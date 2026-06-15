@@ -99,8 +99,57 @@ NUM_COLOR="${FG_BRIGHT_WHITE}${B}"
 )"
 
 
-# ─── Separators ──────────────────────────────────────────────────────────────
-DOT="${FG_GRAY} | ${R}"
+# ─── Parse CLI Arguments & Theme ─────────────────────────────────────────────
+USE_CLASSIC_ICONS=false
+for arg in "$@"; do
+  if [ "$arg" = "--classic" ] || [ "$arg" = "--no-nerdfont" ] || [ "$arg" = "--compatibility" ]; then
+    USE_CLASSIC_ICONS=true
+  fi
+done
+
+if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+  DOT_L1="${FG_GRAY} ╱ ${R}"
+  DOT_L2="${FG_GRAY} · ${R}"
+  ICON_READY="●"
+  ICON_THINKING="◆"
+  ICON_WORKING="⚙"
+  ICON_TOOL="🔧"
+  ICON_STATE_UNKNOWN="⏳"
+  ICON_VCS="╱"
+  ICON_MODEL=""
+  ICON_SANDBOX_NET="ON (net)"
+  ICON_SANDBOX_NONET="ON (no-net)"
+  ICON_SANDBOX_OFF="OFF"
+  ICON_CONTEXT_BAR="ctx"
+  ICON_ARTIFACTS="artifacts"
+  ICON_SUBAGENTS="subagents"
+  ICON_TASKS="tasks"
+  ICON_DIR="╱"
+  ICON_CONV="╱"
+  ICON_TOK_SUM=""
+  ICON_RESET="⌛"
+else
+  DOT_L1="${FG_GRAY} | ${R}"
+  DOT_L2="${FG_GRAY} | ${R}"
+  ICON_READY=""
+  ICON_THINKING="󰟷"
+  ICON_WORKING=""
+  ICON_TOOL=""
+  ICON_STATE_UNKNOWN=""
+  ICON_VCS=""
+  ICON_MODEL=""
+  ICON_SANDBOX_NET="󰒙"
+  ICON_SANDBOX_NONET="󰴴"
+  ICON_SANDBOX_OFF="󰦜"
+  ICON_CONTEXT_BAR="󱍏"
+  ICON_ARTIFACTS=""
+  ICON_SUBAGENTS="󱙺"
+  ICON_TASKS=""
+  ICON_DIR=""
+  ICON_CONV="󰍪"
+  ICON_TOK_SUM=""
+  ICON_RESET="⌛️"
+fi
 
 
 # ─── VCS directly from git (bypasses JSON parsing entirely) ──────────────────
@@ -165,40 +214,55 @@ visible_len() {
 
 # ─── State Indicator ─────────────────────────────────────────────────────────
 case "$STATE" in
-  idle)     S="${FG_BRIGHT_GREEN}${B}  READY${R}" ;;
-  thinking) S="${FG_BRIGHT_YELLOW}${B} 󰟷 THINKING${R}" ;;
-  working)  S="${FG_BRIGHT_CYAN}${B}  WORKING${R}" ;;
-  tool_use) S="${FG_BRIGHT_MAGENTA}${B}  TOOL${R}" ;;
-  *)        S="${FG_WHITE}${B}  $(echo "$STATE" | tr '[:lower:]' '[:upper:]')${R}" ;;
+  idle)     S="${FG_BRIGHT_GREEN}${B} ${ICON_READY} READY${R}" ;;
+  thinking) S="${FG_BRIGHT_YELLOW}${B} ${ICON_THINKING} THINKING${R}" ;;
+  working)  S="${FG_BRIGHT_CYAN}${B} ${ICON_WORKING} WORKING${R}" ;;
+  tool_use) S="${FG_BRIGHT_MAGENTA}${B} ${ICON_TOOL} TOOL${R}" ;;
+  *)        S="${FG_WHITE}${B} ${ICON_STATE_UNKNOWN} $(echo "$STATE" | tr '[:lower:]' '[:upper:]')${R}" ;;
 esac
 
-# ─── VCS Branch & Type (fixed: color applied correctly in both branches) ─────
+# ─── VCS branch details ──────────────────────────────────────────────────────
 V=""
 if [ -n "$VCS_BRANCH" ]; then
-  VCS_LABEL="${VCS_TYPE:-git}"
   if [ "$VCS_DIRTY" = "true" ]; then
-    V="${DOT}${R}${FG_BRIGHT_RED} ${VCS_BRANCH}${FG_BRIGHT_YELLOW}*${R}"
+    if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+      V="${DOT_L1}${FG_BRIGHT_RED}${VCS_BRANCH}${FG_BRIGHT_YELLOW}*${R}"
+    else
+      V="${DOT_L1}${R}${FG_BRIGHT_RED}${ICON_VCS} ${VCS_BRANCH}${FG_BRIGHT_YELLOW}*${R}"
+    fi
   else
-    V="${DOT}${R}${FG_BRIGHT_BLUE} ${VCS_BRANCH}${R}"
+    if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+      V="${DOT_L1}${FG_BRIGHT_BLUE}${VCS_BRANCH}${R}"
+    else
+      V="${DOT_L1}${R}${FG_BRIGHT_BLUE}${ICON_VCS} ${VCS_BRANCH}${R}"
+    fi
   fi
 fi
 
 # ─── Model ───────────────────────────────────────────────────────────────────
-MODEL_DISP=" ${R}${MODEL_NAME:-$MODEL_ID}"
+MODEL_DISP="${MODEL_NAME:-$MODEL_ID}"
 M=""
 if [ -n "$MODEL_DISP" ]; then
-  M="${FG_GRAY}${DOT}${FG_BRIGHT_MAGENTA}${I}${MODEL_DISP}${R}"
+  if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+    M="${DOT_L1}${FG_BRIGHT_MAGENTA}${I}${MODEL_DISP}${R}"
+  else
+    M="${DOT_L1}${FG_BRIGHT_MAGENTA}${I}${ICON_MODEL} ${MODEL_DISP}${R}"
+  fi
 fi
 
 # ─── Sandbox Badge ───────────────────────────────────────────────────────────
 if [ "$SANDBOX" = "true" ]; then
   if [ "$SANDBOX_NET" = "true" ]; then
-    SB="${FG_GREEN}󰒙 ${FG_BRIGHT_GREEN}${B}ON (net)${R}"
+    SB="${FG_GREEN}${ICON_SANDBOX_NET} ON (net)${R}"
   else
-    SB="${FG_GREEN}󰴴 ${FG_BRIGHT_GREEN}${B}ON (no-net)${R}"
+    SB="${FG_GREEN}${ICON_SANDBOX_NONET} ON (no-net)${R}"
   fi
 else
-  SB="${FG_RED}󰦜 ${FG_BRIGHT_RED}${B}OFF${R}"
+  if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+    SB="${FG_GRAY}sandbox off${R}"
+  else
+    SB="${FG_RED}${ICON_SANDBOX_OFF} OFF${R}"
+  fi
 fi
 
 # ─── Context Bar (20 segments) ───────────────────────────────────────────────
@@ -211,38 +275,76 @@ elif [ "$PCT_INT" -ge 60 ]; then FILL_COLOR="$FG_BRIGHT_YELLOW"
 else                              FILL_COLOR="$FG_YELLOW"
 fi
 
-BAR=""
-for ((i = 0; i < BAR_LEN; i++)); do
-  if   [ "$i" -lt "$FILLED" ]; then
-    BAR="${BAR}${FILL_COLOR}█${R}"
-  elif [ "$i" -eq "$FILLED" ]; then
-    if   [ "$REMAINDER" -ge 75 ]; then BAR="${BAR}${FILL_COLOR}▓${R}${FG_GRAY}"
-    elif [ "$REMAINDER" -ge 50 ]; then BAR="${BAR}${FILL_COLOR}▒${R}${FG_GRAY}"
-    else                               BAR="${BAR}${FILL_COLOR}░${R}${FG_GRAY}"
+if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+  BAR=""
+  for ((i = 0; i < BAR_LEN; i++)); do
+    if   [ "$i" -lt "$FILLED" ]; then
+      BAR="${BAR}█"
+    elif [ "$i" -eq "$FILLED" ]; then
+      if   [ "$REMAINDER" -ge 75 ]; then BAR="${BAR}▓"
+      elif [ "$REMAINDER" -ge 50 ]; then BAR="${BAR}▒"
+      elif [ "$REMAINDER" -ge 25 ]; then BAR="${BAR}░"
+      else                               BAR="${BAR}·"
+      fi
+    else BAR="${BAR}·"
     fi
-  else BAR="${BAR}${FG_GRAY}░${R}"
-  fi
-done
+  done
+  CTX_BAR="${FG_GRAY}ctx ${FILL_COLOR}${BAR} ${NUM_COLOR}${PCT_FMT}%${R}"
+else
+  BAR=""
+  for ((i = 0; i < BAR_LEN; i++)); do
+    if   [ "$i" -lt "$FILLED" ]; then
+      BAR="${BAR}${FILL_COLOR}█${R}"
+    elif [ "$i" -eq "$FILLED" ]; then
+      if   [ "$REMAINDER" -ge 75 ]; then BAR="${BAR}${FILL_COLOR}▓${R}${FG_GRAY}"
+      elif [ "$REMAINDER" -ge 50 ]; then BAR="${BAR}${FILL_COLOR}▒${R}${FG_GRAY}"
+      else                               BAR="${BAR}${FILL_COLOR}░${R}${FG_GRAY}"
+      fi
+    else BAR="${BAR}${FG_GRAY}░${R}"
+    fi
+  done
+  CTX_BAR="${FG_YELLOW}${ICON_CONTEXT_BAR}  ${R}${BAR} ${NUM_COLOR}${PCT_FMT}%${R}"
+fi
 
 # ─── Stats & Metadata formatting ─────────────────────────────────────────────
-CTX_BAR="${FG_YELLOW}󱍏  ${R}${BAR} ${NUM_COLOR}${PCT_FMT}%${R}"
-ART_FMT="${FG_BLUE} ${NUM_COLOR}${ARTIFACTS}${R}"
-SUB_FMT="${FG_CYAN}󱙺 ${NUM_COLOR}${SUBAGENTS}${R}"
-BG_FMT="${FG_MAGENTA} ${NUM_COLOR}${BG_TASKS}${R}"
+if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+  ART_FMT="${FG_GRAY}artifacts ${NUM_COLOR}${ARTIFACTS}${R}"
+  SUB_FMT="${FG_GRAY}subagents ${NUM_COLOR}${SUBAGENTS}${R}"
+  BG_FMT="${FG_GRAY}tasks ${NUM_COLOR}${BG_TASKS}${R}"
+else
+  ART_FMT="${FG_BLUE}${ICON_ARTIFACTS} ${NUM_COLOR}${ARTIFACTS}${R}"
+  SUB_FMT="${FG_CYAN}${ICON_SUBAGENTS} ${NUM_COLOR}${SUBAGENTS}${R}"
+  BG_FMT="${FG_MAGENTA}${ICON_TASKS} ${NUM_COLOR}${BG_TASKS}${R}"
+fi
 
 DIR_FMT=""
 if [ -n "$CWD_SHORT" ]; then
-  DIR_FMT="${FG_GRAY}${DOT}${FG_CYAN} ${R}${CWD_SHORT}${R}"
+  if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+    DIR_FMT="${DOT_L1}${FG_CYAN}${CWD_SHORT}${R}"
+  else
+    DIR_FMT="${DOT_L1}${FG_CYAN}${ICON_DIR} ${CWD_SHORT}${R}"
+  fi
 fi
 
 CONV_FMT=""
 if [ -n "$CONV_ID" ]; then
-  CONV_FMT="${FG_GRAY}${DOT}${FG_GRAY}󰍪 ${CONV_ID:0:8}${R}"
+  if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+    CONV_FMT="${DOT_L1}${FG_GRAY}${CONV_ID:0:8}${R}"
+  else
+    CONV_FMT="${DOT_L1}${FG_GRAY}${ICON_CONV} ${CONV_ID:0:8}${R}"
+  fi
 fi
 
-TOK_DETAILS=""
+TOK_DETAILS_WIDE=""
+TOK_DETAILS_MED=""
 if [ "$CTX_USED" -gt 0 ] 2>/dev/null; then
-  TOK_DETAILS=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})"
+  if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+    TOK_DETAILS_WIDE=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})${DOT_L2}(${INPUT_TOK_FMT} in/${OUTPUT_TOK_FMT} out)"
+    TOK_DETAILS_MED=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})"
+  else
+    TOK_DETAILS_WIDE=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})${DOT_L2}${FG_YELLOW}${ICON_TOK_SUM} ${R} (${INPUT_TOK_FMT} in/${OUTPUT_TOK_FMT} out)"
+    TOK_DETAILS_MED=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})"
+  fi
 fi
 
 # ─── Quota formatting ────────────────────────────────────────────────────────
@@ -283,12 +385,25 @@ make_quota_bar() {
   local label=$2
   local bar_color=$3
   local reset_sec=$4
+  
+  local reset_label=" ${ICON_RESET} "
+  local separator=""
+  if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+    separator="${FG_GRAY} · ${R}"
+  else
+    separator="${FG_GRAY}| ${R}"
+  fi
+  
   if [ -z "$val" ] || [[ "$val" == -* ]]; then
     local bar=""
     for ((i = 0; i < 20; i++)); do
-      bar="${bar}░"
+      if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+        bar="${bar}·"
+      else
+        bar="${bar}░"
+      fi
     done
-    echo -n "${FG_GRAY}| ${R}${FG_BRIGHT_WHITE}${B}${label}${R} ${FG_GRAY}${bar} N/A${R}"
+    echo -n "${separator}${FG_BRIGHT_WHITE}${B}${label}${R} ${FG_GRAY}${bar} N/A${R}"
     return
   fi
 
@@ -309,46 +424,70 @@ make_quota_bar() {
   local bar=""
   for ((i = 0; i < bar_len; i++)); do
     if [ "$i" -lt "$filled" ]; then
-      bar="${bar}${bar_color}█${R}"
+      if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+        bar="${bar}█"
+      else
+        bar="${bar}${bar_color}█${R}"
+      fi
     elif [ "$i" -eq "$filled" ]; then
-      if [ "$remainder" -ge 75 ]; then
-        bar="${bar}${bar_color}▓${R}${FG_GRAY}"
-      elif [ "$remainder" -ge 50 ]; then
-        bar="${bar}${bar_color}▒${R}${FG_GRAY}"
-      elif [ "$remainder" -ge 25 ]; then
-        bar="${bar}${bar_color}░${R}${FG_GRAY}"
+      if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+        if [ "$remainder" -ge 75 ]; then bar="${bar}▓"
+        elif [ "$remainder" -ge 50 ]; then bar="${bar}▒"
+        elif [ "$remainder" -ge 25 ]; then bar="${bar}░"
+        else                               bar="${bar}·"
+        fi
+      else
+        if [ "$remainder" -ge 75 ]; then
+          bar="${bar}${bar_color}▓${R}${FG_GRAY}"
+        elif [ "$remainder" -ge 50 ]; then
+          bar="${bar}${bar_color}▒${R}${FG_GRAY}"
+        elif [ "$remainder" -ge 25 ]; then
+          bar="${bar}${bar_color}░${R}${FG_GRAY}"
+        else
+          bar="${bar}${FG_GRAY}░${R}"
+        fi
+      fi
+    else
+      if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+        bar="${bar}·"
       else
         bar="${bar}${FG_GRAY}░${R}"
       fi
-    else
-      bar="${bar}${FG_GRAY}░${R}"
     fi
   done
 
   local reset_str=""
   if [ -n "$reset_sec" ] && [ "$reset_sec" -gt 0 ]; then
-    reset_str=" ⌛️ $(format_reset_time "$reset_sec")"
+    reset_str="${reset_label}$(format_reset_time "$reset_sec")"
   fi
 
-  echo -n "${FG_GRAY}| ${R}${FG_BRIGHT_WHITE}${B}${label}${R} ${bar} ${text_color}${val}%${R}${reset_str}"
+  if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+    echo -n "${separator}${FG_BRIGHT_WHITE}${B}${label}${R} ${bar_color}${bar}${R} ${text_color}${val}%${R}${reset_str}"
+  else
+    echo -n "${separator}${FG_BRIGHT_WHITE}${B}${label}${R} ${bar} ${text_color}${val}%${R}${reset_str}"
+  fi
 }
 
-# Determine active quota
-MODEL_LOWER=$(echo "${MODEL_NAME:-$MODEL_ID}" | tr '[:upper:]' '[:lower:]')
-if [[ "$MODEL_LOWER" == *gemini* ]]; then
+# Determine active quota based on actual availability
+if { [ -n "$GEMINI_5H" ] && [ "$GEMINI_5H" != "-1" ]; } || { [ -n "$GEMINI_WK" ] && [ "$GEMINI_WK" != "-1" ]; }; then
   Q_5H="$GEMINI_5H"
   Q_WK="$GEMINI_WK"
   Q_5H_R="$GEMINI_5H_RESET"
   Q_WK_R="$GEMINI_WK_RESET"
-else
+elif { [ -n "$TP_5H" ] && [ "$TP_5H" != "-1" ]; } || { [ -n "$TP_WK" ] && [ "$TP_WK" != "-1" ]; }; then
   Q_5H="$TP_5H"
   Q_WK="$TP_WK"
   Q_5H_R="$TP_5H_RESET"
   Q_WK_R="$TP_WK_RESET"
+else
+  Q_5H="-1"
+  Q_WK="-1"
+  Q_5H_R="-1"
+  Q_WK_R="-1"
 fi
 
 QUOTA_FMT=""
-if [ -n "$Q_5H" ] || [ -n "$Q_WK" ]; then
+if { [ -n "$Q_5H" ] && [ "$Q_5H" != "-1" ]; } || { [ -n "$Q_WK" ] && [ "$Q_WK" != "-1" ]; }; then
   QUOTA_FMT="$(make_quota_bar "$Q_5H" "5H" "$FG_BRIGHT_CYAN" "$Q_5H_R") $(make_quota_bar "$Q_WK" "7D" "$FG_BRIGHT_MAGENTA" "$Q_WK_R")"
 fi
 
@@ -374,17 +513,21 @@ print_right_aligned() {
 if [ "$COLS" -ge 180 ]; then
   LINE1="${S}${M}${DIR_FMT}${V}${CONV_FMT}"
 
-  if [ "$CTX_USED" -gt 0 ] 2>/dev/null; then
-    TOK_DETAILS=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})${DOT}${FG_YELLOW} ${R} (${INPUT_TOK_FMT} in/${OUTPUT_TOK_FMT} out)"
+  if [ -n "$QUOTA_FMT" ]; then
+    LINE2="${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}${DOT_L2}${CTX_BAR}${TOK_DETAILS_WIDE}${QUOTA_FMT}"
+  else
+    LINE2="${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}${DOT_L2}${CTX_BAR}${TOK_DETAILS_WIDE}"
   fi
-
-  LINE2="${ART_FMT}${DOT}${SUB_FMT}${DOT}${BG_FMT}${DOT}${SB}${DOT}${CTX_BAR}${TOK_DETAILS}${DOT}${QUOTA_FMT}"
   print_right_aligned "$LINE1" "$LINE2" "$COLS"
 
 elif [ "$COLS" -ge 90 ]; then
   # Medium Layout: Two-line layout with border
   LINE1="${S}${M}${DIR_FMT}${V}"
-  LINE2=" ${CTX_BAR}${TOK_DETAILS}${DOT}${ART_FMT}${DOT}${SUB_FMT}${DOT}${BG_FMT}${DOT}${SB}${DOT}${QUOTA_FMT}"
+  if [ -n "$QUOTA_FMT" ]; then
+    LINE2=" ${CTX_BAR}${TOK_DETAILS_MED}${DOT_L2}${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}${QUOTA_FMT}"
+  else
+    LINE2=" ${CTX_BAR}${TOK_DETAILS_MED}${DOT_L2}${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}"
+  fi
 
   echo -e "${FG_GRAY}╭─${R}${LINE1}"
   echo -e "${FG_GRAY}╰─${R}${LINE2}"
@@ -392,9 +535,17 @@ elif [ "$COLS" -ge 90 ]; then
 else
   M_SHORT=""
   if [ -n "$MODEL_DISP" ]; then
-    M_SHORT="${FG_GRAY} ╱ ${FG_BRIGHT_MAGENTA}${MODEL_DISP}${R}"
+    if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+      M_SHORT="${FG_GRAY} ╱ ${FG_BRIGHT_MAGENTA}${MODEL_DISP:0:12}${R}"
+    else
+      M_SHORT="${FG_GRAY} ╱ ${FG_BRIGHT_MAGENTA}${ICON_MODEL} ${MODEL_DISP:0:12}${R}"
+    fi
   fi
 
   echo -e "${S}${M_SHORT}"
-  echo -e "${CTX_BAR}${DOT}${BG_FMT}${DOT}${QUOTA_FMT}"
+  if [ -n "$QUOTA_FMT" ]; then
+    echo -e "${CTX_BAR}${DOT_L2}${BG_FMT}${QUOTA_FMT}"
+  else
+    echo -e "${CTX_BAR}${DOT_L2}${BG_FMT}"
+  fi
 fi

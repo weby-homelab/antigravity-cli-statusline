@@ -16,6 +16,36 @@ Wraps status into a clean two-line boxed block to avoid command output line wrap
 
 ---
 
+## 🎨 Compatibility Mode (Classic Icons)
+
+If your terminal does not support Nerd Fonts (e.g., ChromeOS Terminal, Emacs, or standard TTYs), you can run the statusline in **Classic Icon Mode**. This mode replaces advanced glyphs with standard Unicode symbols (`●`, `◆`, `⚙`, `🔧`, etc.) and plain text labels to ensure clean rendering.
+
+To enable it, simply append `--classic` (or `--no-nerdfont` / `--compatibility`) to the command parameter in your `settings.json`:
+
+### 🐧 macOS / Linux (`~/.gemini/antigravity-cli/settings.json`)
+```json
+{
+  "statusLine": {
+    "type": "",
+    "command": "/home/user/.antigravity/statusline.sh --classic",
+    "enabled": true
+  }
+}
+```
+
+### 🪟 Windows (`%USERPROFILE%\.gemini\antigravity-cli\settings.json`)
+```json
+{
+  "statusLine": {
+    "type": "",
+    "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"C:/Users/user/.antigravity/statusline.ps1\" --classic",
+    "enabled": true
+  }
+}
+```
+
+---
+
 ## ✨ Features
 
 - **Responsive Design:** Automatically switches layouts (Wide, Medium, Small) depending on terminal width (`terminal_width`) to avoid messy line wrapping.

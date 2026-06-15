@@ -132,6 +132,58 @@ function shorten_path($path) {
 }
 $CWD_SHORT = shorten_path $CWD
 
+# ─── Parse CLI Arguments & Theme ─────────────────────────────────────────────
+$USE_CLASSIC_ICONS = $false
+foreach ($arg in $args) {
+    if ($arg -eq "--classic" -or $arg -eq "--no-nerdfont" -or $arg -eq "--compatibility") {
+        $USE_CLASSIC_ICONS = $true
+    }
+}
+
+if ($USE_CLASSIC_ICONS) {
+    $DOT_L1 = "${FG_GRAY} ╱ ${R}"
+    $DOT_L2 = "${FG_GRAY} · ${R}"
+    $ICON_READY = "●"
+    $ICON_THINKING = "◆"
+    $ICON_WORKING = "⚙"
+    $ICON_TOOL = "🔧"
+    $ICON_STATE_UNKNOWN = "⏳"
+    $ICON_VCS = "╱"
+    $ICON_MODEL = ""
+    $ICON_SANDBOX_NET = "ON (net)"
+    $ICON_SANDBOX_NONET = "ON (no-net)"
+    $ICON_SANDBOX_OFF = "OFF"
+    $ICON_CONTEXT_BAR = "ctx"
+    $ICON_ARTIFACTS = "artifacts"
+    $ICON_SUBAGENTS = "subagents"
+    $ICON_TASKS = "tasks"
+    $ICON_DIR = "╱"
+    $ICON_CONV = "╱"
+    $ICON_TOK_SUM = ""
+    $ICON_RESET = "⌛"
+} else {
+    $DOT_L1 = "${FG_GRAY} | ${R}"
+    $DOT_L2 = "${FG_GRAY} | ${R}"
+    $ICON_READY = ""
+    $ICON_THINKING = "󰟷"
+    $ICON_WORKING = ""
+    $ICON_TOOL = ""
+    $ICON_STATE_UNKNOWN = ""
+    $ICON_VCS = ""
+    $ICON_MODEL = ""
+    $ICON_SANDBOX_NET = "󰒙"
+    $ICON_SANDBOX_NONET = "󰴴"
+    $ICON_SANDBOX_OFF = "󰦜"
+    $ICON_CONTEXT_BAR = "󱍏"
+    $ICON_ARTIFACTS = ""
+    $ICON_SUBAGENTS = "󱙺"
+    $ICON_TASKS = ""
+    $ICON_DIR = ""
+    $ICON_CONV = "󰍪"
+    $ICON_TOK_SUM = ""
+    $ICON_RESET = "⌛️"
+}
+
 function visible_len($str) {
     # Strips ESC sequences and counts visible length
     $stripped = $str -replace '\x1b\[[0-9;]*m', ''
@@ -141,20 +193,28 @@ function visible_len($str) {
 # State Indicator
 $S = ""
 switch ($STATE) {
-    "idle"     { $S = "${FG_BRIGHT_GREEN}${B}  READY${R}" }
-    "thinking" { $S = "${FG_BRIGHT_YELLOW}${B} 󰟷 THINKING${R}" }
-    "working"  { $S = "${FG_BRIGHT_CYAN}${B}  WORKING${R}" }
-    "tool_use" { $S = "${FG_BRIGHT_MAGENTA}${B}  TOOL${R}" }
-    default    { $S = "${FG_WHITE}${B}  $($STATE.ToUpper())${R}" }
+    "idle"     { $S = "${FG_BRIGHT_GREEN}${B} ${ICON_READY} READY${R}" }
+    "thinking" { $S = "${FG_BRIGHT_YELLOW}${B} ${ICON_THINKING} THINKING${R}" }
+    "working"  { $S = "${FG_BRIGHT_CYAN}${B} ${ICON_WORKING} WORKING${R}" }
+    "tool_use" { $S = "${FG_BRIGHT_MAGENTA}${B} ${ICON_TOOL} TOOL${R}" }
+    default    { $S = "${FG_WHITE}${B} ${ICON_STATE_UNKNOWN} $($STATE.ToUpper())${R}" }
 }
 
 # VCS branch details
 $V = ""
 if ($VCS_BRANCH) {
     if ($VCS_DIRTY -eq $true) {
-        $V = "${DOT}${R}${FG_BRIGHT_RED} ${VCS_BRANCH}${FG_BRIGHT_YELLOW}*${R}"
+        if ($USE_CLASSIC_ICONS) {
+            $V = "${DOT_L1}${FG_BRIGHT_RED}${VCS_BRANCH}${FG_BRIGHT_YELLOW}*${R}"
+        } else {
+            $V = "${DOT_L1}${R}${FG_BRIGHT_RED}${ICON_VCS} ${VCS_BRANCH}${FG_BRIGHT_YELLOW}*${R}"
+        }
     } else {
-        $V = "${DOT}${R}${FG_BRIGHT_BLUE} ${VCS_BRANCH}${R}"
+        if ($USE_CLASSIC_ICONS) {
+            $V = "${DOT_L1}${FG_BRIGHT_BLUE}${VCS_BRANCH}${R}"
+        } else {
+            $V = "${DOT_L1}${R}${FG_BRIGHT_BLUE}${ICON_VCS} ${VCS_BRANCH}${R}"
+        }
     }
 }
 
@@ -162,19 +222,27 @@ if ($VCS_BRANCH) {
 $disp = if ($MODEL_NAME) { $MODEL_NAME } else { $MODEL_ID }
 $M = ""
 if ($disp) {
-    $M = "${FG_GRAY}${DOT}${FG_BRIGHT_MAGENTA}${I} ${disp}${R}"
+    if ($USE_CLASSIC_ICONS) {
+        $M = "${DOT_L1}${FG_BRIGHT_MAGENTA}${I}${disp}${R}"
+    } else {
+        $M = "${DOT_L1}${FG_BRIGHT_MAGENTA}${I}${ICON_MODEL} ${disp}${R}"
+    }
 }
 
 # Sandbox Badge
 $SB = ""
 if ($SANDBOX -eq $true) {
     if ($SANDBOX_NET -eq $true) {
-        $SB = "${FG_GREEN}󰒙 ${FG_BRIGHT_GREEN}${B}ON (net)${R}"
+        $SB = "${FG_GREEN}${ICON_SANDBOX_NET} ON (net)${R}"
     } else {
-        $SB = "${FG_GREEN}󰴴 ${FG_BRIGHT_GREEN}${B}ON (no-net)${R}"
+        $SB = "${FG_GREEN}${ICON_SANDBOX_NONET} ON (no-net)${R}"
     }
 } else {
-    $SB = "${FG_RED}󰦜 ${FG_BRIGHT_RED}${B}OFF${R}"
+    if ($USE_CLASSIC_ICONS) {
+        $SB = "${FG_GRAY}sandbox off${R}"
+    } else {
+        $SB = "${FG_RED}${ICON_SANDBOX_OFF} OFF${R}"
+    }
 }
 
 # Context bar
@@ -186,39 +254,77 @@ $FILL_COLOR = $FG_YELLOW
 if ($PCT_INT -ge 90) { $FILL_COLOR = $FG_BRIGHT_RED }
 elseif ($PCT_INT -ge 60) { $FILL_COLOR = $FG_BRIGHT_YELLOW }
 
-$BAR = ""
-for ($i = 0; $i -lt $BAR_LEN; $i++) {
-    if ($i -lt $FILLED) {
-        $BAR += "${FILL_COLOR}█${R}"
-    } elseif ($i -eq $FILLED) {
-        if ($REMAINDER -ge 75) { $BAR += "${FILL_COLOR}▓${R}${FG_GRAY}" }
-        elseif ($REMAINDER -ge 50) { $BAR += "${FILL_COLOR}▒${R}${FG_GRAY}" }
-        else { $BAR += "${FILL_COLOR}░${R}${FG_GRAY}" }
-    } else {
-        $BAR += "${FG_GRAY}░${R}"
+if ($USE_CLASSIC_ICONS) {
+    $BAR = ""
+    for ($i = 0; $i -lt $BAR_LEN; $i++) {
+        if ($i -lt $FILLED) {
+            $BAR += "█"
+        } elseif ($i -eq $FILLED) {
+            if ($REMAINDER -ge 75) { $BAR += "▓" }
+            elseif ($REMAINDER -ge 50) { $BAR += "▒" }
+            elseif ($REMAINDER -ge 25) { $BAR += "░" }
+            else { $BAR += "·" }
+        } else {
+            $BAR += "·"
+        }
     }
+    $CTX_BAR = "${FG_GRAY}ctx ${FILL_COLOR}${BAR} ${NUM_COLOR}${PCT_FMT}%${R}"
+} else {
+    $BAR = ""
+    for ($i = 0; $i -lt $BAR_LEN; $i++) {
+        if ($i -lt $FILLED) {
+            $BAR += "${FILL_COLOR}█${R}"
+        } elseif ($i -eq $FILLED) {
+            if ($REMAINDER -ge 75) { $BAR += "${FILL_COLOR}▓${R}${FG_GRAY}" }
+            elseif ($REMAINDER -ge 50) { $BAR += "${FILL_COLOR}▒${R}${FG_GRAY}" }
+            else { $BAR += "${FILL_COLOR}░${R}${FG_GRAY}" }
+        } else {
+            $BAR += "${FG_GRAY}░${R}"
+        }
+    }
+    $CTX_BAR = "${FG_YELLOW}${ICON_CONTEXT_BAR}  ${R}${BAR} ${NUM_COLOR}${PCT_FMT}%${R}"
 }
-$CTX_BAR = "${FG_YELLOW}󱍏  ${R}${BAR} ${NUM_COLOR}${PCT_FMT}%${R}"
 
 # Stats badges
-$ART_FMT = "${FG_BLUE} ${NUM_COLOR}${ARTIFACTS}${R}"
-$SUB_FMT = "${FG_CYAN}󱙺 ${NUM_COLOR}${SUBAGENTS}${R}"
-$BG_FMT = "${FG_MAGENTA} ${NUM_COLOR}${BG_TASKS}${R}"
+if ($USE_CLASSIC_ICONS) {
+    $ART_FMT = "${FG_GRAY}artifacts ${NUM_COLOR}${ARTIFACTS}${R}"
+    $SUB_FMT = "${FG_GRAY}subagents ${NUM_COLOR}${SUBAGENTS}${R}"
+    $BG_FMT = "${FG_GRAY}tasks ${NUM_COLOR}${BG_TASKS}${R}"
+} else {
+    $ART_FMT = "${FG_BLUE}${ICON_ARTIFACTS} ${NUM_COLOR}${ARTIFACTS}${R}"
+    $SUB_FMT = "${FG_CYAN}${ICON_SUBAGENTS} ${NUM_COLOR}${SUBAGENTS}${R}"
+    $BG_FMT = "${FG_MAGENTA}${ICON_TASKS} ${NUM_COLOR}${BG_TASKS}${R}"
+}
 
 $DIR_FMT = ""
 if ($CWD_SHORT) {
-    $DIR_FMT = "${FG_GRAY}${DOT}${FG_CYAN} ${R}${CWD_SHORT}${R}"
+    if ($USE_CLASSIC_ICONS) {
+        $DIR_FMT = "${DOT_L1}${FG_CYAN}${CWD_SHORT}${R}"
+    } else {
+        $DIR_FMT = "${DOT_L1}${FG_CYAN}${ICON_DIR} ${CWD_SHORT}${R}"
+    }
 }
 
 $CONV_FMT = ""
 if ($CONV_ID) {
     $short_conv = $CONV_ID.Substring(0, [Math]::Min(8, $CONV_ID.Length))
-    $CONV_FMT = "${FG_GRAY}${DOT}${FG_GRAY}󰍪 ${short_conv}${R}"
+    if ($USE_CLASSIC_ICONS) {
+        $CONV_FMT = "${DOT_L1}${FG_GRAY}${short_conv}${R}"
+    } else {
+        $CONV_FMT = "${DOT_L1}${FG_GRAY}${ICON_CONV} ${short_conv}${R}"
+    }
 }
 
-$TOK_DETAILS = ""
+$TOK_DETAILS_WIDE = ""
+$TOK_DETAILS_MED = ""
 if ($CTX_USED -gt 0) {
-    $TOK_DETAILS = " (${CTX_USED_FMT}/${CTX_LIMIT_FMT})"
+    if ($USE_CLASSIC_ICONS) {
+        $TOK_DETAILS_WIDE = " (${CTX_USED_FMT}/${CTX_LIMIT_FMT})${DOT_L2}(${INPUT_TOK_FMT} in/${OUTPUT_TOK_FMT} out)"
+        $TOK_DETAILS_MED = " (${CTX_USED_FMT}/${CTX_LIMIT_FMT})"
+    } else {
+        $TOK_DETAILS_WIDE = " (${CTX_USED_FMT}/${CTX_LIMIT_FMT})${DOT_L2}${FG_YELLOW}${ICON_TOK_SUM} ${R} (${INPUT_TOK_FMT} in/${OUTPUT_TOK_FMT} out)"
+        $TOK_DETAILS_MED = " (${CTX_USED_FMT}/${CTX_LIMIT_FMT})"
+    }
 }
 
 # Quota bars
@@ -243,9 +349,20 @@ function format_reset_time($sec) {
 }
 
 function make_quota_bar($val, $label, $bar_color, $reset_sec) {
+    $reset_label = " ${ICON_RESET} "
+    $separator = ""
+    if ($USE_CLASSIC_ICONS) {
+        $separator = "${FG_GRAY} · ${R}"
+    } else {
+        $separator = "${FG_GRAY}| ${R}"
+    }
+
     if ($val -eq $null -or $val -lt 0) {
-        $bar = "░" * 20
-        return "${FG_GRAY}| ${R}${FG_BRIGHT_WHITE}${B}${label}${R} ${FG_GRAY}${bar} N/A${R}"
+        $bar = ""
+        for ($i = 0; $i -lt 20; $i++) {
+            if ($USE_CLASSIC_ICONS) { $bar += "·" } else { $bar += "░" }
+        }
+        return "${separator}${FG_BRIGHT_WHITE}${B}${label}${R} ${FG_GRAY}${bar} N/A${R}"
     }
 
     $val_int = [int][Math]::Floor($val)
@@ -260,42 +377,64 @@ function make_quota_bar($val, $label, $bar_color, $reset_sec) {
     $bar = ""
     for ($i = 0; $i -lt $bar_len; $i++) {
         if ($i -lt $filled) {
-            $bar += "${bar_color}█${R}"
+            if ($USE_CLASSIC_ICONS) {
+                $bar += "█"
+            } else {
+                $bar += "${bar_color}█${R}"
+            }
         } elseif ($i -eq $filled) {
-            if ($remainder -ge 75) { $bar += "${bar_color}▓${R}${FG_GRAY}" }
-            elseif ($remainder -ge 50) { $bar += "${bar_color}▒${R}${FG_GRAY}" }
-            elseif ($remainder -ge 25) { $bar += "${bar_color}░${R}${FG_GRAY}" }
-            else { $bar += "${FG_GRAY}░${R}" }
+            if ($USE_CLASSIC_ICONS) {
+                if ($remainder -ge 75) { $bar += "▓" }
+                elseif ($remainder -ge 50) { $bar += "▒" }
+                elseif ($remainder -ge 25) { $bar += "░" }
+                else { $bar += "·" }
+            } else {
+                if ($remainder -ge 75) { $bar += "${bar_color}▓${R}${FG_GRAY}" }
+                elseif ($remainder -ge 50) { $bar += "${bar_color}▒${R}${FG_GRAY}" }
+                elseif ($remainder -ge 25) { $bar += "${bar_color}░${R}${FG_GRAY}" }
+                else { $bar += "${FG_GRAY}░${R}" }
+            }
         } else {
-            $bar += "${FG_GRAY}░${R}"
+            if ($USE_CLASSIC_ICONS) {
+                $bar += "·"
+            } else {
+                $bar += "${FG_GRAY}░${R}"
+            }
         }
     }
 
     $reset_str = ""
     $t = format_reset_time $reset_sec
-    if ($t) { $reset_str = " ⌛️ $t" }
+    if ($t) { $reset_str = "${reset_label}${t}" }
 
     $val_fmt = $val.ToString("0.0", [System.Globalization.CultureInfo]::InvariantCulture)
-    return "${FG_GRAY}| ${R}${FG_BRIGHT_WHITE}${B}${label}${R} ${bar} ${text_color}${val_fmt}%${R}${reset_str}"
+    if ($USE_CLASSIC_ICONS) {
+        return "${separator}${FG_BRIGHT_WHITE}${B}${label}${R} ${bar_color}${bar}${R} ${text_color}${val_fmt}%${R}${reset_str}"
+    } else {
+        return "${separator}${FG_BRIGHT_WHITE}${B}${label}${R} ${bar} ${text_color}${val_fmt}%${R}${reset_str}"
+    }
 }
 
-$model_lower = $MODEL_ID.ToLower()
-if ($MODEL_NAME) { $model_lower = $MODEL_NAME.ToLower() }
-
-if ($model_lower.Contains("gemini")) {
+# Determine active quota based on actual availability
+if (($GEMINI_5H -ne $null -and $GEMINI_5H -ne -1) -or ($GEMINI_WK -ne $null -and $GEMINI_WK -ne -1)) {
     $Q_5H = $GEMINI_5H
     $Q_WK = $GEMINI_WK
     $Q_5H_R = $GEMINI_5H_RESET
     $Q_WK_R = $GEMINI_WK_RESET
-} else {
+} elseif (($TP_5H -ne $null -and $TP_5H -ne -1) -or ($TP_WK -ne $null -and $TP_WK -ne -1)) {
     $Q_5H = $TP_5H
     $Q_WK = $TP_WK
     $Q_5H_R = $TP_5H_RESET
     $Q_WK_R = $TP_WK_RESET
+} else {
+    $Q_5H = -1
+    $Q_WK = -1
+    $Q_5H_R = -1
+    $Q_WK_R = -1
 }
 
 $QUOTA_FMT = ""
-if ($Q_5H -ne -1 -or $Q_WK -ne -1) {
+if (($Q_5H -ne $null -and $Q_5H -ne -1) -or ($Q_WK -ne $null -and $Q_WK -ne -1)) {
     $QUOTA_FMT = "$((make_quota_bar $Q_5H "5H" $FG_BRIGHT_CYAN $Q_5H_R)) $((make_quota_bar $Q_WK "7D" $FG_BRIGHT_MAGENTA $Q_WK_R))"
 }
 
@@ -312,19 +451,32 @@ function print_right_aligned($left, $right, $total_cols) {
 # Output Assembly based on Column Width
 if ($COLS -ge 180) {
     $LINE1 = "${S}${M}${DIR_FMT}${V}${CONV_FMT}"
-    if ($CTX_USED -gt 0) {
-        $TOK_DETAILS = " (${CTX_USED_FMT}/${CTX_LIMIT_FMT})${DOT}${FG_YELLOW} ${R} (${INPUT_TOK_FMT} in/${OUTPUT_TOK_FMT} out)"
+    if ($QUOTA_FMT) {
+        $LINE2 = "${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}${DOT_L2}${CTX_BAR}${TOK_DETAILS_WIDE}${QUOTA_FMT}"
+    } else {
+        $LINE2 = "${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}${DOT_L2}${CTX_BAR}${TOK_DETAILS_WIDE}"
     }
-    $LINE2 = "${ART_FMT}${DOT}${SUB_FMT}${DOT}${BG_FMT}${DOT}${SB}${DOT}${CTX_BAR}${TOK_DETAILS}${DOT}${QUOTA_FMT}"
     print_right_aligned $LINE1 $LINE2 $COLS
 } elseif ($COLS -ge 90) {
     $LINE1 = "${S}${M}${DIR_FMT}${V}"
-    $LINE2 = " ${CTX_BAR}${TOK_DETAILS}${DOT}${ART_FMT}${DOT}${SUB_FMT}${DOT}${BG_FMT}${DOT}${SB}${DOT}${QUOTA_FMT}"
+    if ($QUOTA_FMT) {
+        $LINE2 = " ${CTX_BAR}${TOK_DETAILS_MED}${DOT_L2}${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}${QUOTA_FMT}"
+    } else {
+        $LINE2 = " ${CTX_BAR}${TOK_DETAILS_MED}${DOT_L2}${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}"
+    }
     "${FG_GRAY}╭─${R}${LINE1}`n${FG_GRAY}╰─${R}${LINE2}"
 } else {
     $M_SHORT = ""
     if ($disp) {
-        $M_SHORT = "${FG_GRAY} ╱ ${FG_BRIGHT_MAGENTA} ${disp}${R}"
+        if ($USE_CLASSIC_ICONS) {
+            $M_SHORT = "${FG_GRAY} ╱ ${FG_BRIGHT_MAGENTA}$($disp.Substring(0, [Math]::Min(12, $disp.Length)))${R}"
+        } else {
+            $M_SHORT = "${FG_GRAY} ╱ ${FG_BRIGHT_MAGENTA}${ICON_MODEL} $($disp.Substring(0, [Math]::Min(12, $disp.Length)))${R}"
+        }
     }
-    "${S}${M_SHORT}`n${CTX_BAR}${DOT}${BG_FMT}${DOT}${QUOTA_FMT}"
+    if ($QUOTA_FMT) {
+        "${S}${M_SHORT}`n${CTX_BAR}${DOT_L2}${BG_FMT}${QUOTA_FMT}"
+    } else {
+        "${S}${M_SHORT}`n${CTX_BAR}${DOT_L2}${BG_FMT}"
+    }
 }
