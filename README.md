@@ -6,6 +6,10 @@ An advanced, responsive, and high-information statusline plugin for the **Antigr
 
 ## 🎨 Layout Showcase
 
+### 👑 Ultra Layout (Full Telemetry)
+The ultimate high-information layout displaying all telemetry fields: system metrics, Git status, active subagents, background tasks, model quotas, and power/battery state in a single visual dashboard.
+![Ultra Layout](screenshots/Antigravity-cli-statusline-ULTRA.png)
+
 ### 🖥️ Wide Layout (Terminal width $\ge$ 180 chars)
 Provides a rich, single-row layout displaying all developer telemetry and active quotas side-by-side.
 ![Wide Layout](screenshots/Antigravity-cli-statusline-max.png)
