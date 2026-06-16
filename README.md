@@ -51,9 +51,12 @@ To enable it, simply append `--classic` (or `--no-nerdfont` / `--compatibility`)
 - **Responsive Design:** Automatically switches layouts (Wide, Medium, Small) depending on terminal width (`terminal_width`) to avoid messy line wrapping.
 - **Smart Git Tracking:** Queries the Git binary (`git -C`) directly to get real-time branch status and dirty states, bypassing cached session details.
 - **Dynamic Quota Swapping:** Automatically detects the current LLM model (Gemini vs. 3rd-party models) and switches to display the correct active quotas (`gemini-5h` & `gemini-weekly` or `3p-5h` & `3p-weekly`) along with countdowns to quota reset.
-- **Context & Token Metres:** Displays a visual 20-segment context window bar with percentage, and displays input/output tokens in a human-readable (`K`, `M`) format.
+- **Context & Token Metres:** Displays a visual 20-segment context window bar with percentage, and displays total input/output tokens in a human-readable (`K`, `M`) format.
+- **Current Turn Token Usage:** Tracks the input/output tokens processed during the last turn (e.g. `turn: +40.5K/318`).
 - **Sandbox Network Badges:** Displays whether the execution sandbox is `ON (net)`, `ON (no-net)`, or `OFF`.
 - **Background Actions Tracker:** Live metrics showing active subagents count (`󱙺`) and running background tasks (``).
+- **CLI & Session Metadata:** Displays the current `agy` CLI version, subscription tier (e.g. `Google AI Pro`), and logged-in account email.
+- **Resilient Power & Host Tracking:** Live display of the host machine's name, Tailscale connection IP, and mains/battery status with capacity metrics (e.g. `🔌 AC` or `🔋 85%`) to track blackout states.
 
 ---
 

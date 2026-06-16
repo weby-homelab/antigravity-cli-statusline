@@ -34,6 +34,11 @@ $MODEL_NAME = if ($data.model.display_name) { $data.model.display_name } else { 
 $COLS = if ($data.terminal_width -ne $null) { $data.terminal_width } else { 80 }
 $CWD = if ($data.cwd) { $data.cwd } else { "" }
 $CONV_ID = if ($data.conversation_id) { $data.conversation_id } else { "" }
+$CLI_VERSION = if ($data.version) { $data.version } else { "" }
+$PLAN_TIER = if ($data.plan_tier) { $data.plan_tier } else { "" }
+$USER_EMAIL = if ($data.email) { $data.email } else { "" }
+$TURN_INPUT_TOKENS = if ($data.context_window.current_usage.input_tokens -ne $null) { $data.context_window.current_usage.input_tokens } else { 0 }
+$TURN_OUTPUT_TOKENS = if ($data.context_window.current_usage.output_tokens -ne $null) { $data.context_window.current_usage.output_tokens } else { 0 }
 
 $INPUT_TOKENS = if ($data.context_window.total_input_tokens -ne $null) { $data.context_window.total_input_tokens } else { 0 }
 $OUTPUT_TOKENS = if ($data.context_window.total_output_tokens -ne $null) { $data.context_window.total_output_tokens } else { 0 }
@@ -118,6 +123,8 @@ $INPUT_TOK_FMT = human_format $INPUT_TOKENS
 $OUTPUT_TOK_FMT = human_format $OUTPUT_TOKENS
 $CTX_LIMIT_FMT = human_format $CTX_LIMIT
 $CTX_USED_FMT = human_format $CTX_USED
+$TURN_INPUT_FMT = human_format $TURN_INPUT_TOKENS
+$TURN_OUTPUT_FMT = human_format $TURN_OUTPUT_TOKENS
 
 function shorten_path($path) {
     if (-not $path) { return "" }
@@ -161,6 +168,8 @@ if ($USE_CLASSIC_ICONS) {
     $ICON_CONV = "╱"
     $ICON_TOK_SUM = ""
     $ICON_RESET = "⌛"
+    $ICON_AC = "AC"
+    $ICON_BAT = "BAT"
 } else {
     $DOT_L1 = "${FG_GRAY} | ${R}"
     $DOT_L2 = "${FG_GRAY} | ${R}"
@@ -182,6 +191,8 @@ if ($USE_CLASSIC_ICONS) {
     $ICON_CONV = "󰍪"
     $ICON_TOK_SUM = ""
     $ICON_RESET = "⌛️"
+    $ICON_AC = "󰚥"
+    $ICON_BAT = "🔋"
 }
 
 function visible_len($str) {
@@ -189,6 +200,80 @@ function visible_len($str) {
     $stripped = $str -replace '\x1b\[[0-9;]*m', ''
     return $stripped.Length
 }
+
+$CLI_VER_FMT = ""
+if ($CLI_VERSION) {
+    $CLI_VER_FMT = "${DOT_L1}${FG_GRAY}v${CLI_VERSION}${R}"
+}
+
+$USER_FMT = ""
+if ($PLAN_TIER -or $USER_EMAIL) {
+    $userInfo = ""
+    if ($PLAN_TIER -and $USER_EMAIL) {
+        $userInfo = "${PLAN_TIER} (${USER_EMAIL})"
+    } elseif ($PLAN_TIER) {
+        $userInfo = $PLAN_TIER
+    } else {
+        $userInfo = $USER_EMAIL
+    }
+    # Truncate if too long
+    if ($userInfo.Length -gt 35) {
+        $userInfo = $userInfo.Substring(0, 32) + "..."
+    }
+    if ($USE_CLASSIC_ICONS) {
+        $USER_FMT = "${DOT_L1}${FG_GRAY}${userInfo}${R}"
+    } else {
+        $USER_FMT = "${DOT_L1}${FG_GRAY}󰇮 ${userInfo}${R}"
+    }
+}
+
+# Get hostname and Tailscale IP
+$HOST_NAME = ""
+try { $HOST_NAME = [System.Net.Dns]::GetHostName() } catch {}
+$TS_IP = ""
+try {
+    if (Get-Command tailscale -ErrorAction SilentlyContinue) {
+        $tsStatus = tailscale ip -4 2>$null
+        if ($tsStatus) { $TS_IP = $tsStatus.Trim() }
+    }
+} catch {}
+
+$HOST_FMT = ""
+if ($HOST_NAME) {
+    $hostDetails = $HOST_NAME
+    if ($TS_IP) {
+        $hostDetails = "${HOST_NAME} (${TS_IP})"
+    }
+    if ($USE_CLASSIC_ICONS) {
+        $HOST_FMT = "${DOT_L1}${FG_BRIGHT_BLUE}${hostDetails}${R}"
+    } else {
+        $HOST_FMT = "${DOT_L1}${FG_BRIGHT_BLUE}󰒋 ${hostDetails}${R}"
+    }
+}
+
+# Get Power Status
+$POWER_FMT = ""
+try {
+    $battery = Get-CimInstance -ClassName Win32_Battery -ErrorAction SilentlyContinue
+    if ($battery) {
+        $status = $battery.BatteryStatus
+        $cap = $battery.EstimatedChargeRemaining
+        # BatteryStatus 1 = Discharging (on battery)
+        if ($status -eq 1) {
+            if ($USE_CLASSIC_ICONS) {
+                $POWER_FMT = "${DOT_L2}${FG_BRIGHT_YELLOW}${ICON_BAT}:${cap}%${R}"
+            } else {
+                $POWER_FMT = "${DOT_L2}${FG_BRIGHT_YELLOW}${ICON_BAT} ${cap}%${R}"
+            }
+        } else {
+            if ($USE_CLASSIC_ICONS) {
+                $POWER_FMT = "${DOT_L2}${FG_GREEN}${ICON_AC}${R}"
+            } else {
+                $POWER_FMT = "${DOT_L2}${FG_GREEN}${ICON_AC} AC${R}"
+            }
+        }
+    }
+} catch {}
 
 # State Indicator
 $S = ""
@@ -318,11 +403,15 @@ if ($CONV_ID) {
 $TOK_DETAILS_WIDE = ""
 $TOK_DETAILS_MED = ""
 if ($CTX_USED -gt 0) {
+    $turnStr = ""
+    if ($TURN_INPUT_TOKENS -gt 0 -or $TURN_OUTPUT_TOKENS -gt 0) {
+        $turnStr = " | turn: +${TURN_INPUT_FMT}/${TURN_OUTPUT_FMT}"
+    }
     if ($USE_CLASSIC_ICONS) {
-        $TOK_DETAILS_WIDE = " (${CTX_USED_FMT}/${CTX_LIMIT_FMT})${DOT_L2}(${INPUT_TOK_FMT} in/${OUTPUT_TOK_FMT} out)"
+        $TOK_DETAILS_WIDE = " (${CTX_USED_FMT}/${CTX_LIMIT_FMT})${DOT_L2}(total: ${INPUT_TOK_FMT}/${OUTPUT_TOK_FMT}${turnStr})"
         $TOK_DETAILS_MED = " (${CTX_USED_FMT}/${CTX_LIMIT_FMT})"
     } else {
-        $TOK_DETAILS_WIDE = " (${CTX_USED_FMT}/${CTX_LIMIT_FMT})${DOT_L2}${FG_YELLOW}${ICON_TOK_SUM} ${R} (${INPUT_TOK_FMT} in/${OUTPUT_TOK_FMT} out)"
+        $TOK_DETAILS_WIDE = " (${CTX_USED_FMT}/${CTX_LIMIT_FMT})${DOT_L2}${FG_YELLOW}${ICON_TOK_SUM} ${R} (total: ${INPUT_TOK_FMT}/${OUTPUT_TOK_FMT}${turnStr})"
         $TOK_DETAILS_MED = " (${CTX_USED_FMT}/${CTX_LIMIT_FMT})"
     }
 }
@@ -450,19 +539,19 @@ function print_right_aligned($left, $right, $total_cols) {
 
 # Output Assembly based on Column Width
 if ($COLS -ge 180) {
-    $LINE1 = "${S}${M}${DIR_FMT}${V}${CONV_FMT}"
+    $LINE1 = "${S}${CLI_VER_FMT}${USER_FMT}${HOST_FMT}${M}${DIR_FMT}${V}${CONV_FMT}"
     if ($QUOTA_FMT) {
-        $LINE2 = "${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}${DOT_L2}${CTX_BAR}${TOK_DETAILS_WIDE}${QUOTA_FMT}"
+        $LINE2 = "${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}${DOT_L2}${CTX_BAR}${TOK_DETAILS_WIDE}${QUOTA_FMT}${POWER_FMT}"
     } else {
-        $LINE2 = "${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}${DOT_L2}${CTX_BAR}${TOK_DETAILS_WIDE}"
+        $LINE2 = "${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}${DOT_L2}${CTX_BAR}${TOK_DETAILS_WIDE}${POWER_FMT}"
     }
     print_right_aligned $LINE1 $LINE2 $COLS
 } elseif ($COLS -ge 90) {
-    $LINE1 = "${S}${M}${DIR_FMT}${V}"
+    $LINE1 = "${S}${CLI_VER_FMT}${USER_FMT}${HOST_FMT}${M}${DIR_FMT}${V}"
     if ($QUOTA_FMT) {
-        $LINE2 = " ${CTX_BAR}${TOK_DETAILS_MED}${DOT_L2}${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}${QUOTA_FMT}"
+        $LINE2 = " ${CTX_BAR}${TOK_DETAILS_MED}${DOT_L2}${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}${QUOTA_FMT}${POWER_FMT}"
     } else {
-        $LINE2 = " ${CTX_BAR}${TOK_DETAILS_MED}${DOT_L2}${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}"
+        $LINE2 = " ${CTX_BAR}${TOK_DETAILS_MED}${DOT_L2}${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}${POWER_FMT}"
     }
     "${FG_GRAY}╭─${R}${LINE1}`n${FG_GRAY}╰─${R}${LINE2}"
 } else {
@@ -475,8 +564,8 @@ if ($COLS -ge 180) {
         }
     }
     if ($QUOTA_FMT) {
-        "${S}${M_SHORT}`n${CTX_BAR}${DOT_L2}${BG_FMT}${QUOTA_FMT}"
+        "${S}${M_SHORT}`n${CTX_BAR}${DOT_L2}${BG_FMT}${QUOTA_FMT}${POWER_FMT}"
     } else {
-        "${S}${M_SHORT}`n${CTX_BAR}${DOT_L2}${BG_FMT}"
+        "${S}${M_SHORT}`n${CTX_BAR}${DOT_L2}${BG_FMT}${POWER_FMT}"
     }
 }

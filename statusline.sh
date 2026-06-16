@@ -2,7 +2,6 @@
 set -euo pipefail
 INPUT_JSON=$(cat)
 
-
 # ─── ANSI Helpers (Standard 16-color palette only) ───────────────────────────
 R="\033[0m"         # Reset
 B="\033[1m"         # Bold
@@ -63,6 +62,11 @@ NUM_COLOR="${FG_BRIGHT_WHITE}${B}"
   read -r GEMINI_WK_RESET
   read -r TP_5H_RESET
   read -r TP_WK_RESET
+  read -r CLI_VERSION
+  read -r PLAN_TIER
+  read -r USER_EMAIL
+  read -r TURN_INPUT_TOKENS
+  read -r TURN_OUTPUT_TOKENS
 } <<< "$(
   echo "$INPUT_JSON" | jq -r '
     (.agent_state // "idle"),
@@ -94,8 +98,13 @@ NUM_COLOR="${FG_BRIGHT_WHITE}${B}"
     (.quota["gemini-5h"].reset_in_seconds // -1),
     (.quota["gemini-weekly"].reset_in_seconds // -1),
     (.quota["3p-5h"].reset_in_seconds // -1),
-    (.quota["3p-weekly"].reset_in_seconds // -1)
-  ' 2>/dev/null || printf "idle\n0\n\nfalse\n\n\nfalse\nfalse\n0\n0\n0\n\n\n80\n\n\n\n0\n0\n0\n0\n100\n-1\n-1\n-1\n-1\n-1\n-1\n-1\n-1\n"
+    (.quota["3p-weekly"].reset_in_seconds // -1),
+    (.version // ""),
+    (.plan_tier // ""),
+    (.email // ""),
+    (.context_window.current_usage.input_tokens // 0),
+    (.context_window.current_usage.output_tokens // 0)
+  ' 2>/dev/null || printf "idle\n0\n\nfalse\n\n\nfalse\nfalse\n0\n0\n0\n\n\n80\n\n\n\n0\n0\n0\n0\n100\n-1\n-1\n-1\n-1\n-1\n-1\n-1\n-1\n\n\n\n0\n0\n"
 )"
 
 
@@ -128,6 +137,8 @@ if [ "$USE_CLASSIC_ICONS" = "true" ]; then
   ICON_CONV="╱"
   ICON_TOK_SUM=""
   ICON_RESET="⌛"
+  ICON_AC="AC"
+  ICON_BAT="BAT"
 else
   DOT_L1="${FG_GRAY} | ${R}"
   DOT_L2="${FG_GRAY} | ${R}"
@@ -149,6 +160,8 @@ else
   ICON_CONV="󰍪"
   ICON_TOK_SUM=""
   ICON_RESET="⌛️"
+  ICON_AC="󰚥"
+  ICON_BAT="🔋"
 fi
 
 
@@ -190,6 +203,82 @@ INPUT_TOK_FMT=$(human_format "$INPUT_TOKENS")
 OUTPUT_TOK_FMT=$(human_format "$OUTPUT_TOKENS")
 CTX_LIMIT_FMT=$(human_format "$CTX_LIMIT")
 CTX_USED_FMT=$(human_format "$CTX_USED")
+TURN_INPUT_FMT=$(human_format "$TURN_INPUT_TOKENS")
+TURN_OUTPUT_FMT=$(human_format "$TURN_OUTPUT_TOKENS")
+
+CLI_VER_FMT=""
+if [ -n "$CLI_VERSION" ]; then
+  CLI_VER_FMT="${DOT_L1}${FG_GRAY}v${CLI_VERSION}${R}"
+fi
+
+USER_FMT=""
+if [ -n "$PLAN_TIER" ] || [ -n "$USER_EMAIL" ]; then
+  user_info=""
+  if [ -n "$PLAN_TIER" ] && [ -n "$USER_EMAIL" ]; then
+    user_info="${PLAN_TIER} (${USER_EMAIL})"
+  elif [ -n "$PLAN_TIER" ]; then
+    user_info="${PLAN_TIER}"
+  else
+    user_info="${USER_EMAIL}"
+  fi
+  # Truncate if too long
+  if [ "${#user_info}" -gt 35 ]; then
+    user_info="${user_info:0:32}..."
+  fi
+  if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+    USER_FMT="${DOT_L1}${FG_GRAY}${user_info}${R}"
+  else
+    USER_FMT="${DOT_L1}${FG_GRAY}󰇮 ${user_info}${R}"
+  fi
+fi
+
+# Get hostname and Tailscale IP
+HOST_NAME=$(hostname 2>/dev/null || echo "")
+TS_IP=$(ip -4 addr show dev tailscale0 2>/dev/null | grep -o 'inet [0-9.]*' | cut -d' ' -f2 || echo "")
+
+HOST_FMT=""
+if [ -n "$HOST_NAME" ]; then
+  host_details="$HOST_NAME"
+  if [ -n "$TS_IP" ]; then
+    host_details="${HOST_NAME} (${TS_IP})"
+  fi
+  if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+    HOST_FMT="${DOT_L1}${FG_BRIGHT_BLUE}${host_details}${R}"
+  else
+    HOST_FMT="${DOT_L1}${FG_BRIGHT_BLUE}󰒋 ${host_details}${R}"
+  fi
+fi
+
+# Get Power Status (Resilience check)
+POWER_FMT=""
+if [ -f /sys/class/power_supply/ACAD/online ]; then
+  AC_ON=$(cat /sys/class/power_supply/ACAD/online 2>/dev/null || echo "1")
+  BAT_CAP=$(cat /sys/class/power_supply/BAT1/capacity 2>/dev/null || echo "")
+  
+  if [ "$AC_ON" = "0" ]; then
+    # Running on battery/UPS
+    if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+      if [ -n "$BAT_CAP" ]; then
+        POWER_FMT="${DOT_L2}${FG_BRIGHT_YELLOW}${ICON_BAT}:${BAT_CAP}%${R}"
+      else
+        POWER_FMT="${DOT_L2}${FG_BRIGHT_YELLOW}${ICON_BAT}${R}"
+      fi
+    else
+      if [ -n "$BAT_CAP" ]; then
+        POWER_FMT="${DOT_L2}${FG_BRIGHT_YELLOW}${ICON_BAT} ${BAT_CAP}%${R}"
+      else
+        POWER_FMT="${DOT_L2}${FG_BRIGHT_YELLOW}${ICON_BAT}${R}"
+      fi
+    fi
+  else
+    # Running on AC (Mains)
+    if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+      POWER_FMT="${DOT_L2}${FG_GREEN}${ICON_AC}${R}"
+    else
+      POWER_FMT="${DOT_L2}${FG_GREEN}${ICON_AC} AC${R}"
+    fi
+  fi
+fi
 
 shorten_path() {
   local path=$1
@@ -338,11 +427,15 @@ fi
 TOK_DETAILS_WIDE=""
 TOK_DETAILS_MED=""
 if [ "$CTX_USED" -gt 0 ] 2>/dev/null; then
+  turn_str=""
+  if [ "$TURN_INPUT_TOKENS" -gt 0 ] || [ "$TURN_OUTPUT_TOKENS" -gt 0 ]; then
+    turn_str=" | turn: +${TURN_INPUT_FMT}/${TURN_OUTPUT_FMT}"
+  fi
   if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-    TOK_DETAILS_WIDE=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})${DOT_L2}(${INPUT_TOK_FMT} in/${OUTPUT_TOK_FMT} out)"
+    TOK_DETAILS_WIDE=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})${DOT_L2}(total: ${INPUT_TOK_FMT}/${OUTPUT_TOK_FMT}${turn_str})"
     TOK_DETAILS_MED=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})"
   else
-    TOK_DETAILS_WIDE=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})${DOT_L2}${FG_YELLOW}${ICON_TOK_SUM} ${R} (${INPUT_TOK_FMT} in/${OUTPUT_TOK_FMT} out)"
+    TOK_DETAILS_WIDE=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})${DOT_L2}${FG_YELLOW}${ICON_TOK_SUM} ${R} (total: ${INPUT_TOK_FMT}/${OUTPUT_TOK_FMT}${turn_str})"
     TOK_DETAILS_MED=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})"
   fi
 fi
@@ -511,22 +604,22 @@ print_right_aligned() {
 
 # ─── Output Assembly ─────────────────────────────────────────────────────────
 if [ "$COLS" -ge 180 ]; then
-  LINE1="${S}${M}${DIR_FMT}${V}${CONV_FMT}"
+  LINE1="${S}${CLI_VER_FMT}${USER_FMT}${HOST_FMT}${M}${DIR_FMT}${V}${CONV_FMT}"
 
   if [ -n "$QUOTA_FMT" ]; then
-    LINE2="${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}${DOT_L2}${CTX_BAR}${TOK_DETAILS_WIDE}${QUOTA_FMT}"
+    LINE2="${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}${DOT_L2}${CTX_BAR}${TOK_DETAILS_WIDE}${QUOTA_FMT}${POWER_FMT}"
   else
-    LINE2="${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}${DOT_L2}${CTX_BAR}${TOK_DETAILS_WIDE}"
+    LINE2="${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}${DOT_L2}${CTX_BAR}${TOK_DETAILS_WIDE}${POWER_FMT}"
   fi
   print_right_aligned "$LINE1" "$LINE2" "$COLS"
 
 elif [ "$COLS" -ge 90 ]; then
   # Medium Layout: Two-line layout with border
-  LINE1="${S}${M}${DIR_FMT}${V}"
+  LINE1="${S}${CLI_VER_FMT}${USER_FMT}${HOST_FMT}${M}${DIR_FMT}${V}"
   if [ -n "$QUOTA_FMT" ]; then
-    LINE2=" ${CTX_BAR}${TOK_DETAILS_MED}${DOT_L2}${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}${QUOTA_FMT}"
+    LINE2=" ${CTX_BAR}${TOK_DETAILS_MED}${DOT_L2}${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}${QUOTA_FMT}${POWER_FMT}"
   else
-    LINE2=" ${CTX_BAR}${TOK_DETAILS_MED}${DOT_L2}${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}"
+    LINE2=" ${CTX_BAR}${TOK_DETAILS_MED}${DOT_L2}${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}${POWER_FMT}"
   fi
 
   echo -e "${FG_GRAY}╭─${R}${LINE1}"
@@ -544,8 +637,8 @@ else
 
   echo -e "${S}${M_SHORT}"
   if [ -n "$QUOTA_FMT" ]; then
-    echo -e "${CTX_BAR}${DOT_L2}${BG_FMT}${QUOTA_FMT}"
+    echo -e "${CTX_BAR}${DOT_L2}${BG_FMT}${QUOTA_FMT}${POWER_FMT}"
   else
-    echo -e "${CTX_BAR}${DOT_L2}${BG_FMT}"
+    echo -e "${CTX_BAR}${DOT_L2}${BG_FMT}${POWER_FMT}"
   fi
 fi
