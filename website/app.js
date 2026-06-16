@@ -143,7 +143,8 @@ document.addEventListener('DOMContentLoaded', () => {
               <span class="statusline-progress-label">CTX [██████████░░░░░░░░░░] 50%</span>
             </div>
             <span class="status-badge font-mono" style="background: rgba(255,255,255,0.03);">󰢱 120.4K/1.0M t</span>
-            <span class="status-badge font-mono" style="background: rgba(16, 185, 129, 0.05); color: #34d399;">󰅠 5h: 90%</span>
+            <span class="status-badge font-mono" style="background: rgba(6, 182, 212, 0.05); color: #06b6d4;">󰅠 5H: 90%</span>
+            <span class="status-badge font-mono" style="background: rgba(167, 139, 250, 0.05); color: #c084fc;">󰅠 7D: 85%</span>
             <span class="status-badge" style="background: rgba(255,255,255,0.03);">󱙺 2  1</span>
           </div>
         </div>
@@ -166,8 +167,9 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <span style="font-size: 0.8rem; color: var(--text-muted);">120.4K/1.0M t</span>
           </div>
-          <div class="statusline-cell">
-            <span class="status-badge font-mono" style="background: rgba(16, 185, 129, 0.05); color: #34d399; font-size: 0.75rem;">󰅠 5h: 90%</span>
+          <div class="statusline-cell" style="display: flex; gap: 4px;">
+            <span class="status-badge font-mono" style="background: rgba(6, 182, 212, 0.05); color: #06b6d4; font-size: 0.75rem;">󰅠 5H: 90%</span>
+            <span class="status-badge font-mono" style="background: rgba(167, 139, 250, 0.05); color: #c084fc; font-size: 0.75rem;">󰅠 7D: 85%</span>
           </div>
         </div>
       `,
@@ -176,7 +178,8 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="statusline-cell">
             <span class="status-badge net-on">󰖩 ON</span>
             <span class="status-badge git-branch"> main*</span>
-            <span class="status-badge error">󰅠 5h: 90%</span>
+            <span class="status-badge error" style="background: rgba(6, 182, 212, 0.05); color: #06b6d4;">󰅠 5H: 90%</span>
+            <span class="status-badge error" style="background: rgba(167, 139, 250, 0.05); color: #c084fc;">󰅠 7D: 85%</span>
           </div>
           <div class="statusline-cell">
             <span class="status-badge" style="background: rgba(255,255,255,0.03);">󱙺 2  1</span>
@@ -197,7 +200,8 @@ document.addEventListener('DOMContentLoaded', () => {
               <span class="statusline-progress-label">CTX [**********..........] 50%</span>
             </div>
             <span class="status-badge font-mono" style="background: rgba(255,255,255,0.03);">tok: 120.4K/1.0M</span>
-            <span class="status-badge font-mono" style="background: rgba(16, 185, 129, 0.05); color: #34d399;">q-5h: 90%</span>
+            <span class="status-badge font-mono" style="background: rgba(6, 182, 212, 0.05); color: #06b6d4;">q-5H: 90%</span>
+            <span class="status-badge font-mono" style="background: rgba(167, 139, 250, 0.05); color: #c084fc;">q-7D: 85%</span>
             <span class="status-badge" style="background: rgba(255,255,255,0.03);">subs: 2 tasks: 1</span>
           </div>
         </div>
@@ -220,12 +224,13 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <span style="font-size: 0.8rem; color: var(--text-muted);">120.4K/1.0M</span>
           </div>
-          <div class="statusline-cell">
-            <span class="status-badge font-mono" style="background: rgba(16, 185, 129, 0.05); color: #34d399; font-size: 0.75rem;">q-5h: 90%</span>
+          <div class="statusline-cell" style="display: flex; gap: 4px;">
+            <span class="status-badge font-mono" style="background: rgba(6, 182, 212, 0.05); color: #06b6d4; font-size: 0.75rem;">q-5H: 90%</span>
+            <span class="status-badge font-mono" style="background: rgba(167, 139, 250, 0.05); color: #c084fc; font-size: 0.75rem;">q-7D: 85%</span>
           </div>
         </div>
       `,
-      // Classic + Small shows the exact multi-line list matching the user request with Gemini 3.5 Flash
+      // Classic + Small shows the exact multi-line list matching the user request with Gemini 3.5 Flash and both quotas
       small: `
         <div style="line-height: 1.5; font-family: var(--font-mono); font-size: 0.85rem; padding: 4px 0;">
           <div style="color: #10b981;">[NET_ON]</div>
@@ -233,7 +238,8 @@ document.addEventListener('DOMContentLoaded', () => {
           <div style="color: #06b6d4; font-style: italic;">mod: gemini-3.5-flash</div>
           <div style="color: #f59e0b;">CTX [**********..........] 50%</div>
           <div style="color: #f8fafc;">tok: 120.4K/1.0M</div>
-          <div style="color: #10b981;">q-5h: 90%</div>
+          <div style="color: #10b981;">q-5H: 90%</div>
+          <div style="color: #a78bfa;">q-7D: 85%</div>
           <div style="color: #94a3b8;">subs: 2 tasks: 1</div>
         </div>
       `
