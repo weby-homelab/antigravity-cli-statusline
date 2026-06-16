@@ -59,6 +59,9 @@ To enable it, simply append `--classic` (or `--no-nerdfont` / `--compatibility`)
 
 ## 📥 Installation
 
+> [!WARNING]
+> Do **NOT** run the installation commands with `sudo`. The statusline installs locally in your home directory (`~/.antigravity` and `~/.gemini/`). Running with `sudo` will cause file permission issues for your user account.
+
 Choose the installation command for your operating system:
 
 ### 🐧 macOS / Linux
@@ -180,6 +183,10 @@ Your `%USERPROFILE%\.gemini\antigravity-cli\settings.json` will be configured as
 ---
 
 ## 📝 Important Notes & Release History
+
+### 🚀 Release v0.1.3 (June 16, 2026)
+- **One-liner Web Installation**: Added full support for direct internet-based installation using `curl` or `wget` (without cloning the repository locally) for Linux, macOS, and Windows.
+- **Sudo Safety Check**: Added an active check to block execution when run with `sudo` or as `root` via `sudo` on Linux/macOS to protect local user home directory permissions.
 
 ### 🚀 Release v0.1.2 (June 15, 2026)
 - **Classic Compatibility Mode**: Added support for terminals without Nerd Fonts (e.g. ChromeOS Terminal, Emacs, legacy TTYs). You can activate it by adding `--classic`, `--no-nerdfont`, or `--compatibility` arguments to the `command` field in your `settings.json`.
