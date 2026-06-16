@@ -1038,3 +1038,9 @@ body.lang-ua .lang-en {
   display: none !important;
 }
 
+/* Fallback: if body has neither class, default to hiding UA */
+body:not(.lang-ua):not(.lang-en) .lang-ua {
+  display: none !important;
+}
+
+
