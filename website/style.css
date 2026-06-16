@@ -545,6 +545,7 @@ nav a:hover {
   font-size: 0.85rem;
   transition: var(--transition-normal);
   width: 100%;
+  font-family: "FiraCode Nerd Font", var(--font-mono);
 }
 
 .statusline-preview.medium {
