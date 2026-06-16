@@ -30,24 +30,42 @@ INSTALL_DIR="$HOME/.antigravity"
 echo -e "Creating directory ${INSTALL_DIR}..."
 mkdir -p "$INSTALL_DIR"
 
-# 3. Copy files
-SCRIPT_SOURCE="$(dirname "$0")/statusline.sh"
+# 3. Copy/Download files
 SCRIPT_TARGET="${INSTALL_DIR}/statusline.sh"
-UNINSTALL_SOURCE="$(dirname "$0")/uninstall.sh"
 UNINSTALL_TARGET="${INSTALL_DIR}/uninstall.sh"
 
-if [ ! -f "$SCRIPT_SOURCE" ]; then
-  echo -e "${RED}Error: Cannot find statusline.sh in $(dirname "$0")${RESET}"
-  exit 1
+LOCAL_DIR=""
+if [ -f "$(dirname "$0")/statusline.sh" ]; then
+  LOCAL_DIR="$(dirname "$0")"
 fi
 
-echo -e "Copying statusline.sh to ${SCRIPT_TARGET}..."
-cp "$SCRIPT_SOURCE" "$SCRIPT_TARGET"
-chmod +x "$SCRIPT_TARGET"
+RAW_URL="https://raw.githubusercontent.com/weby-homelab/antigravity-cli-statusline/main"
 
-if [ -f "$UNINSTALL_SOURCE" ]; then
-  echo -e "Copying uninstall.sh to ${UNINSTALL_TARGET}..."
-  cp "$UNINSTALL_SOURCE" "$UNINSTALL_TARGET"
+if [ -n "$LOCAL_DIR" ]; then
+  echo -e "Installing from local files..."
+  cp "${LOCAL_DIR}/statusline.sh" "$SCRIPT_TARGET"
+  chmod +x "$SCRIPT_TARGET"
+  if [ -f "${LOCAL_DIR}/uninstall.sh" ]; then
+    cp "${LOCAL_DIR}/uninstall.sh" "$UNINSTALL_TARGET"
+    chmod +x "$UNINSTALL_TARGET"
+  fi
+else
+  echo -e "Installing from remote repository..."
+  if command -v curl &> /dev/null; then
+    echo -e "Downloading statusline.sh using curl..."
+    curl -fsSL "${RAW_URL}/statusline.sh" -o "$SCRIPT_TARGET"
+    echo -e "Downloading uninstall.sh using curl..."
+    curl -fsSL "${RAW_URL}/uninstall.sh" -o "$UNINSTALL_TARGET"
+  elif command -v wget &> /dev/null; then
+    echo -e "Downloading statusline.sh using wget..."
+    wget -qO "$SCRIPT_TARGET" "${RAW_URL}/statusline.sh"
+    echo -e "Downloading uninstall.sh using wget..."
+    wget -qO "$UNINSTALL_TARGET" "${RAW_URL}/uninstall.sh"
+  else
+    echo -e "${RED}Error: Neither curl nor wget is installed. Cannot download files.${RESET}"
+    exit 1
+  fi
+  chmod +x "$SCRIPT_TARGET"
   chmod +x "$UNINSTALL_TARGET"
 fi
 

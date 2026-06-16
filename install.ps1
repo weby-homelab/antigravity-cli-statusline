@@ -10,22 +10,39 @@ if (-not (Test-Path $installDir)) {
     New-Item -ItemType Directory -Path $installDir | Out-Null
 }
 
-$sourceScript = Join-Path $PSScriptRoot "statusline.ps1"
 $targetScript = Join-Path $installDir "statusline.ps1"
-$sourceUninstall = Join-Path $PSScriptRoot "uninstall.ps1"
 $targetUninstall = Join-Path $installDir "uninstall.ps1"
 
-if (-not (Test-Path $sourceScript)) {
-    Write-Error "Could not find statusline.ps1 in: $PSScriptRoot"
-    exit 1
+$rawUrl = "https://raw.githubusercontent.com/weby-homelab/antigravity-cli-statusline/main"
+
+# Check if we have local files
+$isLocal = $false
+if ($PSScriptRoot) {
+    $sourceScript = Join-Path $PSScriptRoot "statusline.ps1"
+    if (Test-Path $sourceScript) {
+        $isLocal = $true
+    }
 }
 
-Write-Host "Copying statusline.ps1 to $targetScript..."
-Copy-Item -Path $sourceScript -Destination $targetScript -Force
-
-if (Test-Path $sourceUninstall) {
-    Write-Host "Copying uninstall.ps1 to $targetUninstall..."
-    Copy-Item -Path $sourceUninstall -Destination $targetUninstall -Force
+if ($isLocal) {
+    Write-Host "Installing from local files..."
+    $sourceScript = Join-Path $PSScriptRoot "statusline.ps1"
+    $sourceUninstall = Join-Path $PSScriptRoot "uninstall.ps1"
+    
+    Write-Host "Copying statusline.ps1 to $targetScript..."
+    Copy-Item -Path $sourceScript -Destination $targetScript -Force
+    
+    if (Test-Path $sourceUninstall) {
+        Write-Host "Copying uninstall.ps1 to $targetUninstall..."
+        Copy-Item -Path $sourceUninstall -Destination $targetUninstall -Force
+    }
+} else {
+    Write-Host "Installing from remote repository..."
+    Write-Host "Downloading statusline.ps1..."
+    Invoke-WebRequest -Uri "$rawUrl/statusline.ps1" -OutFile $targetScript -UseBasicParsing
+    
+    Write-Host "Downloading uninstall.ps1..."
+    Invoke-WebRequest -Uri "$rawUrl/uninstall.ps1" -OutFile $targetUninstall -UseBasicParsing
 }
 
 # Configuration file

@@ -62,9 +62,15 @@ To enable it, simply append `--classic` (or `--no-nerdfont` / `--compatibility`)
 Choose the installation command for your operating system:
 
 ### 🐧 macOS / Linux
-Run this one-liner to clone the repository to a temporary directory, ensure the installer is executable, run the installer, and automatically clean up the temporary folder:
+
+**One-liner (curl):**
 ```bash
-git clone https://github.com/weby-homelab/antigravity-cli-statusline.git /tmp/antigravity-cli-statusline && chmod +x /tmp/antigravity-cli-statusline/install.sh && /tmp/antigravity-cli-statusline/install.sh && rm -rf /tmp/antigravity-cli-statusline
+curl -fsSL https://raw.githubusercontent.com/weby-homelab/antigravity-cli-statusline/main/install.sh | bash
+```
+
+**One-liner (wget):**
+```bash
+wget -qO- https://raw.githubusercontent.com/weby-homelab/antigravity-cli-statusline/main/install.sh | bash
 ```
 
 **Manual Installation:**
@@ -82,9 +88,16 @@ git clone https://github.com/weby-homelab/antigravity-cli-statusline.git /tmp/an
 ---
 
 ### 🪟 Windows (PowerShell)
-Run this one-liner in PowerShell (run as Administrator if your execution policy is restricted) to install and automatically clean up the temporary directory:
+
+**One-liner (PowerShell WebRequest):**
 ```powershell
-git clone https://github.com/weby-homelab/antigravity-cli-statusline.git $env:TEMP/antigravity-cli-statusline; Powershell -NoProfile -ExecutionPolicy Bypass -File $env:TEMP/antigravity-cli-statusline/install.ps1; Remove-Item -Recurse -Force $env:TEMP/antigravity-cli-statusline
+powershell -NoProfile -ExecutionPolicy Bypass -Command "iex (irm https://raw.githubusercontent.com/weby-homelab/antigravity-cli-statusline/main/install.ps1)"
+```
+
+**One-liner (curl on Windows):**
+If you have curl.exe installed on Windows, you can download and run the installer in one line:
+```powershell
+curl -fsSL https://raw.githubusercontent.com/weby-homelab/antigravity-cli-statusline/main/install.ps1 | powershell -NoProfile -ExecutionPolicy Bypass -Command -
 ```
 
 **Manual Installation:**
