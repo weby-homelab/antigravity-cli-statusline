@@ -166,11 +166,19 @@ fi
 
 
 # ─── VCS directly from git (bypasses JSON parsing entirely) ──────────────────
+run_with_timeout() {
+  if command -v timeout &>/dev/null; then
+    timeout 1s "$@"
+  else
+    "$@"
+  fi
+}
+
 GIT_DIR="${CWD:-.}"
-VCS_BRANCH=$(git -C "$GIT_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+VCS_BRANCH=$(run_with_timeout git -C "$GIT_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 if [ -n "$VCS_BRANCH" ]; then
   VCS_TYPE="git"
-  if git -C "$GIT_DIR" status --porcelain 2>/dev/null | grep -q .; then
+  if run_with_timeout git -C "$GIT_DIR" status --porcelain 2>/dev/null | grep -q .; then
     VCS_DIRTY="true"
   else
     VCS_DIRTY="false"
@@ -251,9 +259,15 @@ fi
 
 # Get Power Status (Resilience check)
 POWER_FMT=""
-if [ -f /sys/class/power_supply/ACAD/online ]; then
-  AC_ON=$(cat /sys/class/power_supply/ACAD/online 2>/dev/null || echo "1")
-  BAT_CAP=$(cat /sys/class/power_supply/BAT1/capacity 2>/dev/null || echo "")
+AC_ONLINE_PATH=$(ls /sys/class/power_supply/*/online 2>/dev/null | head -n 1)
+BAT_CAP_PATH=$(ls /sys/class/power_supply/*/capacity 2>/dev/null | head -n 1)
+
+if [ -n "$AC_ONLINE_PATH" ]; then
+  AC_ON=$(cat "$AC_ONLINE_PATH" 2>/dev/null || echo "1")
+  BAT_CAP=""
+  if [ -n "$BAT_CAP_PATH" ]; then
+    BAT_CAP=$(cat "$BAT_CAP_PATH" 2>/dev/null || echo "")
+  fi
   
   if [ "$AC_ON" = "0" ]; then
     # Running on battery/UPS
