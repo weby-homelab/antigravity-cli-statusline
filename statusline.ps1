@@ -4,6 +4,48 @@ $ProgressPreference = 'SilentlyContinue'
 # Set Output Encoding to UTF-8 to support nerd font icons on Windows
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
+# Check for legend parameter before reading stdin
+foreach ($arg in $args) {
+    if ($arg -eq "--legend" -or $arg -eq "-l" -or $arg -eq "-Legend" -or $arg -eq "legend") {
+        Write-Host "🚀 Antigravity CLI Statusline Legend" -ForegroundColor Green
+        Write-Host "This statusline adapts dynamically to your terminal width and theme settings.`n"
+        
+        Write-Host "LAYOUTS:" -ForegroundColor White
+        Write-Host "  - Wide Layout (>= 180 chars): Single-row, full developer telemetry dashboard."
+        Write-Host "  - Medium Layout (>= 90 chars): Two-line boxed block to prevent line wrap."
+        Write-Host "  - Small Layout (< 90 chars): Minimalist indicator for status, model, context & tasks.`n"
+        
+        Write-Host "COMPONENTS & ICONS:" -ForegroundColor White
+        Write-Host "  Field                Nerd Font   Classic     Description" -ForegroundColor White
+        Write-Host "  --------------------------------------------------------------------------------"
+        
+        Write-Host "  State: READY         " -NoNewline; Write-Host "           " -ForegroundColor Green -NoNewline; Write-Host "●           " -ForegroundColor Green -NoNewline; Write-Host "Agent is idle, ready for user requests."
+        Write-Host "  State: THINKING      " -NoNewline; Write-Host "󰟷           " -ForegroundColor Yellow -NoNewline; Write-Host "◆           " -ForegroundColor Yellow -NoNewline; Write-Host "Agent is processing/thinking."
+        Write-Host "  State: WORKING       " -NoNewline; Write-Host "           " -ForegroundColor Cyan -NoNewline; Write-Host "⚙           " -ForegroundColor Cyan -NoNewline; Write-Host "Agent is executing background operations."
+        Write-Host "  State: TOOL          " -NoNewline; Write-Host "           " -ForegroundColor Magenta -NoNewline; Write-Host "🔧          " -ForegroundColor Magenta -NoNewline; Write-Host "Agent is running a tool."
+        Write-Host "  State: UNKNOWN       " -NoNewline; Write-Host "           " -ForegroundColor White -NoNewline; Write-Host "⏳          " -ForegroundColor White -NoNewline; Write-Host "Agent state is unknown or initializing."
+        Write-Host "  VCS Branch           " -NoNewline; Write-Host "           " -ForegroundColor Blue -NoNewline; Write-Host "/           " -ForegroundColor Gray -NoNewline; Write-Host "Current Git branch name (Red + * if dirty)."
+        Write-Host "  Model                " -NoNewline; Write-Host "           " -ForegroundColor Magenta -NoNewline; Write-Host "(None)      " -ForegroundColor DarkGray -NoNewline; Write-Host "Current active LLM model name/ID."
+        Write-Host "  Sandbox Network      " -NoNewline; Write-Host "󰒙           " -ForegroundColor Green -NoNewline; Write-Host "ON (net)    " -ForegroundColor Green -NoNewline; Write-Host "Sandbox enabled with internet access."
+        Write-Host "  Sandbox Restricted   " -NoNewline; Write-Host "󰴴           " -ForegroundColor Green -NoNewline; Write-Host "ON (no-net) " -ForegroundColor Green -NoNewline; Write-Host "Sandbox enabled with network disabled."
+        Write-Host "  Sandbox Off          " -NoNewline; Write-Host "󰦜           " -ForegroundColor Red -NoNewline; Write-Host "sandbox off " -ForegroundColor Gray -NoNewline; Write-Host "Sandbox is disabled (runs on host)."
+        Write-Host "  Context Bar          " -NoNewline; Write-Host "󱍏           " -ForegroundColor Yellow -NoNewline; Write-Host "ctx         " -ForegroundColor Gray -NoNewline; Write-Host "20-segment visual context window usage bar."
+        Write-Host "  Artifacts            " -NoNewline; Write-Host "           " -ForegroundColor Blue -NoNewline; Write-Host "artifacts   " -ForegroundColor Gray -NoNewline; Write-Host "Number of active output artifacts."
+        Write-Host "  Subagents            " -NoNewline; Write-Host "󱙺           " -ForegroundColor Cyan -NoNewline; Write-Host "subagents   " -ForegroundColor Gray -NoNewline; Write-Host "Number of spawned active subagents."
+        Write-Host "  Background Tasks     " -NoNewline; Write-Host "           " -ForegroundColor Magenta -NoNewline; Write-Host "tasks       " -ForegroundColor Gray -NoNewline; Write-Host "Number of background tasks running."
+        Write-Host "  Current Directory    " -NoNewline; Write-Host "           " -ForegroundColor Cyan -NoNewline; Write-Host "/           " -ForegroundColor Gray -NoNewline; Write-Host "Current working directory path (shortened)."
+        Write-Host "  Conversation ID      " -NoNewline; Write-Host "󰍪           " -ForegroundColor Gray -NoNewline; Write-Host "/           " -ForegroundColor Gray -NoNewline; Write-Host "Short prefix of the current session ID."
+        Write-Host "  Tokens Sum           " -NoNewline; Write-Host "           " -ForegroundColor Yellow -NoNewline; Write-Host "(None)      " -ForegroundColor DarkGray -NoNewline; Write-Host "Total input/output tokens parsed."
+        Write-Host "  Quota Reset Time     " -NoNewline; Write-Host "⌛️          " -ForegroundColor Gray -NoNewline; Write-Host "⌛          " -ForegroundColor Gray -NoNewline; Write-Host "Remaining time until LLM quota resets."
+        Write-Host "  Power Mains (AC)     " -NoNewline; Write-Host "󰚥           " -ForegroundColor Green -NoNewline; Write-Host "AC          " -ForegroundColor Green -NoNewline; Write-Host "Host is connected to external AC power."
+        Write-Host "  Power Battery (UPS)  " -NoNewline; Write-Host "🔋           " -ForegroundColor Yellow -NoNewline; Write-Host "BAT         " -ForegroundColor Yellow -NoNewline; Write-Host "Host is running on battery (shows charge %)."
+        
+        Write-Host "`nTIPS:" -ForegroundColor White
+        Write-Host "  To toggle Classic Icon mode, use the -classic or --classic option in settings.json configuration."
+        exit
+    }
+}
+
 # Read JSON input from stdin
 $inputJson = $input | Out-String
 if (-not $inputJson -or $inputJson.Trim().Length -eq 0) {
