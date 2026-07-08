@@ -16,6 +16,10 @@ Provides a rich, single-row layout displaying all developer telemetry and active
 
 ### 📱 Medium Layout (Terminal width $\ge$ 90 chars)
 Wraps status into a clean two-line boxed block to avoid command output line wrap.
+![Medium Layout](screenshots/Antigravity-cli-statusline-midle.png)
+
+### 📟 Small Layout (Terminal width < 90 chars)
+A minimalist layout displaying only the agent status, current model, and context window bar.
 ![Compact Layout](screenshots/Antigravity-cli-statusline-min.png)
 
 ---
@@ -26,28 +30,31 @@ You can inspect the legend of all components and icons directly from your termin
 * **Linux/macOS:** `~/.antigravity/statusline.sh --legend` (or `-l` / `legend`)
 * **Windows (PowerShell):** `powershell -NoProfile -ExecutionPolicy Bypass -File $HOME\.antigravity\statusline.ps1 -Legend` (or `--legend`)
 
-| Component | Nerd Font Icon | Classic Icon | Description |
+> [!IMPORTANT]
+> **Nerd Font Glyphs Rendering:** The icons in the "Nerd Font Icon" column utilize characters from Nerd Fonts (V3+). If they appear as boxes, squares, or question marks in your web browser or on GitHub, this is expected since web browsers do not load Nerd Fonts by default. In your terminal, they will render correctly if you have a Nerd Font installed and active. The Unicode codepoints (e.g. `U+F192`) are provided for reference.
+
+| Component | Nerd Font Icon (Codepoint) | Classic Icon | Description |
 | :--- | :---: | :---: | :--- |
-| **State: READY** | ` READY` | `● READY` | Agent is idle, waiting for commands. |
-| **State: THINKING** | `󰟷 THINKING` | `◆ THINKING` | Agent is currently thinking/processing request. |
-| **State: WORKING** | ` WORKING` | `⚙ WORKING` | Agent is performing background tasks. |
-| **State: TOOL** | ` TOOL` | `🔧 TOOL` | Agent is currently executing a tool. |
-| **State: UNKNOWN** | ` STATE` | `⏳ STATE` | Agent state is unknown or initializing. |
-| **VCS Branch** | ` branch` | `╱ branch` | Active Git branch (renders Red + `*` if dirty). |
-| **Active Model** | ` model` | `model` | Active LLM model name or ID. |
-| **Sandbox (Network)** | `󰒙 ON (net)` | `ON (net)` | Execution sandbox active with full network access. |
-| **Sandbox (Restricted)** | `󰴴 ON (no-net)` | `ON (no-net)` | Execution sandbox active with disabled network. |
-| **Sandbox (Off)** | `󰦜 OFF` | `sandbox off` | Sandbox is disabled, commands run on host. |
-| **Context Window Bar** | `󱍏 █░░...` | `ctx █··...` | 20-segment visual representation of context usage. |
-| **Artifacts Counter** | ` count` | `artifacts count` | Number of currently active workspace artifacts. |
-| **Subagents Counter** | `󱙺 count` | `subagents count` | Number of spawned active subagent processes. |
-| **Background Tasks** | ` count` | `tasks count` | Number of running background asynchronous tasks. |
-| **Current Directory** | ` path` | `╱ path` | Shortened current working directory path. |
-| **Conversation ID** | `󰍪 id` | `╱ id` | 8-character prefix of the current session ID. |
-| **Token Sum** | ` tokens` | `tokens` | Total input + output tokens processed in session. |
-| **Quota Reset** | `⌛️ time` | `⌛ time` | Remaining time until model API quota limits reset. |
-| **Power (Mains/AC)** | `󰚥 AC` | `AC` | Connected to AC power. |
-| **Power (Battery)** | `🔋 charge%` | `BAT:charge%` | Running on battery or UPS (shows charge percentage). |
+| **State: READY** | ` (U+F192)` READY | `●` READY | Agent is idle, waiting for commands. |
+| **State: THINKING** | `󰟷 (U+F07F7)` THINKING | `◆` THINKING | Agent is currently thinking/processing request. |
+| **State: WORKING** | ` (U+F423)` WORKING | `⚙` WORKING | Agent is performing background tasks. |
+| **State: TOOL** | ` (U+F425)` TOOL | `🔧` TOOL | Agent is currently executing a tool. |
+| **State: UNKNOWN** | ` (U+F252)` STATE | `⏳` STATE | Agent state is unknown or initializing. |
+| **VCS Branch** | ` (U+F418)` branch | `╱` branch | Active Git branch (renders Red + `*` if dirty). |
+| **Active Model** | ` (U+F400)` model | `model` | Active LLM model name or ID. |
+| **Sandbox (Network)** | `󰒙 (U+F0499)` ON (net) | `ON (net)` | Execution sandbox active with full network access. |
+| **Sandbox (Restricted)** | `󰴴 (U+F0D34)` ON (no-net) | `ON (no-net)` | Execution sandbox active with disabled network. |
+| **Sandbox (Off)** | `󰦜 (U+F099C)` OFF | `sandbox off` | Sandbox is disabled, commands run on host. |
+| **Context Window Bar** | `󱍏 (U+F134F)` █░░... | `ctx` █··... | 20-segment visual representation of context usage. |
+| **Artifacts Counter** | ` (U+F0F6)` count | `artifacts` count | Number of currently active workspace artifacts. |
+| **Subagents Counter** | `󱙺 (U+F167A)` count | `subagents` count | Number of spawned active subagent processes. |
+| **Background Tasks** | ` (U+F0AE)` count | `tasks` count | Number of running background asynchronous tasks. |
+| **Current Directory** | ` (U+EA83)` path | `╱` path | Shortened current working directory path. |
+| **Conversation ID** | `󰍪 (U+F036A)` id | `╱` id | 8-character prefix of the current session ID. |
+| **Token Sum** | ` (U+E26B)` tokens | `tokens` | Total input + output tokens processed in session. |
+| **Quota Reset** | `⌛️ (U+231B)` time | `⌛` time | Remaining time until model API quota limits reset. |
+| **Power (Mains/AC)** | `󰚥 (U+F06A5)` AC | `AC` | Connected to AC power. |
+| **Power (Battery)** | `🔋 (U+1F50B)` charge% | `BAT:`charge% | Running on battery or UPS (shows charge percentage). |
 
 ---
 
