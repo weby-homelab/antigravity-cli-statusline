@@ -1,7 +1,5 @@
 #!/bin/bash
 set -euo pipefail
-INPUT_JSON=$(cat)
-
 # ─── ANSI Helpers (Standard 16-color palette only) ───────────────────────────
 R="\033[0m"         # Reset
 B="\033[1m"         # Bold
@@ -29,6 +27,49 @@ FG_BRIGHT_WHITE="\033[97m"
 
 # Number Highlight Color
 NUM_COLOR="${FG_BRIGHT_WHITE}${B}"
+
+# ─── Legend display check ────────────────────────────────────────────────────
+for arg in "$@"; do
+  if [ "$arg" = "--legend" ] || [ "$arg" = "-l" ] || [ "$arg" = "legend" ]; then
+    echo -e "${FG_BRIGHT_GREEN}${B}🚀 Antigravity CLI Statusline Legend${R}"
+    echo -e "This statusline adapts dynamically to your terminal width and theme settings."
+    echo -e ""
+    echo -e "${B}LAYOUTS:${R}"
+    echo -e "  - ${B}Wide Layout (>= 180 chars):${R} Single-row, full developer telemetry dashboard."
+    echo -e "  - ${B}Medium Layout (>= 90 chars):${R} Two-line boxed block to prevent line wrap."
+    echo -e "  - ${B}Small Layout (< 90 chars):${R} Minimalist indicator for status, model, context & tasks."
+    echo -e ""
+    echo -e "${B}COMPONENTS & ICONS:${R}"
+    echo -e "  ${B}Field                Nerd Font   Classic     Description${R}"
+    echo -e "  --------------------------------------------------------------------------------"
+    echo -e "  State: READY         ${FG_BRIGHT_GREEN}${R}          ${FG_BRIGHT_GREEN}●${R}           Agent is idle, ready for user requests."
+    echo -e "  State: THINKING      ${FG_BRIGHT_YELLOW}󰟷${R}          ${FG_BRIGHT_YELLOW}◆${R}           Agent is processing/thinking."
+    echo -e "  State: WORKING       ${FG_BRIGHT_CYAN}${R}          ${FG_BRIGHT_CYAN}⚙${R}           Agent is executing background operations."
+    echo -e "  State: TOOL          ${FG_BRIGHT_MAGENTA}${R}          ${FG_BRIGHT_MAGENTA}🔧${R}          Agent is running a tool."
+    echo -e "  State: UNKNOWN       ${FG_WHITE}${R}          ${FG_WHITE}⏳${R}          Agent state is unknown or initializing."
+    echo -e "  VCS Branch           ${FG_BRIGHT_BLUE}${R}          ${FG_GRAY}╱${R}           Current Git branch name (Red + * if dirty)."
+    echo -e "  Model                ${FG_BRIGHT_MAGENTA}${R}          (None)      Current active LLM model name/ID."
+    echo -e "  Sandbox Network      ${FG_GREEN}󰒙${R}          ${FG_GREEN}ON (net)${R}    Sandbox enabled with internet access."
+    echo -e "  Sandbox Restricted   ${FG_GREEN}󰴴${R}          ${FG_GREEN}ON (no-net)${R} Sandbox enabled with network disabled."
+    echo -e "  Sandbox Off          ${FG_RED}󰦜${R}          ${FG_GRAY}sandbox off${R} Sandbox is disabled (runs on host)."
+    echo -e "  Context Bar          ${FG_YELLOW}󱍏${R}          ${FG_GRAY}ctx${R}         20-segment visual context window usage bar."
+    echo -e "  Artifacts            ${FG_BLUE}${R}          ${FG_GRAY}artifacts${R}   Number of active output artifacts."
+    echo -e "  Subagents            ${FG_CYAN}󱙺${R}          ${FG_GRAY}subagents${R}   Number of spawned active subagents."
+    echo -e "  Background Tasks     ${FG_MAGENTA}${R}          ${FG_GRAY}tasks${R}       Number of background tasks running."
+    echo -e "  Current Directory    ${FG_CYAN}${R}          ${FG_GRAY}╱${R}           Current working directory path (shortened)."
+    echo -e "  Conversation ID      ${FG_GRAY}󰍪${R}          ${FG_GRAY}╱${R}           Short prefix of the current session ID."
+    echo -e "  Tokens Sum           ${FG_YELLOW}${R}          (None)      Total input/output tokens parsed."
+    echo -e "  Quota Reset Time     ${FG_GRAY}⌛️${R}         ${FG_GRAY}⌛${R}          Remaining time until LLM quota resets."
+    echo -e "  Power Mains (AC)     ${FG_GREEN}󰚥${R}          ${FG_GREEN}AC${R}          Host is connected to external AC power."
+    echo -e "  Power Battery (UPS)  ${FG_BRIGHT_YELLOW}🔋${R}          ${FG_BRIGHT_YELLOW}BAT${R}         Host is running on battery (shows charge %)."
+    echo -e ""
+    echo -e "${B}TIPS:${R}"
+    echo -e "  To toggle Classic Icon mode, use the ${B}--classic${R} option in settings.json configuration."
+    exit 0
+  fi
+done
+
+INPUT_JSON=$(cat)
 
 # ─── Parse JSON from stdin (Single jq pass for performance) ──────────────────
 {

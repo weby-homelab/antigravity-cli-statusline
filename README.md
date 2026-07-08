@@ -20,6 +20,37 @@ Wraps status into a clean two-line boxed block to avoid command output line wrap
 
 ---
 
+## 📖 Telemetry Legend
+
+You can inspect the legend of all components and icons directly from your terminal by running:
+* **Linux/macOS:** `~/.antigravity/statusline.sh --legend` (or `-l` / `legend`)
+* **Windows (PowerShell):** `powershell -NoProfile -ExecutionPolicy Bypass -File $HOME\.antigravity\statusline.ps1 -Legend` (or `--legend`)
+
+| Component | Nerd Font Icon | Classic Icon | Description |
+| :--- | :---: | :---: | :--- |
+| **State: READY** | ` READY` | `● READY` | Agent is idle, waiting for commands. |
+| **State: THINKING** | `󰟷 THINKING` | `◆ THINKING` | Agent is currently thinking/processing request. |
+| **State: WORKING** | ` WORKING` | `⚙ WORKING` | Agent is performing background tasks. |
+| **State: TOOL** | ` TOOL` | `🔧 TOOL` | Agent is currently executing a tool. |
+| **State: UNKNOWN** | ` STATE` | `⏳ STATE` | Agent state is unknown or initializing. |
+| **VCS Branch** | ` branch` | `╱ branch` | Active Git branch (renders Red + `*` if dirty). |
+| **Active Model** | ` model` | `model` | Active LLM model name or ID. |
+| **Sandbox (Network)** | `󰒙 ON (net)` | `ON (net)` | Execution sandbox active with full network access. |
+| **Sandbox (Restricted)** | `󰴴 ON (no-net)` | `ON (no-net)` | Execution sandbox active with disabled network. |
+| **Sandbox (Off)** | `󰦜 OFF` | `sandbox off` | Sandbox is disabled, commands run on host. |
+| **Context Window Bar** | `󱍏 █░░...` | `ctx █··...` | 20-segment visual representation of context usage. |
+| **Artifacts Counter** | ` count` | `artifacts count` | Number of currently active workspace artifacts. |
+| **Subagents Counter** | `󱙺 count` | `subagents count` | Number of spawned active subagent processes. |
+| **Background Tasks** | ` count` | `tasks count` | Number of running background asynchronous tasks. |
+| **Current Directory** | ` path` | `╱ path` | Shortened current working directory path. |
+| **Conversation ID** | `󰍪 id` | `╱ id` | 8-character prefix of the current session ID. |
+| **Token Sum** | ` tokens` | `tokens` | Total input + output tokens processed in session. |
+| **Quota Reset** | `⌛️ time` | `⌛ time` | Remaining time until model API quota limits reset. |
+| **Power (Mains/AC)** | `󰚥 AC` | `AC` | Connected to AC power. |
+| **Power (Battery)** | `🔋 charge%` | `BAT:charge%` | Running on battery or UPS (shows charge percentage). |
+
+---
+
 ## 🎨 Compatibility Mode (Classic Icons)
 
 If your terminal does not support Nerd Fonts (e.g., ChromeOS Terminal, Emacs, or standard TTYs), you can run the statusline in **Classic Icon Mode**. This mode replaces advanced glyphs with standard Unicode symbols (`●`, `◆`, `⚙`, `🔧`, etc.) and plain text labels to ensure clean rendering.

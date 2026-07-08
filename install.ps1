@@ -91,4 +91,7 @@ Write-Host "====================================================" -ForegroundCol
 Write-Host "🎉 Installation completed successfully!" -ForegroundColor Green
 Write-Host "Restart your Antigravity CLI session to see your new statusline."
 Write-Host "Uninstaller copied to: $targetUninstall"
+Write-Host ""
+Write-Host "To view the legend of all statusline icons and components, run:"
+Write-Host "  powershell -NoProfile -ExecutionPolicy Bypass -File `"$escapedScriptPath`" -Legend" -ForegroundColor Green
 Write-Host "====================================================" -ForegroundColor Blue
