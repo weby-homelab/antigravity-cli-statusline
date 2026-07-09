@@ -12,6 +12,7 @@ The ultimate high-information layout displaying all telemetry fields: system met
 
 ### ⚡ Medium-Wide / Two-Line Layout (Terminal width 140 to 179 chars)
 Encloses the statusline powerline segments and all telemetry badges into a space-efficient, beautifully boxed 2-line layout.
+![Medium-Wide Layout](screenshots/Antigravity-cli-statusline-2-Rows.png)
 
 ### 📱 Medium Layout (Terminal width 100 to 139 chars)
 Stacks status segments and telemetry badges into a clean 3-line layout to prevent command output wrapping on standard terminals.
