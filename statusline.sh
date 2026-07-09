@@ -400,6 +400,20 @@ make_segment() {
   fi
 }
 
+to_ansi_color() {
+  local code="$1"
+  case "$code" in
+    75)  echo -n "${FG_BRIGHT_BLUE}" ;;
+    37)  echo -n "${FG_BRIGHT_CYAN}" ;;
+    135) echo -n "${FG_BRIGHT_MAGENTA}" ;;
+    76)  echo -n "${FG_BRIGHT_GREEN}" ;;
+    197) echo -n "${FG_BRIGHT_RED}" ;;
+    214) echo -n "${FG_BRIGHT_YELLOW}" ;;
+    244) echo -n "${FG_GRAY}" ;;
+    *)   echo -n "" ;;
+  esac
+}
+
 # ─── Rounded Pill badge formatter ─────────────────────────────────────────────
 make_badge() {
   local icon="$1"
@@ -408,7 +422,8 @@ make_badge() {
   local bg_color="236"
   
   if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-    echo -n "${icon_color}${icon} ${NUM_COLOR}${val}${R}"
+    local ansi_c=$(to_ansi_color "$icon_color")
+    echo -n "${ansi_c}${icon} ${NUM_COLOR}${val}${R}"
     return
   fi
 
@@ -451,7 +466,7 @@ format_reset_time() {
 make_quota_bar() {
   local val=$1
   local label=$2
-  local bar_color=$3
+  local bar_color_num=$3
   local reset_sec=$4
   
   local reset_label=" ${ICON_RESET} "
@@ -494,7 +509,7 @@ make_quota_bar() {
       if [ "$USE_CLASSIC_ICONS" = "true" ]; then
         bar="${bar}█"
       else
-        bar="${bar}${bar_color}█${R}"
+        bar="${bar}\033[38;5;${bar_color_num}m█${R}"
       fi
     elif [ "$i" -eq "$filled" ]; then
       if [ "$USE_CLASSIC_ICONS" = "true" ]; then
@@ -505,11 +520,11 @@ make_quota_bar() {
         fi
       else
         if [ "$remainder" -ge 75 ]; then
-          bar="${bar}${bar_color}▓${R}${FG_GRAY}"
+          bar="${bar}\033[38;5;${bar_color_num}m▓${R}${FG_GRAY}"
         elif [ "$remainder" -ge 50 ]; then
-          bar="${bar}${bar_color}▒${R}${FG_GRAY}"
+          bar="${bar}\033[38;5;${bar_color_num}m▒${R}${FG_GRAY}"
         elif [ "$remainder" -ge 25 ]; then
-          bar="${bar}${bar_color}░${R}${FG_GRAY}"
+          bar="${bar}\033[38;5;${bar_color_num}m░${R}${FG_GRAY}"
         else
           bar="${bar}${FG_GRAY}░${R}"
         fi
@@ -529,7 +544,9 @@ make_quota_bar() {
   fi
 
   if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-    echo -n "${separator}${FG_BRIGHT_WHITE}${B}${label}${R} ${bar_color}${bar}${R} ${text_color}${val}%${R}${reset_str}"
+    local text_ansi=$(to_ansi_color "$text_color")
+    local bar_ansi=$(to_ansi_color "$bar_color_num")
+    echo -n "${separator}${FG_BRIGHT_WHITE}${B}${label}${R} ${bar_ansi}${bar}${R} ${text_ansi}${val}%${R}${reset_str}"
   else
     local label_bg="236"
     local bar_bg="235"
@@ -557,7 +574,7 @@ fi
 
 QUOTA_FMT=""
 if { [ -n "$Q_5H" ] && [ "$Q_5H" != "-1" ]; } || { [ -n "$Q_WK" ] && [ "$Q_WK" != "-1" ]; }; then
-  QUOTA_FMT="$(make_quota_bar "$Q_5H" "5H" "\033[38;5;37m" "$Q_5H_R") $(make_quota_bar "$Q_WK" "7D" "\033[38;5;135m" "$Q_WK_R")"
+  QUOTA_FMT="$(make_quota_bar "$Q_5H" "5H" "37" "$Q_5H_R") $(make_quota_bar "$Q_WK" "7D" "135" "$Q_WK_R")"
 fi
 
 # Right-align printing helper
@@ -676,19 +693,16 @@ if [ -n "$AC_ONLINE_PATH" ]; then
 fi
 
 # Token counters
-TOK_DETAILS_WIDE=""
-TOK_DETAILS_MED=""
+TOK_DETAILS=""
 if [ "$CTX_USED" -gt 0 ] 2>/dev/null; then
   turn_str=""
   if [ "$TURN_INPUT_TOKENS" -gt 0 ] || [ "$TURN_OUTPUT_TOKENS" -gt 0 ]; then
     turn_str=" | turn: +${TURN_INPUT_FMT}/${TURN_OUTPUT_FMT}"
   fi
   if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-    TOK_DETAILS_WIDE=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})${DOT_L2}(total: ${INPUT_TOK_FMT}/${OUTPUT_TOK_FMT}${turn_str})"
-    TOK_DETAILS_MED=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})"
+    TOK_DETAILS=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})${DOT_L2}(total: ${INPUT_TOK_FMT}/${OUTPUT_TOK_FMT}${turn_str})"
   else
-    TOK_DETAILS_WIDE=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})${DOT_L2}${FG_YELLOW}${ICON_TOK_SUM} ${R} (total: ${INPUT_TOK_FMT}/${OUTPUT_TOK_FMT}${turn_str})"
-    TOK_DETAILS_MED=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})"
+    TOK_DETAILS=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})${DOT_L2}${FG_YELLOW}${ICON_TOK_SUM} ${R} (total: ${INPUT_TOK_FMT}/${OUTPUT_TOK_FMT}${turn_str})"
   fi
 fi
 
@@ -761,21 +775,25 @@ if [ -n "$CWD_SHORT" ]; then
 fi
 
 # 5. Conversation
-if [ -n "$CONV_ID" ]; then
+if [ -n "$CONV_ID" ] && [ "$COLS" -ge 80 ]; then
   ACTIVE_SEGS+=("${ICON_CONV} ${CONV_ID:0:8}")
   ACTIVE_BGS+=("$BG_META")
   ACTIVE_FGS+=("$FG_META_TEXT")
 fi
 
 # 6. Host IP
-if [ -n "$HOST_INFO" ]; then
-  ACTIVE_SEGS+=("󰒋 ${HOST_INFO}")
+if [ -n "$HOST_INFO" ] && [ "$COLS" -ge 110 ]; then
+  if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+    ACTIVE_SEGS+=("${HOST_INFO}")
+  else
+    ACTIVE_SEGS+=("󰒋 ${HOST_INFO}")
+  fi
   ACTIVE_BGS+=("$BG_META")
   ACTIVE_FGS+=("$FG_META_TEXT")
 fi
 
 # 7. Version
-if [ -n "$CLI_VERSION" ]; then
+if [ -n "$CLI_VERSION" ] && [ "$COLS" -ge 120 ]; then
   ACTIVE_SEGS+=("v${CLI_VERSION}")
   ACTIVE_BGS+=("$BG_META")
   ACTIVE_FGS+=("$FG_META_TEXT")
@@ -793,48 +811,88 @@ for ((i = 0; i < num_segs; i++)); do
 done
 
 # ─── Output Assembly based on terminal size ──────────────────────────────────
+# Configure separators and line prefixes
+sep="  "
+line_pref1=""
+line_pref2=""
+line_pref3=""
+line_pref4=""
+
+if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+  sep=" | "
+else
+  line_pref1="${FG_GRAY}╭─${R}"
+  line_pref2="${FG_GRAY}├─${R}"
+  line_pref3="${FG_GRAY}├─${R}"
+  line_pref4="${FG_GRAY}╰─${R}"
+fi
+
 if [ "$COLS" -ge 180 ]; then
   # Wide Layout: single row, left segment block and right pill dashboard
-  sep="  "
-  if [ "$USE_CLASSIC_ICONS" = "true" ]; then sep=" ${DOT_L2} "; fi
-  
   LINE2=""
   if [ -n "$SYS_FMT" ]; then LINE2="${SYS_FMT}${sep}"; fi
-  LINE2="${LINE2}${ART_FMT}${sep}${SUB_FMT}${sep}${BG_FMT}${sep}${SB_FMT}${sep}${CTX_BAR}${TOK_DETAILS_WIDE}"
+  LINE2="${LINE2}${ART_FMT}${sep}${SUB_FMT}${sep}${BG_FMT}${sep}${SB_FMT}${sep}${CTX_BAR}${TOK_DETAILS}"
   if [ -n "$QUOTA_FMT" ]; then LINE2="${LINE2} ${QUOTA_FMT}"; fi
   if [ -n "$POWER_FMT" ]; then LINE2="${LINE2}${sep}${POWER_FMT}"; fi
   
   print_right_aligned "$LINE1" "$LINE2" "$COLS"
 
-elif [ "$COLS" -ge 90 ]; then
-  # Medium Layout: two lines boxed
-  sep="  "
-  if [ "$USE_CLASSIC_ICONS" = "true" ]; then sep=" ${DOT_L2} "; fi
+elif [ "$COLS" -ge 130 ]; then
+  # Medium Layout: 3-row display to avoid wrapping
+  LINE2="${CTX_BAR}${TOK_DETAILS}"
+  for badge in "$SYS_FMT" "$ART_FMT" "$SUB_FMT" "$BG_FMT" "$SB_FMT"; do
+    if [ -n "$badge" ]; then
+      LINE2="${LINE2}${sep}${badge}"
+    fi
+  done
   
-  LINE2="${CTX_BAR}${TOK_DETAILS_MED}${sep}${SYS_FMT}${sep}${ART_FMT}${sep}${SUB_FMT}${sep}${BG_FMT}${sep}${SB_FMT}"
-  if [ -n "$QUOTA_FMT" ]; then LINE2="${LINE2} ${QUOTA_FMT}"; fi
-  if [ -n "$POWER_FMT" ]; then LINE2="${LINE2}${sep}${POWER_FMT}"; fi
-  
-  echo -e "${FG_GRAY}╭─${R}${LINE1}"
-  echo -e "${FG_GRAY}╰─${R}${LINE2}"
-
-else
-  # Small Layout: Minimalist status & resources
-  sep=" "
-  M_SHORT=""
-  if [ -n "$MODEL_DISP" ]; then
-    if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-      M_SHORT="${FG_GRAY} ╱ ${FG_BRIGHT_MAGENTA}${MODEL_DISP:0:12}${R}"
+  LINE3=""
+  if [ -n "$QUOTA_FMT" ]; then LINE3="${QUOTA_FMT}"; fi
+  if [ -n "$POWER_FMT" ]; then
+    if [ -n "$LINE3" ]; then
+      LINE3="${LINE3}${sep}${POWER_FMT}"
     else
-      M_SHORT="${FG_GRAY} ╱ ${FG_BRIGHT_MAGENTA}${ICON_MODEL} ${MODEL_DISP:0:12}${R}"
+      LINE3="${POWER_FMT}"
     fi
   fi
   
-  echo -e "${S}${M_SHORT}"
+  echo -e "${line_pref1}${LINE1}"
+  echo -e "${line_pref2}${LINE2}"
+  if [ -n "$LINE3" ]; then
+    echo -e "${line_pref4}${LINE3}"
+  fi
+
+else
+  # Compact Layout: 4-row display ensuring all blocks are visible and fit perfectly
+  LINE2="${CTX_BAR}${TOK_DETAILS}"
   
-  LINE2="${CTX_BAR}"
-  if [ -n "$SYS_FMT" ]; then LINE2="${LINE2}${sep}${SYS_FMT}"; fi
-  if [ -n "$BG_FMT" ]; then LINE2="${LINE2}${sep}${BG_FMT}"; fi
-  if [ -n "$POWER_FMT" ]; then LINE2="${LINE2}${sep}${POWER_FMT}"; fi
-  echo -e "${LINE2}"
+  LINE3=""
+  for badge in "$SYS_FMT" "$ART_FMT" "$SUB_FMT" "$BG_FMT" "$SB_FMT"; do
+    if [ -n "$badge" ]; then
+      if [ -n "$LINE3" ]; then
+        LINE3="${LINE3}${sep}${badge}"
+      else
+        LINE3="${badge}"
+      fi
+    fi
+  done
+  
+  LINE4=""
+  if [ -n "$QUOTA_FMT" ]; then LINE4="${QUOTA_FMT}"; fi
+  if [ -n "$POWER_FMT" ]; then
+    if [ -n "$LINE4" ]; then
+      LINE4="${LINE4}${sep}${POWER_FMT}"
+    else
+      LINE4="${POWER_FMT}"
+    fi
+  fi
+  
+  echo -e "${line_pref1}${LINE1}"
+  echo -e "${line_pref2}${LINE2}"
+  if [ -n "$LINE3" ]; then
+    echo -e "${line_pref3}${LINE3}"
+  fi
+  if [ -n "$LINE4" ]; then
+    echo -e "${line_pref4}${LINE4}"
+  fi
 fi
