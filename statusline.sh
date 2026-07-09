@@ -1,12 +1,17 @@
 #!/bin/bash
+# statusline.sh - Resilient and Maximized Telemetry Statusline for Antigravity CLI
+# Built with premium 256-color powerline theme & instant system diagnostics
+
 set -euo pipefail
-# ─── ANSI Helpers (Standard 16-color palette only) ───────────────────────────
+INPUT_JSON=$(cat)
+
+# ─── ANSI Helpers (Standard colors) ───────────────────────────────────────────
 R="\033[0m"         # Reset
 B="\033[1m"         # Bold
 D="\033[2m"         # Dim
 I="\033[3m"         # Italic
 
-# Foreground accents (Standard 16 colors)
+# Foreground standard colors for classic fallback
 FG_BLACK="\033[30m"
 FG_RED="\033[31m"
 FG_GREEN="\033[32m"
@@ -25,51 +30,7 @@ FG_BRIGHT_MAGENTA="\033[95m"
 FG_BRIGHT_CYAN="\033[96m"
 FG_BRIGHT_WHITE="\033[97m"
 
-# Number Highlight Color
 NUM_COLOR="${FG_BRIGHT_WHITE}${B}"
-
-# ─── Legend display check ────────────────────────────────────────────────────
-for arg in "$@"; do
-  if [ "$arg" = "--legend" ] || [ "$arg" = "-l" ] || [ "$arg" = "legend" ]; then
-    echo -e "${FG_BRIGHT_GREEN}${B}🚀 Antigravity CLI Statusline Legend${R}"
-    echo -e "This statusline adapts dynamically to your terminal width and theme settings."
-    echo -e ""
-    echo -e "${B}LAYOUTS:${R}"
-    echo -e "  - ${B}Wide Layout (>= 180 chars):${R} Single-row, full developer telemetry dashboard."
-    echo -e "  - ${B}Medium Layout (>= 90 chars):${R} Two-line boxed block to prevent line wrap."
-    echo -e "  - ${B}Small Layout (< 90 chars):${R} Minimalist indicator for status, model, context & tasks."
-    echo -e ""
-    echo -e "${B}COMPONENTS & ICONS:${R}"
-    echo -e "  ${B}Field                Nerd Font   Classic     Description${R}"
-    echo -e "  --------------------------------------------------------------------------------"
-    echo -e "  State: READY         ${FG_BRIGHT_GREEN}${R}          ${FG_BRIGHT_GREEN}●${R}           Agent is idle, ready for user requests."
-    echo -e "  State: THINKING      ${FG_BRIGHT_YELLOW}󰟷${R}          ${FG_BRIGHT_YELLOW}◆${R}           Agent is processing/thinking."
-    echo -e "  State: WORKING       ${FG_BRIGHT_CYAN}${R}          ${FG_BRIGHT_CYAN}⚙${R}           Agent is executing background operations."
-    echo -e "  State: TOOL          ${FG_BRIGHT_MAGENTA}${R}          ${FG_BRIGHT_MAGENTA}🔧${R}          Agent is running a tool."
-    echo -e "  State: UNKNOWN       ${FG_WHITE}${R}          ${FG_WHITE}⏳${R}          Agent state is unknown or initializing."
-    echo -e "  VCS Branch           ${FG_BRIGHT_BLUE}${R}          ${FG_GRAY}╱${R}           Current Git branch name (Red + * if dirty)."
-    echo -e "  Model                ${FG_BRIGHT_MAGENTA}${R}          (None)      Current active LLM model name/ID."
-    echo -e "  Sandbox Network      ${FG_GREEN}󰒙${R}          ${FG_GREEN}ON (net)${R}    Sandbox enabled with internet access."
-    echo -e "  Sandbox Restricted   ${FG_GREEN}󰴴${R}          ${FG_GREEN}ON (no-net)${R} Sandbox enabled with network disabled."
-    echo -e "  Sandbox Off          ${FG_RED}󰦜${R}          ${FG_GRAY}sandbox off${R} Sandbox is disabled (runs on host)."
-    echo -e "  Context Bar          ${FG_YELLOW}󱍏${R}          ${FG_GRAY}ctx${R}         20-segment visual context window usage bar."
-    echo -e "  Artifacts            ${FG_BLUE}${R}          ${FG_GRAY}artifacts${R}   Number of active output artifacts."
-    echo -e "  Subagents            ${FG_CYAN}󱙺${R}          ${FG_GRAY}subagents${R}   Number of spawned active subagents."
-    echo -e "  Background Tasks     ${FG_MAGENTA}${R}          ${FG_GRAY}tasks${R}       Number of background tasks running."
-    echo -e "  Current Directory    ${FG_CYAN}${R}          ${FG_GRAY}╱${R}           Current working directory path (shortened)."
-    echo -e "  Conversation ID      ${FG_GRAY}󰍪${R}          ${FG_GRAY}╱${R}           Short prefix of the current session ID."
-    echo -e "  Tokens Sum           ${FG_YELLOW}${R}          (None)      Total input/output tokens parsed."
-    echo -e "  Quota Reset Time     ${FG_GRAY}⌛️${R}         ${FG_GRAY}⌛${R}          Remaining time until LLM quota resets."
-    echo -e "  Power Mains (AC)     ${FG_GREEN}󰚥${R}          ${FG_GREEN}AC${R}          Host is connected to external AC power."
-    echo -e "  Power Battery (UPS)  ${FG_BRIGHT_YELLOW}🔋${R}          ${FG_BRIGHT_YELLOW}BAT${R}         Host is running on battery (shows charge %)."
-    echo -e ""
-    echo -e "${B}TIPS:${R}"
-    echo -e "  To toggle Classic Icon mode, use the ${B}--classic${R} option in settings.json configuration."
-    exit 0
-  fi
-done
-
-INPUT_JSON=$(cat)
 
 # ─── Parse JSON from stdin (Single jq pass for performance) ──────────────────
 {
@@ -148,15 +109,59 @@ INPUT_JSON=$(cat)
   ' 2>/dev/null || printf "idle\n0\n\nfalse\n\n\nfalse\nfalse\n0\n0\n0\n\n\n80\n\n\n\n0\n0\n0\n0\n100\n-1\n-1\n-1\n-1\n-1\n-1\n-1\n-1\n\n\n\n0\n0\n"
 )"
 
-
 # ─── Parse CLI Arguments & Theme ─────────────────────────────────────────────
 USE_CLASSIC_ICONS=false
 for arg in "$@"; do
-  if [ "$arg" = "--classic" ] || [ "$arg" = "--no-nerdfont" ] || [ "$arg" = "--compatibility" ]; then
+  if [ "$arg" = "--classic" ] || [ "$arg" = "--no-nerdfont" ] || [ "$arg" = "--compatibility" ] || [ "$arg" = "-l" ] || [ "$arg" = "--legend" ] || [ "$arg" = "legend" ]; then
+    # We parse argument to see if it is legend command
+    if [ "$arg" = "--legend" ] || [ "$arg" = "-l" ] || [ "$arg" = "legend" ]; then
+      echo -e "${FG_BRIGHT_GREEN}${B}🚀 Antigravity CLI Maximized Statusline Legend${R}"
+      echo -e "This statusline adapts dynamically to terminal width and displays high-density system & agent telemetry."
+      echo -e ""
+      echo -e "${B}LAYOUTS:${R}"
+      echo -e "  - ${B}Wide Layout (>= 180 chars):${R} Single-row powerline segment dashboard."
+      echo -e "  - ${B}Medium Layout (>= 90 chars):${R} Double-line boxed telemetry block."
+      echo -e "  - ${B}Small Layout (< 90 chars):${R} Minimalist indicator for status, model & resources."
+      echo -e ""
+      echo -e "${B}COMPONENTS & ICONS:${R}"
+      echo -e "  ${B}Field                Nerd Font   Classic     Description${R}"
+      echo -e "  --------------------------------------------------------------------------------"
+      echo -e "  State: READY                   ●           Agent is idle, ready for user requests."
+      echo -e "  State: THINKING      󰟷          ◆           Agent is processing/thinking."
+      echo -e "  State: WORKING                 ⚙           Agent is executing background operations."
+      echo -e "  State: TOOL                    🔧          Agent is running a tool."
+      echo -e "  VCS Branch                     ╱           Current Git branch name (Red + * if dirty)."
+      echo -e "  Model                          (None)      Current active LLM model name/ID."
+      echo -e "  Sandbox Network      󰒙          ON (net)    Sandbox enabled with internet access."
+      echo -e "  Sandbox Restricted   󰴴          ON (no-net) Sandbox enabled with network disabled."
+      echo -e "  Sandbox Off          󰦜          sandbox off Sandbox is disabled (runs on host)."
+      echo -e "  Context Bar          󱍏          ctx         Context window usage bar (10 or 20 segments)."
+      echo -e "  Tokens Sum                     (None)      Total input/output tokens parsed."
+      echo -e "  Sys resources                  sys         Host CPU load average & memory utilization."
+      echo -e "  Artifacts                      artifacts   Number of active output artifacts."
+      echo -e "  Subagents            󱙺          subagents   Number of spawned active subagents."
+      echo -e "  Background Tasks               tasks       Number of background tasks running."
+      echo -e "  Current Directory              ╱           Current working directory path (shortened)."
+      echo -e "  Conversation ID      󰍪          ╱           Short prefix of the current session ID."
+      echo -e "  Quota Reset Time     ⌛️         ⌛          Remaining time until LLM quota resets."
+      echo -e "  Power Mains (AC)     󰚥          AC          Host is connected to external AC power."
+      echo -e "  Power Battery (UPS)  🔋          BAT         Host is running on battery (shows charge %)."
+      exit 0
+    fi
     USE_CLASSIC_ICONS=true
   fi
 done
 
+# Set dynamic width boundaries
+if [ "$COLS" -ge 180 ]; then
+  BAR_LEN=20
+  QUOTA_BAR_LEN=15
+else
+  BAR_LEN=10
+  QUOTA_BAR_LEN=8
+fi
+
+# Define Theme Colors and Icons
 if [ "$USE_CLASSIC_ICONS" = "true" ]; then
   DOT_L1="${FG_GRAY} ╱ ${R}"
   DOT_L2="${FG_GRAY} · ${R}"
@@ -180,6 +185,33 @@ if [ "$USE_CLASSIC_ICONS" = "true" ]; then
   ICON_RESET="⌛"
   ICON_AC="AC"
   ICON_BAT="BAT"
+  ICON_SYS="sys"
+
+  # Standard 16-color mappings for classic mode
+  BG_READY="${FG_GREEN}"
+  FG_READY_TEXT="${B}"
+  BG_THINKING="${FG_YELLOW}"
+  FG_THINKING_TEXT="${B}"
+  BG_WORKING="${FG_CYAN}"
+  FG_WORKING_TEXT="${B}"
+  BG_TOOL="${FG_MAGENTA}"
+  FG_TOOL_TEXT="${B}"
+  BG_UNKNOWN="${FG_WHITE}"
+  FG_UNKNOWN_TEXT="${B}"
+
+  BG_GIT_CLEAN="${FG_BLUE}"
+  FG_GIT_CLEAN_TEXT="${B}"
+  BG_GIT_DIRTY="${FG_RED}"
+  FG_GIT_DIRTY_TEXT="${B}"
+
+  BG_MODEL="${FG_MAGENTA}"
+  FG_MODEL_TEXT=""
+
+  BG_DIR="${FG_CYAN}"
+  FG_DIR_TEXT=""
+
+  BG_META="${FG_GRAY}"
+  FG_META_TEXT=""
 else
   DOT_L1="${FG_GRAY} | ${R}"
   DOT_L2="${FG_GRAY} | ${R}"
@@ -203,10 +235,41 @@ else
   ICON_RESET="⌛️"
   ICON_AC="󰚥"
   ICON_BAT="🔋"
+  ICON_SYS=""
+
+  # Premium 256-color palette mappings
+  BG_READY="\033[48;5;76m"
+  FG_READY_TEXT="\033[38;5;232m\033[1m"
+  
+  BG_THINKING="\033[48;5;214m"
+  FG_THINKING_TEXT="\033[38;5;232m\033[1m"
+  
+  BG_WORKING="\033[48;5;37m"
+  FG_WORKING_TEXT="\033[38;5;232m\033[1m"
+  
+  BG_TOOL="\033[48;5;135m"
+  FG_TOOL_TEXT="\033[38;5;255m\033[1m"
+  
+  BG_UNKNOWN="\033[48;5;244m"
+  FG_UNKNOWN_TEXT="\033[38;5;255m\033[1m"
+  
+  BG_GIT_CLEAN="\033[48;5;33m"
+  FG_GIT_CLEAN_TEXT="\033[38;5;255m\033[1m"
+  
+  BG_GIT_DIRTY="\033[48;5;197m"
+  FG_GIT_DIRTY_TEXT="\033[38;5;255m\033[1m"
+  
+  BG_MODEL="\033[48;5;63m"
+  FG_MODEL_TEXT="\033[38;5;255m\033[1m"
+  
+  BG_DIR="\033[48;5;38m"
+  FG_DIR_TEXT="\033[38;5;232m\033[1m"
+  
+  BG_META="\033[48;5;236m"
+  FG_META_TEXT="\033[38;5;250m"
 fi
 
-
-# ─── VCS directly from git (bypasses JSON parsing entirely) ──────────────────
+# ─── Git Timeout Resilience Wrapper ──────────────────────────────────────────
 run_with_timeout() {
   if command -v timeout &>/dev/null; then
     timeout 1s "$@"
@@ -229,7 +292,30 @@ else
   VCS_DIRTY="false"
 fi
 
-# ─── Computed & Formatted Values ─────────────────────────────────────────────
+# ─── Dynamic CPU load & RAM diagnostics (Pure Bash, instant) ────────────────
+MEM_PCT=""
+LOAD_1M=""
+if [ -f /proc/meminfo ]; then
+  mem_total=0
+  mem_avail=0
+  while read -r name value unit; do
+    if [ "$name" = "MemTotal:" ]; then
+      mem_total=$value
+    elif [ "$name" = "MemAvailable:" ]; then
+      mem_avail=$value
+      break
+    fi
+  done < /proc/meminfo
+  if [ "$mem_total" -gt 0 ]; then
+    MEM_PCT=$(( (mem_total - mem_avail) * 100 / mem_total ))
+  fi
+fi
+if [ -f /proc/loadavg ]; then
+  read -r load_1m rest < /proc/loadavg
+  LOAD_1M=$load_1m
+fi
+
+# ─── Helpers for values ──────────────────────────────────────────────────────
 PCT_FMT=$(LC_NUMERIC=C printf "%.1f" "$USED_PCT")
 PCT_INT=${USED_PCT%.*}; PCT_INT=${PCT_INT:-0}
 
@@ -255,86 +341,6 @@ CTX_USED_FMT=$(human_format "$CTX_USED")
 TURN_INPUT_FMT=$(human_format "$TURN_INPUT_TOKENS")
 TURN_OUTPUT_FMT=$(human_format "$TURN_OUTPUT_TOKENS")
 
-CLI_VER_FMT=""
-if [ -n "$CLI_VERSION" ]; then
-  CLI_VER_FMT="${DOT_L1}${FG_GRAY}v${CLI_VERSION}${R}"
-fi
-
-USER_FMT=""
-if [ -n "$PLAN_TIER" ] || [ -n "$USER_EMAIL" ]; then
-  user_info=""
-  if [ -n "$PLAN_TIER" ] && [ -n "$USER_EMAIL" ]; then
-    user_info="${PLAN_TIER} (${USER_EMAIL})"
-  elif [ -n "$PLAN_TIER" ]; then
-    user_info="${PLAN_TIER}"
-  else
-    user_info="${USER_EMAIL}"
-  fi
-  # Truncate if too long
-  if [ "${#user_info}" -gt 35 ]; then
-    user_info="${user_info:0:32}..."
-  fi
-  if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-    USER_FMT="${DOT_L1}${FG_GRAY}${user_info}${R}"
-  else
-    USER_FMT="${DOT_L1}${FG_GRAY}󰇮 ${user_info}${R}"
-  fi
-fi
-
-# Get hostname and Tailscale IP
-HOST_NAME=$(hostname 2>/dev/null || echo "")
-TS_IP=$(ip -4 addr show dev tailscale0 2>/dev/null | grep -o 'inet [0-9.]*' | cut -d' ' -f2 || echo "")
-
-HOST_FMT=""
-if [ -n "$HOST_NAME" ]; then
-  host_details="$HOST_NAME"
-  if [ -n "$TS_IP" ]; then
-    host_details="${HOST_NAME} (${TS_IP})"
-  fi
-  if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-    HOST_FMT="${DOT_L1}${FG_BRIGHT_BLUE}${host_details}${R}"
-  else
-    HOST_FMT="${DOT_L1}${FG_BRIGHT_BLUE}󰒋 ${host_details}${R}"
-  fi
-fi
-
-# Get Power Status (Resilience check)
-POWER_FMT=""
-AC_ONLINE_PATH=$(ls /sys/class/power_supply/*/online 2>/dev/null | head -n 1)
-BAT_CAP_PATH=$(ls /sys/class/power_supply/*/capacity 2>/dev/null | head -n 1)
-
-if [ -n "$AC_ONLINE_PATH" ]; then
-  AC_ON=$(cat "$AC_ONLINE_PATH" 2>/dev/null || echo "1")
-  BAT_CAP=""
-  if [ -n "$BAT_CAP_PATH" ]; then
-    BAT_CAP=$(cat "$BAT_CAP_PATH" 2>/dev/null || echo "")
-  fi
-  
-  if [ "$AC_ON" = "0" ]; then
-    # Running on battery/UPS
-    if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-      if [ -n "$BAT_CAP" ]; then
-        POWER_FMT="${DOT_L2}${FG_BRIGHT_YELLOW}${ICON_BAT}:${BAT_CAP}%${R}"
-      else
-        POWER_FMT="${DOT_L2}${FG_BRIGHT_YELLOW}${ICON_BAT}${R}"
-      fi
-    else
-      if [ -n "$BAT_CAP" ]; then
-        POWER_FMT="${DOT_L2}${FG_BRIGHT_YELLOW}${ICON_BAT} ${BAT_CAP}%${R}"
-      else
-        POWER_FMT="${DOT_L2}${FG_BRIGHT_YELLOW}${ICON_BAT}${R}"
-      fi
-    fi
-  else
-    # Running on AC (Mains)
-    if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-      POWER_FMT="${DOT_L2}${FG_GREEN}${ICON_AC}${R}"
-    else
-      POWER_FMT="${DOT_L2}${FG_GREEN}${ICON_AC} AC${R}"
-    fi
-  fi
-fi
-
 shorten_path() {
   local path=$1
   if [ -z "$path" ]; then
@@ -350,150 +356,64 @@ shorten_path() {
 }
 CWD_SHORT=$(shorten_path "$CWD")
 
-# ─── Strip ANSI escapes to measure visible length ────────────────────────────
 visible_len() {
-  # Strips ESC sequences and counts remaining bytes
   printf '%s' "$(echo -e "$1" | sed 's/\x1b\[[0-9;]*m//g')" | wc -m
 }
 
-# ─── State Indicator ─────────────────────────────────────────────────────────
-case "$STATE" in
-  idle)     S="${FG_BRIGHT_GREEN}${B} ${ICON_READY} READY${R}" ;;
-  thinking) S="${FG_BRIGHT_YELLOW}${B} ${ICON_THINKING} THINKING${R}" ;;
-  working)  S="${FG_BRIGHT_CYAN}${B} ${ICON_WORKING} WORKING${R}" ;;
-  tool_use) S="${FG_BRIGHT_MAGENTA}${B} ${ICON_TOOL} TOOL${R}" ;;
-  *)        S="${FG_WHITE}${B} ${ICON_STATE_UNKNOWN} $(echo "$STATE" | tr '[:lower:]' '[:upper:]')${R}" ;;
-esac
-
-# ─── VCS branch details ──────────────────────────────────────────────────────
-V=""
-if [ -n "$VCS_BRANCH" ]; then
-  if [ "$VCS_DIRTY" = "true" ]; then
-    if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-      V="${DOT_L1}${FG_BRIGHT_RED}${VCS_BRANCH}${FG_BRIGHT_YELLOW}*${R}"
-    else
-      V="${DOT_L1}${R}${FG_BRIGHT_RED}${ICON_VCS} ${VCS_BRANCH}${FG_BRIGHT_YELLOW}*${R}"
-    fi
+# Get Tailscale and Host Info
+HOST_NAME=$(hostname 2>/dev/null || echo "")
+TS_IP=$(ip -4 addr show dev tailscale0 2>/dev/null | grep -o 'inet [0-9.]*' | cut -d' ' -f2 || echo "")
+HOST_INFO=""
+if [ -n "$HOST_NAME" ]; then
+  if [ -n "$TS_IP" ]; then
+    HOST_INFO="${HOST_NAME} (${TS_IP})"
   else
-    if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-      V="${DOT_L1}${FG_BRIGHT_BLUE}${VCS_BRANCH}${R}"
-    else
-      V="${DOT_L1}${R}${FG_BRIGHT_BLUE}${ICON_VCS} ${VCS_BRANCH}${R}"
-    fi
+    HOST_INFO="${HOST_NAME}"
   fi
 fi
 
-# ─── Model ───────────────────────────────────────────────────────────────────
-MODEL_DISP="${MODEL_NAME:-$MODEL_ID}"
-M=""
-if [ -n "$MODEL_DISP" ]; then
+# ─── Power / Battery Scanner ─────────────────────────────────────────────────
+POWER_FMT=""
+AC_ONLINE_PATH=$(ls /sys/class/power_supply/*/online 2>/dev/null | head -n 1)
+BAT_CAP_PATH=$(ls /sys/class/power_supply/*/capacity 2>/dev/null | head -n 1)
+
+# ─── Segment powerline formatter ──────────────────────────────────────────────
+make_segment() {
+  local bg_color="$1"
+  local fg_text="$2"
+  local text="$3"
+  local next_bg="$4"
+  
   if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-    M="${DOT_L1}${FG_BRIGHT_MAGENTA}${I}${MODEL_DISP}${R}"
-  else
-    M="${DOT_L1}${FG_BRIGHT_MAGENTA}${I}${ICON_MODEL} ${MODEL_DISP}${R}"
+    echo -n "${bg_color}${text}${R} "
+    return
   fi
-fi
 
-# ─── Sandbox Badge ───────────────────────────────────────────────────────────
-if [ "$SANDBOX" = "true" ]; then
-  if [ "$SANDBOX_NET" = "true" ]; then
-    SB="${FG_GREEN}${ICON_SANDBOX_NET} ON (net)${R}"
+  local current_bg_code="${bg_color}"
+  local next_bg_code="${next_bg}"
+  local fg_sep_code=$(echo -n "$current_bg_code" | sed 's/48;/38;/')
+  
+  if [ -n "$next_bg_code" ]; then
+    echo -n "${current_bg_code}${fg_text} ${text} ${next_bg_code}${fg_sep_code}${R}"
   else
-    SB="${FG_GREEN}${ICON_SANDBOX_NONET} ON (no-net)${R}"
+    echo -n "${current_bg_code}${fg_text} ${text} \033[0m${fg_sep_code}${R}"
   fi
-else
+}
+
+# ─── Rounded Pill badge formatter ─────────────────────────────────────────────
+make_badge() {
+  local icon="$1"
+  local val="$2"
+  local icon_color="$3"
+  local bg_color="236"
+  
   if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-    SB="${FG_GRAY}sandbox off${R}"
-  else
-    SB="${FG_RED}${ICON_SANDBOX_OFF} OFF${R}"
+    echo -n "${icon_color}${icon} ${NUM_COLOR}${val}${R}"
+    return
   fi
-fi
 
-# ─── Context Bar (20 segments) ───────────────────────────────────────────────
-BAR_LEN=20
-FILLED=$((PCT_INT * BAR_LEN / 100))
-REMAINDER=$(( (PCT_INT * BAR_LEN) % 100 ))
-
-if   [ "$PCT_INT" -ge 90 ]; then FILL_COLOR="$FG_BRIGHT_RED"
-elif [ "$PCT_INT" -ge 60 ]; then FILL_COLOR="$FG_BRIGHT_YELLOW"
-else                              FILL_COLOR="$FG_YELLOW"
-fi
-
-if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-  BAR=""
-  for ((i = 0; i < BAR_LEN; i++)); do
-    if   [ "$i" -lt "$FILLED" ]; then
-      BAR="${BAR}█"
-    elif [ "$i" -eq "$FILLED" ]; then
-      if   [ "$REMAINDER" -ge 75 ]; then BAR="${BAR}▓"
-      elif [ "$REMAINDER" -ge 50 ]; then BAR="${BAR}▒"
-      elif [ "$REMAINDER" -ge 25 ]; then BAR="${BAR}░"
-      else                               BAR="${BAR}·"
-      fi
-    else BAR="${BAR}·"
-    fi
-  done
-  CTX_BAR="${FG_GRAY}ctx ${FILL_COLOR}${BAR} ${NUM_COLOR}${PCT_FMT}%${R}"
-else
-  BAR=""
-  for ((i = 0; i < BAR_LEN; i++)); do
-    if   [ "$i" -lt "$FILLED" ]; then
-      BAR="${BAR}${FILL_COLOR}█${R}"
-    elif [ "$i" -eq "$FILLED" ]; then
-      if   [ "$REMAINDER" -ge 75 ]; then BAR="${BAR}${FILL_COLOR}▓${R}${FG_GRAY}"
-      elif [ "$REMAINDER" -ge 50 ]; then BAR="${BAR}${FILL_COLOR}▒${R}${FG_GRAY}"
-      else                               BAR="${BAR}${FILL_COLOR}░${R}${FG_GRAY}"
-      fi
-    else BAR="${BAR}${FG_GRAY}░${R}"
-    fi
-  done
-  CTX_BAR="${FG_YELLOW}${ICON_CONTEXT_BAR}  ${R}${BAR} ${NUM_COLOR}${PCT_FMT}%${R}"
-fi
-
-# ─── Stats & Metadata formatting ─────────────────────────────────────────────
-if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-  ART_FMT="${FG_GRAY}artifacts ${NUM_COLOR}${ARTIFACTS}${R}"
-  SUB_FMT="${FG_GRAY}subagents ${NUM_COLOR}${SUBAGENTS}${R}"
-  BG_FMT="${FG_GRAY}tasks ${NUM_COLOR}${BG_TASKS}${R}"
-else
-  ART_FMT="${FG_BLUE}${ICON_ARTIFACTS} ${NUM_COLOR}${ARTIFACTS}${R}"
-  SUB_FMT="${FG_CYAN}${ICON_SUBAGENTS} ${NUM_COLOR}${SUBAGENTS}${R}"
-  BG_FMT="${FG_MAGENTA}${ICON_TASKS} ${NUM_COLOR}${BG_TASKS}${R}"
-fi
-
-DIR_FMT=""
-if [ -n "$CWD_SHORT" ]; then
-  if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-    DIR_FMT="${DOT_L1}${FG_CYAN}${CWD_SHORT}${R}"
-  else
-    DIR_FMT="${DOT_L1}${FG_CYAN}${ICON_DIR} ${CWD_SHORT}${R}"
-  fi
-fi
-
-CONV_FMT=""
-if [ -n "$CONV_ID" ]; then
-  if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-    CONV_FMT="${DOT_L1}${FG_GRAY}${CONV_ID:0:8}${R}"
-  else
-    CONV_FMT="${DOT_L1}${FG_GRAY}${ICON_CONV} ${CONV_ID:0:8}${R}"
-  fi
-fi
-
-TOK_DETAILS_WIDE=""
-TOK_DETAILS_MED=""
-if [ "$CTX_USED" -gt 0 ] 2>/dev/null; then
-  turn_str=""
-  if [ "$TURN_INPUT_TOKENS" -gt 0 ] || [ "$TURN_OUTPUT_TOKENS" -gt 0 ]; then
-    turn_str=" | turn: +${TURN_INPUT_FMT}/${TURN_OUTPUT_FMT}"
-  fi
-  if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-    TOK_DETAILS_WIDE=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})${DOT_L2}(total: ${INPUT_TOK_FMT}/${OUTPUT_TOK_FMT}${turn_str})"
-    TOK_DETAILS_MED=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})"
-  else
-    TOK_DETAILS_WIDE=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})${DOT_L2}${FG_YELLOW}${ICON_TOK_SUM} ${R} (total: ${INPUT_TOK_FMT}/${OUTPUT_TOK_FMT}${turn_str})"
-    TOK_DETAILS_MED=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})"
-  fi
-fi
+  echo -n "\033[38;5;${bg_color}m\033[48;5;${bg_color}m\033[38;5;${icon_color}m${icon} \033[38;5;255m\033[1m${val}\033[0m\033[38;5;${bg_color}m\033[0m"
+}
 
 # ─── Quota formatting ────────────────────────────────────────────────────────
 format_reset_time() {
@@ -539,12 +459,12 @@ make_quota_bar() {
   if [ "$USE_CLASSIC_ICONS" = "true" ]; then
     separator="${FG_GRAY} · ${R}"
   else
-    separator="${FG_GRAY}| ${R}"
+    separator=" "
   fi
   
   if [ -z "$val" ] || [[ "$val" == -* ]]; then
     local bar=""
-    for ((i = 0; i < 20; i++)); do
+    for ((i = 0; i < QUOTA_BAR_LEN; i++)); do
       if [ "$USE_CLASSIC_ICONS" = "true" ]; then
         bar="${bar}·"
       else
@@ -558,19 +478,18 @@ make_quota_bar() {
   local val_int=${val%.*}
   val_int=${val_int:-0}
   
-  local text_color="$FG_BRIGHT_GREEN"
+  local text_color="76"
   if [ "$val_int" -lt 20 ]; then
-    text_color="$FG_BRIGHT_RED"
+    text_color="197"
   elif [ "$val_int" -lt 50 ]; then
-    text_color="$FG_BRIGHT_YELLOW"
+    text_color="214"
   fi
 
-  local bar_len=20
-  local filled=$((val_int * bar_len / 100))
-  local remainder=$(( (val_int * bar_len) % 100 ))
+  local filled=$((val_int * QUOTA_BAR_LEN / 100))
+  local remainder=$(( (val_int * QUOTA_BAR_LEN) % 100 ))
   
   local bar=""
-  for ((i = 0; i < bar_len; i++)); do
+  for ((i = 0; i < QUOTA_BAR_LEN; i++)); do
     if [ "$i" -lt "$filled" ]; then
       if [ "$USE_CLASSIC_ICONS" = "true" ]; then
         bar="${bar}█"
@@ -612,7 +531,9 @@ make_quota_bar() {
   if [ "$USE_CLASSIC_ICONS" = "true" ]; then
     echo -n "${separator}${FG_BRIGHT_WHITE}${B}${label}${R} ${bar_color}${bar}${R} ${text_color}${val}%${R}${reset_str}"
   else
-    echo -n "${separator}${FG_BRIGHT_WHITE}${B}${label}${R} ${bar} ${text_color}${val}%${R}${reset_str}"
+    local label_bg="236"
+    local bar_bg="235"
+    echo -n "${separator}\033[38;5;${label_bg}m\033[48;5;${label_bg}m\033[38;5;${text_color}m${label}\033[48;5;${bar_bg}m \033[0m${bar}\033[48;5;${label_bg}m \033[38;5;${text_color}m\033[1m${val}%\033[0m\033[38;5;${label_bg}m\033[0m${reset_str}"
   fi
 }
 
@@ -636,11 +557,10 @@ fi
 
 QUOTA_FMT=""
 if { [ -n "$Q_5H" ] && [ "$Q_5H" != "-1" ]; } || { [ -n "$Q_WK" ] && [ "$Q_WK" != "-1" ]; }; then
-  QUOTA_FMT="$(make_quota_bar "$Q_5H" "5H" "$FG_BRIGHT_CYAN" "$Q_5H_R") $(make_quota_bar "$Q_WK" "7D" "$FG_BRIGHT_MAGENTA" "$Q_WK_R")"
+  QUOTA_FMT="$(make_quota_bar "$Q_5H" "5H" "\033[38;5;37m" "$Q_5H_R") $(make_quota_bar "$Q_WK" "7D" "\033[38;5;135m" "$Q_WK_R")"
 fi
 
-# ─── Right-align helper ──────────────────────────────────────────────────────
-# Prints LINE1 left-aligned and LINE2 right-aligned on the same terminal row.
+# Right-align printing helper
 print_right_aligned() {
   local left="$1"
   local right="$2"
@@ -650,37 +570,257 @@ print_right_aligned() {
   left_vis=$(visible_len "$left")
   right_vis=$(visible_len "$right")
 
-  # How many spaces needed between left and right
   pad=$(( total_cols - left_vis - right_vis ))
   [ "$pad" -lt 1 ] && pad=1
 
   printf "%b%*s%b\n" "$left" "$pad" "" "$right"
 }
 
-# ─── Output Assembly ─────────────────────────────────────────────────────────
-if [ "$COLS" -ge 180 ]; then
-  LINE1="${S}${CLI_VER_FMT}${USER_FMT}${HOST_FMT}${M}${DIR_FMT}${V}${CONV_FMT}"
+# ─── Context Bar Formatting ──────────────────────────────────────────────────
+FILLED=$((PCT_INT * BAR_LEN / 100))
+REMAINDER=$(( (PCT_INT * BAR_LEN) % 100 ))
 
-  if [ -n "$QUOTA_FMT" ]; then
-    LINE2="${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}${DOT_L2}${CTX_BAR}${TOK_DETAILS_WIDE}${QUOTA_FMT}${POWER_FMT}"
-  else
-    LINE2="${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}${DOT_L2}${CTX_BAR}${TOK_DETAILS_WIDE}${POWER_FMT}"
+if   [ "$PCT_INT" -ge 90 ]; then FILL_COLOR="$FG_BRIGHT_RED"
+elif [ "$PCT_INT" -ge 60 ]; then FILL_COLOR="$FG_BRIGHT_YELLOW"
+else                              FILL_COLOR="$FG_YELLOW"
+fi
+
+if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+  BAR=""
+  for ((i = 0; i < BAR_LEN; i++)); do
+    if   [ "$i" -lt "$FILLED" ]; then
+      BAR="${BAR}█"
+    elif [ "$i" -eq "$FILLED" ]; then
+      if   [ "$REMAINDER" -ge 75 ]; then BAR="${BAR}▓"
+      elif [ "$REMAINDER" -ge 50 ]; then BAR="${BAR}▒"
+      elif [ "$REMAINDER" -ge 25 ]; then BAR="${BAR}░"
+      else                               BAR="${BAR}·"
+      fi
+    else BAR="${BAR}·"
+    fi
+  done
+  CTX_BAR="${FG_GRAY}ctx ${FILL_COLOR}${BAR} ${NUM_COLOR}${PCT_FMT}%${R}"
+else
+  # Color palette based on context size
+  if [ "$PCT_INT" -ge 90 ]; then bar_c="197"; else bar_c="214"; fi
+  BAR=""
+  for ((i = 0; i < BAR_LEN; i++)); do
+    if   [ "$i" -lt "$FILLED" ]; then
+      BAR="${BAR}\033[38;5;${bar_c}m█\033[0m"
+    elif [ "$i" -eq "$FILLED" ]; then
+      if   [ "$REMAINDER" -ge 75 ]; then
+        BAR="${BAR}\033[38;5;${bar_c}m▓\033[0m"
+      elif [ "$REMAINDER" -ge 50 ]; then
+        BAR="${BAR}\033[38;5;${bar_c}m▒\033[0m"
+      else
+        BAR="${BAR}\033[38;5;${bar_c}m░\033[0m"
+      fi
+    else
+      BAR="${BAR}\033[38;5;236m░\033[0m"
+    fi
+  done
+  
+  # Pill badge for Context Bar
+  label_bg="236"
+  bar_bg="235"
+  CTX_BAR="\033[38;5;${label_bg}m\033[48;5;${label_bg}m\033[38;5;220m${ICON_CONTEXT_BAR} ctx\033[48;5;${bar_bg}m ${BAR}\033[48;5;${label_bg}m \033[38;5;220m\033[1m${PCT_FMT}%\033[0m\033[38;5;${label_bg}m\033[0m"
+fi
+
+# ─── Statistics & Telemetry Badges ──────────────────────────────────────────
+ART_FMT=$(make_badge "${ICON_ARTIFACTS}" "${ARTIFACTS}" "75")
+SUB_FMT=$(make_badge "${ICON_SUBAGENTS}" "${SUBAGENTS}" "37")
+BG_FMT=$(make_badge "${ICON_TASKS}" "${BG_TASKS}" "135")
+
+# System Resources (RAM & Load average)
+SYS_FMT=""
+if [ -n "$MEM_PCT" ] && [ -n "$LOAD_1M" ]; then
+  sys_color="76"
+  if [ "$MEM_PCT" -ge 80 ] 2>/dev/null || (( $(echo "$LOAD_1M > 8.0" | bc -l 2>/dev/null || echo 0) )); then
+    sys_color="197"
+  elif [ "$MEM_PCT" -ge 65 ] 2>/dev/null; then
+    sys_color="214"
   fi
+  SYS_FMT=$(make_badge "${ICON_SYS}" "RAM:${MEM_PCT}% | ld:${LOAD_1M}" "$sys_color")
+fi
+
+# Sandbox Badge
+SB_FMT=""
+if [ "$SANDBOX" = "true" ]; then
+  if [ "$SANDBOX_NET" = "true" ]; then
+    SB_FMT=$(make_badge "${ICON_SANDBOX_NET}" "net-on" "76")
+  else
+    SB_FMT=$(make_badge "${ICON_SANDBOX_NONET}" "net-off" "214")
+  fi
+else
+  SB_FMT=$(make_badge "${ICON_SANDBOX_OFF}" "host" "244")
+fi
+
+# Power Badge
+POWER_FMT=""
+if [ -n "$AC_ONLINE_PATH" ]; then
+  AC_ON=$(cat "$AC_ONLINE_PATH" 2>/dev/null || echo "1")
+  BAT_CAP=""
+  if [ -n "$BAT_CAP_PATH" ]; then
+    BAT_CAP=$(cat "$BAT_CAP_PATH" 2>/dev/null || echo "")
+  fi
+  
+  if [ "$AC_ON" = "0" ]; then
+    local label="BAT"
+    if [ -n "$BAT_CAP" ]; then
+      label="${BAT_CAP}%"
+    fi
+    POWER_FMT=$(make_badge "${ICON_BAT}" "$label" "214")
+  else
+    POWER_FMT=$(make_badge "${ICON_AC}" "AC" "76")
+  fi
+fi
+
+# Token counters
+TOK_DETAILS_WIDE=""
+TOK_DETAILS_MED=""
+if [ "$CTX_USED" -gt 0 ] 2>/dev/null; then
+  turn_str=""
+  if [ "$TURN_INPUT_TOKENS" -gt 0 ] || [ "$TURN_OUTPUT_TOKENS" -gt 0 ]; then
+    turn_str=" | turn: +${TURN_INPUT_FMT}/${TURN_OUTPUT_FMT}"
+  fi
+  if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+    TOK_DETAILS_WIDE=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})${DOT_L2}(total: ${INPUT_TOK_FMT}/${OUTPUT_TOK_FMT}${turn_str})"
+    TOK_DETAILS_MED=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})"
+  else
+    TOK_DETAILS_WIDE=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})${DOT_L2}${FG_YELLOW}${ICON_TOK_SUM} ${R} (total: ${INPUT_TOK_FMT}/${OUTPUT_TOK_FMT}${turn_str})"
+    TOK_DETAILS_MED=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})"
+  fi
+fi
+
+MODEL_DISP="${MODEL_NAME:-$MODEL_ID}"
+
+# ─── Dynamic LINE1 Assembly (Powerline segments) ────────────────────────────
+ACTIVE_SEGS=()
+ACTIVE_BGS=()
+ACTIVE_FGS=()
+
+# 1. State
+case "$STATE" in
+  idle)     
+    ACTIVE_SEGS+=("${ICON_READY} READY")
+    ACTIVE_BGS+=("$BG_READY")
+    ACTIVE_FGS+=("$FG_READY_TEXT")
+    S="${FG_BRIGHT_GREEN}${B} ${ICON_READY} READY${R}"
+    ;;
+  thinking) 
+    ACTIVE_SEGS+=("${ICON_THINKING} THINKING")
+    ACTIVE_BGS+=("$BG_THINKING")
+    ACTIVE_FGS+=("$FG_THINKING_TEXT")
+    S="${FG_BRIGHT_YELLOW}${B} ${ICON_THINKING} THINKING${R}"
+    ;;
+  working)  
+    ACTIVE_SEGS+=("${ICON_WORKING} WORKING")
+    ACTIVE_BGS+=("$BG_WORKING")
+    ACTIVE_FGS+=("$FG_WORKING_TEXT")
+    S="${FG_BRIGHT_CYAN}${B} ${ICON_WORKING} WORKING${R}"
+    ;;
+  tool_use) 
+    ACTIVE_SEGS+=("${ICON_TOOL} TOOL")
+    ACTIVE_BGS+=("$BG_TOOL")
+    ACTIVE_FGS+=("$FG_TOOL_TEXT")
+    S="${FG_BRIGHT_MAGENTA}${B} ${ICON_TOOL} TOOL${R}"
+    ;;
+  *)        
+    ACTIVE_SEGS+=("${ICON_STATE_UNKNOWN} $(echo "$STATE" | tr '[:lower:]' '[:upper:]')")
+    ACTIVE_BGS+=("$BG_UNKNOWN")
+    ACTIVE_FGS+=("$FG_UNKNOWN_TEXT")
+    S="${FG_WHITE}${B} ${ICON_STATE_UNKNOWN} $(echo "$STATE" | tr '[:lower:]' '[:upper:]')${R}"
+    ;;
+esac
+
+# 2. VCS Branch
+if [ -n "$VCS_BRANCH" ]; then
+  if [ "$VCS_DIRTY" = "true" ]; then
+    ACTIVE_SEGS+=("${ICON_VCS} ${VCS_BRANCH}*")
+    ACTIVE_BGS+=("$BG_GIT_DIRTY")
+    ACTIVE_FGS+=("$FG_GIT_DIRTY_TEXT")
+  else
+    ACTIVE_SEGS+=("${ICON_VCS} ${VCS_BRANCH}")
+    ACTIVE_BGS+=("$BG_GIT_CLEAN")
+    ACTIVE_FGS+=("$FG_GIT_CLEAN_TEXT")
+  fi
+fi
+
+# 3. Model
+if [ -n "$MODEL_DISP" ]; then
+  ACTIVE_SEGS+=("${ICON_MODEL} ${MODEL_DISP}")
+  ACTIVE_BGS+=("$BG_MODEL")
+  ACTIVE_FGS+=("$FG_MODEL_TEXT")
+fi
+
+# 4. Directory
+if [ -n "$CWD_SHORT" ]; then
+  ACTIVE_SEGS+=("${ICON_DIR} ${CWD_SHORT}")
+  ACTIVE_BGS+=("$BG_DIR")
+  ACTIVE_FGS+=("$FG_DIR_TEXT")
+fi
+
+# 5. Conversation
+if [ -n "$CONV_ID" ]; then
+  ACTIVE_SEGS+=("${ICON_CONV} ${CONV_ID:0:8}")
+  ACTIVE_BGS+=("$BG_META")
+  ACTIVE_FGS+=("$FG_META_TEXT")
+fi
+
+# 6. Host IP
+if [ -n "$HOST_INFO" ]; then
+  ACTIVE_SEGS+=("󰒋 ${HOST_INFO}")
+  ACTIVE_BGS+=("$BG_META")
+  ACTIVE_FGS+=("$FG_META_TEXT")
+fi
+
+# 7. Version
+if [ -n "$CLI_VERSION" ]; then
+  ACTIVE_SEGS+=("v${CLI_VERSION}")
+  ACTIVE_BGS+=("$BG_META")
+  ACTIVE_FGS+=("$FG_META_TEXT")
+fi
+
+# Assemble LINE1 with powerline transitions
+LINE1=""
+num_segs=${#ACTIVE_SEGS[@]}
+for ((i = 0; i < num_segs; i++)); do
+  next_bg=""
+  if [ "$((i + 1))" -lt "$num_segs" ]; then
+    next_bg="${ACTIVE_BGS[i+1]}"
+  fi
+  LINE1="${LINE1}$(make_segment "${ACTIVE_BGS[i]}" "${ACTIVE_FGS[i]}" "${ACTIVE_SEGS[i]}" "$next_bg")"
+done
+
+# ─── Output Assembly based on terminal size ──────────────────────────────────
+if [ "$COLS" -ge 180 ]; then
+  # Wide Layout: single row, left segment block and right pill dashboard
+  sep="  "
+  if [ "$USE_CLASSIC_ICONS" = "true" ]; then sep=" ${DOT_L2} "; fi
+  
+  LINE2=""
+  if [ -n "$SYS_FMT" ]; then LINE2="${SYS_FMT}${sep}"; fi
+  LINE2="${LINE2}${ART_FMT}${sep}${SUB_FMT}${sep}${BG_FMT}${sep}${SB_FMT}${sep}${CTX_BAR}${TOK_DETAILS_WIDE}"
+  if [ -n "$QUOTA_FMT" ]; then LINE2="${LINE2} ${QUOTA_FMT}"; fi
+  if [ -n "$POWER_FMT" ]; then LINE2="${LINE2}${sep}${POWER_FMT}"; fi
+  
   print_right_aligned "$LINE1" "$LINE2" "$COLS"
 
 elif [ "$COLS" -ge 90 ]; then
-  # Medium Layout: Two-line layout with border
-  LINE1="${S}${CLI_VER_FMT}${USER_FMT}${HOST_FMT}${M}${DIR_FMT}${V}"
-  if [ -n "$QUOTA_FMT" ]; then
-    LINE2=" ${CTX_BAR}${TOK_DETAILS_MED}${DOT_L2}${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}${QUOTA_FMT}${POWER_FMT}"
-  else
-    LINE2=" ${CTX_BAR}${TOK_DETAILS_MED}${DOT_L2}${ART_FMT}${DOT_L2}${SUB_FMT}${DOT_L2}${BG_FMT}${DOT_L2}${SB}${POWER_FMT}"
-  fi
-
+  # Medium Layout: two lines boxed
+  sep="  "
+  if [ "$USE_CLASSIC_ICONS" = "true" ]; then sep=" ${DOT_L2} "; fi
+  
+  LINE2="${CTX_BAR}${TOK_DETAILS_MED}${sep}${SYS_FMT}${sep}${ART_FMT}${sep}${SUB_FMT}${sep}${BG_FMT}${sep}${SB_FMT}"
+  if [ -n "$QUOTA_FMT" ]; then LINE2="${LINE2} ${QUOTA_FMT}"; fi
+  if [ -n "$POWER_FMT" ]; then LINE2="${LINE2}${sep}${POWER_FMT}"; fi
+  
   echo -e "${FG_GRAY}╭─${R}${LINE1}"
   echo -e "${FG_GRAY}╰─${R}${LINE2}"
 
 else
+  # Small Layout: Minimalist status & resources
+  sep=" "
   M_SHORT=""
   if [ -n "$MODEL_DISP" ]; then
     if [ "$USE_CLASSIC_ICONS" = "true" ]; then
@@ -689,11 +829,12 @@ else
       M_SHORT="${FG_GRAY} ╱ ${FG_BRIGHT_MAGENTA}${ICON_MODEL} ${MODEL_DISP:0:12}${R}"
     fi
   fi
-
+  
   echo -e "${S}${M_SHORT}"
-  if [ -n "$QUOTA_FMT" ]; then
-    echo -e "${CTX_BAR}${DOT_L2}${BG_FMT}${QUOTA_FMT}${POWER_FMT}"
-  else
-    echo -e "${CTX_BAR}${DOT_L2}${BG_FMT}${POWER_FMT}"
-  fi
+  
+  LINE2="${CTX_BAR}"
+  if [ -n "$SYS_FMT" ]; then LINE2="${LINE2}${sep}${SYS_FMT}"; fi
+  if [ -n "$BG_FMT" ]; then LINE2="${LINE2}${sep}${BG_FMT}"; fi
+  if [ -n "$POWER_FMT" ]; then LINE2="${LINE2}${sep}${POWER_FMT}"; fi
+  echo -e "${LINE2}"
 fi
