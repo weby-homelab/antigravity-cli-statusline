@@ -30,6 +30,8 @@ You can inspect the legend of all components and icons directly from your termin
 * **Linux/macOS:** `~/.antigravity/statusline.sh --legend` (or `-l` / `legend`)
 * **Windows (PowerShell):** `powershell -NoProfile -ExecutionPolicy Bypass -File $HOME\.antigravity\statusline.ps1 -Legend` (or `--legend`)
 
+![Telemetry Legend Showcase](screenshots/Gemini_AGY-CLI-Statusline-LEGEND.png)
+
 > [!IMPORTANT]
 > **Nerd Font Glyphs Rendering:** The icons in the "Nerd Font Icon" column utilize characters from Nerd Fonts (V3+). If they appear as boxes, squares, or question marks in your web browser or on GitHub, this is expected since web browsers do not load Nerd Fonts by default. In your terminal, they will render correctly if you have a Nerd Font installed and active. The Unicode codepoints (e.g. `U+F192`) are provided for reference.
 
