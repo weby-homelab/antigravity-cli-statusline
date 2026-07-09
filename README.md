@@ -6,21 +6,17 @@ An advanced, responsive, and high-information statusline plugin for the **[Antig
 
 ## 🎨 Layout Showcase
 
-### 👑 Ultra Layout (Full Telemetry)
-The ultimate high-information layout displaying all telemetry fields: system metrics, Git status, active subagents, background tasks, model quotas, and power/battery state in a single visual dashboard.
-![Ultra Layout](screenshots/Antigravity-cli-statusline-ULTRA.png)
+### 👑 Ultra / Wide Layout (Terminal width $\ge$ 180 chars)
+The ultimate high-information layout displaying all telemetry fields: system metrics, Git status, active subagents, background tasks, model quotas, and power/battery state in a single aligned row.
+![Ultra Layout](screenshots/Antigravity-cli-statusline-ULTRA-2.png)
 
-### 🖥️ Wide Layout (Terminal width $\ge$ 180 chars)
-Provides a rich, single-row layout displaying all developer telemetry and active quotas side-by-side.
-![Wide Layout](screenshots/Antigravity-cli-statusline-max.png)
+### 📱 Medium Layout (Terminal width 130 to 179 chars)
+Stacks status and telemetry into a clean 3-line layout to prevent command output wrapping on standard terminals.
+![Medium Layout](screenshots/Antigravity-cli-statusline-MEDIUM-2.png)
 
-### 📱 Medium Layout (Terminal width $\ge$ 90 chars)
-Wraps status into a clean two-line boxed block to avoid command output line wrap.
-![Medium Layout](screenshots/Antigravity-cli-statusline-midle.png)
-
-### 📟 Small Layout (Terminal width < 90 chars)
-A minimalist layout displaying only the agent status, current model, and context window bar.
-![Compact Layout](screenshots/Antigravity-cli-statusline-min.png)
+### 📟 Small / Compact Layout (Terminal width < 130 chars)
+Ensures all metrics (READY, model, CWD, tokens, resources, and power) fit perfectly in a stacked 4-line layout on narrower terminals.
+![Compact Layout](screenshots/Antigravity-cli-statusline-SMALL-2.png)
 
 ---
 
@@ -49,12 +45,34 @@ You can inspect the legend of all components and icons directly from your termin
 | **Artifacts Counter** | ` (U+F0F6)` count | `artifacts` count | Number of currently active workspace artifacts. |
 | **Subagents Counter** | `󱙺 (U+F167A)` count | `subagents` count | Number of spawned active subagent processes. |
 | **Background Tasks** | ` (U+F0AE)` count | `tasks` count | Number of running background asynchronous tasks. |
+| **System Diagnostics** | ` (U+F04BC)` RAM/ld | `sys` RAM/ld | Real-time host CPU 1-min load average and RAM utilization. |
 | **Current Directory** | ` (U+EA83)` path | `╱` path | Shortened current working directory path. |
 | **Conversation ID** | `󰍪 (U+F036A)` id | `╱` id | 8-character prefix of the current session ID. |
+| **Host Info** | `󰒋 (U+F048B)` Host (IP) | `Host (IP)` | Hostname and active Tailscale connection IP. |
 | **Token Sum** | ` (U+E26B)` tokens | `tokens` | Total input + output tokens processed in session. |
 | **Quota Reset** | `⌛️ (U+231B)` time | `⌛` time | Remaining time until model API quota limits reset. |
 | **Power (Mains/AC)** | `󰚥 (U+F06A5)` AC | `AC` | Connected to AC power. |
 | **Power (Battery)** | `🔋 (U+1F50B)` charge% | `BAT:`charge% | Running on battery or UPS (shows charge percentage). |
+| **Segment Divider** | ` (U+E0B0)` | ` ` | Powerline transition symbol for active segments. |
+| **Pill Capsule Caps** | ` (U+E0B6)` / ` (U+E0B4)` | ` ` | Left and right caps enclosing telemetry badges. |
+
+---
+
+## 💎 Telemetry & Icon Styling
+
+The statusline features a modern, high-density telemetry layout built with two key design elements:
+
+1. **Powerline Segments (LINE1):** Left-aligned metadata components (e.g. State, Git Branch, Active Model, Current Directory, Conversation ID, Host Info, Version) are styled as connected blocks using classic `` (U+E0B0) powerline dividers. Each segment features premium 256-color palette styling mapped specifically to its contents.
+2. **Rounded Pill Badges (LINE2/3/4):** Right-aligned/stacked telemetry items (e.g. Host CPU/RAM diagnostics, Artifacts, Subagents, Background Tasks, Sandbox networking, Context Usage bar, Quota metrics, Power state) are rendered as isolated capsules enclosed in rounded caps `` (U+E0B6) and `` (U+E0B4) with a clean, dark-gray background (`#303030`).
+3. **Dynamic Warnings:** Icons inside badges dynamically change colors to signal bottleneck conditions (e.g. CPU/RAM load, critical quota limits, battery power under blackouts).
+
+### 🛠️ Configuration and Font Setup
+
+To configure the statusline icons correctly and prevent rendering issues (e.g., icons showing up as boxes or question marks):
+
+* **Install a Nerd Font (V3.0+):** The statusline relies on Nerd Font glyphs. Make sure you install and configure a compatible font (such as *Inter*, *Hack Nerd Font*, *JetBrainsMono Nerd Font*, or *FiraCode Nerd Font*) in your terminal's settings.
+* **Integrate with `settings.json`:** The statusline command is declared inside the `settings.json` configuration file of the Antigravity CLI, located in `~/.gemini/antigravity-cli/settings.json` (macOS/Linux) or `%USERPROFILE%\.gemini\antigravity-cli\settings.json` (Windows).
+* **Enable Classic Fallback:** If you're running in a terminal environment that lacks Nerd Font support (e.g. legacy TTY, ChromeOS Terminal, Emacs), append `--classic` to the statusline command inside your `settings.json`. This tells the script to use standard Unicode fallback characters and prevents raw 256-color ANSI escapes from leaking into the output.
 
 ---
 
