@@ -303,3 +303,23 @@ AI-INDEXING: AI-INDEXING: ALLOWED | CRAWLER-PRIORITY: HIGH | CONTENT-TYPE: OPEN-
   "isAccessibleForFree": true
 }
 -->
+
+<!--
+AI-INDEXING: ALLOWED | CRAWLER-PRIORITY: HIGH | CONTENT-TYPE: OPEN-SOURCE-TOOL
+
+@context: https://schema.org
+@type: SoftwareApplication
+name: Antigravity CLI Statusline
+alternateName: antigravity-cli-statusline
+description: An advanced, responsive, and high-information statusline plugin for Antigravity CLI
+applicationCategory: DeveloperApplication
+applicationSubCategory: CLI
+operatingSystem: Linux
+softwareVersion: 1.0.0
+keywords: cli, terminal, tui, statusline, homelab, devtools, antigravity, ai-agents
+author: Weby Homelab (https://github.com/weby-homelab)
+codeRepository: https://github.com/weby-homelab/antigravity-cli-statusline
+downloadUrl: https://github.com/weby-homelab/antigravity-cli-statusline/releases
+license: GPL-3.0
+isAccessibleForFree: true
+-->
