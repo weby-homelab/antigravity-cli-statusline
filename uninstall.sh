@@ -29,12 +29,14 @@ if [ -f "$SETTINGS_FILE" ]; then
   # If a backup exists, restore it
   if [ -f "${SETTINGS_FILE}.bak" ]; then
     echo -e "Restoring backup settings from ${SETTINGS_FILE}.bak..."
-    mv "${SETTINGS_FILE}.bak" "$SETTINGS_FILE"
+    cat "${SETTINGS_FILE}.bak" > "$SETTINGS_FILE"
+    rm -f "${SETTINGS_FILE}.bak"
   else
     if command -v jq &> /dev/null; then
       # Turn off statusLine configuration
       jq '.statusLine.enabled = false' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp"
-      mv "${SETTINGS_FILE}.tmp" "$SETTINGS_FILE"
+      cat "${SETTINGS_FILE}.tmp" > "$SETTINGS_FILE"
+      rm -f "${SETTINGS_FILE}.tmp"
       echo -e "Set statusLine.enabled to false."
     else
       echo -e "${YELLOW}Warning: 'jq' not found. Please manually set 'statusLine.enabled: false' in ${SETTINGS_FILE}${RESET}"

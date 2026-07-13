@@ -91,7 +91,8 @@ if [ -f "$SETTINGS_FILE" ]; then
 
   # Merge using jq
   jq '.statusLine = { "type": "", "command": "'"${SCRIPT_TARGET}"'", "enabled": true }' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp"
-  mv "${SETTINGS_FILE}.tmp" "$SETTINGS_FILE"
+  cat "${SETTINGS_FILE}.tmp" > "$SETTINGS_FILE"
+  rm -f "${SETTINGS_FILE}.tmp"
 else
   # Create directory if missing
   mkdir -p "$SETTINGS_DIR"
