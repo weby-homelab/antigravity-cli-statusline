@@ -112,7 +112,13 @@ NUM_COLOR="${FG_BRIGHT_WHITE}${B}"
 # ─── Parse CLI Arguments & Theme ─────────────────────────────────────────────
 USE_CLASSIC_ICONS=false
 for arg in "$@"; do
-  if [ "$arg" = "--classic" ] || [ "$arg" = "--no-nerdfont" ] || [ "$arg" = "--compatibility" ] || [ "$arg" = "-l" ] || [ "$arg" = "--legend" ] || [ "$arg" = "legend" ]; then
+  if [ "$arg" = "--compact" ]; then
+    COLS=99
+  elif [ "$arg" = "--medium" ]; then
+    COLS=120
+  elif [ "$arg" = "--medium-wide" ]; then
+    COLS=150
+  elif [ "$arg" = "--classic" ] || [ "$arg" = "--no-nerdfont" ] || [ "$arg" = "--compatibility" ] || [ "$arg" = "-l" ] || [ "$arg" = "--legend" ] || [ "$arg" = "legend" ]; then
     # We parse argument to see if it is legend command
     if [ "$arg" = "--legend" ] || [ "$arg" = "-l" ] || [ "$arg" = "legend" ]; then
       echo -e "${FG_BRIGHT_GREEN}${B}🚀 Antigravity CLI Maximized Statusline Legend${R}"
@@ -375,8 +381,8 @@ fi
 
 # ─── Power / Battery Scanner ─────────────────────────────────────────────────
 POWER_FMT=""
-AC_ONLINE_PATH=$(ls /sys/class/power_supply/*/online 2>/dev/null | head -n 1)
-BAT_CAP_PATH=$(ls /sys/class/power_supply/*/capacity 2>/dev/null | head -n 1)
+AC_ONLINE_PATH=$(ls /sys/class/power_supply/*/online 2>/dev/null | head -n 1 || true)
+BAT_CAP_PATH=$(ls /sys/class/power_supply/*/capacity 2>/dev/null | head -n 1 || true)
 
 # ─── Segment powerline formatter ──────────────────────────────────────────────
 make_segment() {
@@ -556,21 +562,45 @@ make_quota_bar() {
 }
 
 # Determine active quota based on actual availability
-if { [ -n "$GEMINI_5H" ] && [ "$GEMINI_5H" != "-1" ]; } || { [ -n "$GEMINI_WK" ] && [ "$GEMINI_WK" != "-1" ]; }; then
-  Q_5H="$GEMINI_5H"
-  Q_WK="$GEMINI_WK"
-  Q_5H_R="$GEMINI_5H_RESET"
-  Q_WK_R="$GEMINI_WK_RESET"
-elif { [ -n "$TP_5H" ] && [ "$TP_5H" != "-1" ]; } || { [ -n "$TP_WK" ] && [ "$TP_WK" != "-1" ]; }; then
-  Q_5H="$TP_5H"
-  Q_WK="$TP_WK"
-  Q_5H_R="$TP_5H_RESET"
-  Q_WK_R="$TP_WK_RESET"
+IS_3P=false
+if echo "$MODEL_ID" | grep -qiE "claude|gpt|anthropic|openai|o1|o3|3p"; then
+  IS_3P=true
+fi
+
+if [ "$IS_3P" = true ]; then
+  if { [ -n "$TP_5H" ] && [ "$TP_5H" != "-1" ]; } || { [ -n "$TP_WK" ] && [ "$TP_WK" != "-1" ]; }; then
+    Q_5H="$TP_5H"
+    Q_WK="$TP_WK"
+    Q_5H_R="$TP_5H_RESET"
+    Q_WK_R="$TP_WK_RESET"
+  elif { [ -n "$GEMINI_5H" ] && [ "$GEMINI_5H" != "-1" ]; } || { [ -n "$GEMINI_WK" ] && [ "$GEMINI_WK" != "-1" ]; }; then
+    Q_5H="$GEMINI_5H"
+    Q_WK="$GEMINI_WK"
+    Q_5H_R="$GEMINI_5H_RESET"
+    Q_WK_R="$GEMINI_WK_RESET"
+  else
+    Q_5H="-1"
+    Q_WK="-1"
+    Q_5H_R="-1"
+    Q_WK_R="-1"
+  fi
 else
-  Q_5H="-1"
-  Q_WK="-1"
-  Q_5H_R="-1"
-  Q_WK_R="-1"
+  if { [ -n "$GEMINI_5H" ] && [ "$GEMINI_5H" != "-1" ]; } || { [ -n "$GEMINI_WK" ] && [ "$GEMINI_WK" != "-1" ]; }; then
+    Q_5H="$GEMINI_5H"
+    Q_WK="$GEMINI_WK"
+    Q_5H_R="$GEMINI_5H_RESET"
+    Q_WK_R="$GEMINI_WK_RESET"
+  elif { [ -n "$TP_5H" ] && [ "$TP_5H" != "-1" ]; } || { [ -n "$TP_WK" ] && [ "$TP_WK" != "-1" ]; }; then
+    Q_5H="$TP_5H"
+    Q_WK="$TP_WK"
+    Q_5H_R="$TP_5H_RESET"
+    Q_WK_R="$TP_WK_RESET"
+  else
+    Q_5H="-1"
+    Q_WK="-1"
+    Q_5H_R="-1"
+    Q_WK_R="-1"
+  fi
 fi
 
 QUOTA_FMT=""

@@ -55,7 +55,13 @@ if (-not (Test-Path $settingsDir)) {
 
 # Format script path for settings.json compatibility (using forward slashes)
 $escapedScriptPath = $targetScript.Replace('\', '/')
-$commandString = "powershell -NoProfile -ExecutionPolicy Bypass -File `"$escapedScriptPath`""
+
+# Capture optional script arguments to pass to the statusline (e.g. --medium)
+$extraArgs = ""
+if ($args.Count -gt 0) {
+    $extraArgs = " " + ($args -join " ")
+}
+$commandString = "powershell -NoProfile -ExecutionPolicy Bypass -File `"$escapedScriptPath`"$extraArgs"
 
 Write-Host "Configuring statusline in settings.json..."
 if (Test-Path $settingsFile) {

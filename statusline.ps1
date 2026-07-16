@@ -216,6 +216,12 @@ $USE_CLASSIC_ICONS = $false
 foreach ($arg in $args) {
     if ($arg -eq "--classic" -or $arg -eq "--no-nerdfont" -or $arg -eq "--compatibility") {
         $USE_CLASSIC_ICONS = $true
+    } elseif ($arg -eq "--compact") {
+        $COLS = 89
+    } elseif ($arg -eq "--medium") {
+        $COLS = 120
+    } elseif ($arg -eq "--medium-wide") {
+        $COLS = 150
     }
 }
 
@@ -577,21 +583,45 @@ function make_quota_bar($val, $label, $bar_color, $reset_sec) {
 }
 
 # Determine active quota based on actual availability
-if (($GEMINI_5H -ne $null -and $GEMINI_5H -ne -1) -or ($GEMINI_WK -ne $null -and $GEMINI_WK -ne -1)) {
-    $Q_5H = $GEMINI_5H
-    $Q_WK = $GEMINI_WK
-    $Q_5H_R = $GEMINI_5H_RESET
-    $Q_WK_R = $GEMINI_WK_RESET
-} elseif (($TP_5H -ne $null -and $TP_5H -ne -1) -or ($TP_WK -ne $null -and $TP_WK -ne -1)) {
-    $Q_5H = $TP_5H
-    $Q_WK = $TP_WK
-    $Q_5H_R = $TP_5H_RESET
-    $Q_WK_R = $TP_WK_RESET
+$is3PModel = $false
+if ($MODEL_ID -and $MODEL_ID -match "(?i)claude|gpt|anthropic|openai|o1|o3|3p") {
+    $is3PModel = $true
+}
+
+if ($is3PModel) {
+    if (($TP_5H -ne $null -and $TP_5H -ne -1) -or ($TP_WK -ne $null -and $TP_WK -ne -1)) {
+        $Q_5H = $TP_5H
+        $Q_WK = $TP_WK
+        $Q_5H_R = $TP_5H_RESET
+        $Q_WK_R = $TP_WK_RESET
+    } elseif (($GEMINI_5H -ne $null -and $GEMINI_5H -ne -1) -or ($GEMINI_WK -ne $null -and $GEMINI_WK -ne -1)) {
+        $Q_5H = $GEMINI_5H
+        $Q_WK = $GEMINI_WK
+        $Q_5H_R = $GEMINI_5H_RESET
+        $Q_WK_R = $GEMINI_WK_RESET
+    } else {
+        $Q_5H = -1
+        $Q_WK = -1
+        $Q_5H_R = -1
+        $Q_WK_R = -1
+    }
 } else {
-    $Q_5H = -1
-    $Q_WK = -1
-    $Q_5H_R = -1
-    $Q_WK_R = -1
+    if (($GEMINI_5H -ne $null -and $GEMINI_5H -ne -1) -or ($GEMINI_WK -ne $null -and $GEMINI_WK -ne -1)) {
+        $Q_5H = $GEMINI_5H
+        $Q_WK = $GEMINI_WK
+        $Q_5H_R = $GEMINI_5H_RESET
+        $Q_WK_R = $GEMINI_WK_RESET
+    } elseif (($TP_5H -ne $null -and $TP_5H -ne -1) -or ($TP_WK -ne $null -and $TP_WK -ne -1)) {
+        $Q_5H = $TP_5H
+        $Q_WK = $TP_WK
+        $Q_5H_R = $TP_5H_RESET
+        $Q_WK_R = $TP_WK_RESET
+    } else {
+        $Q_5H = -1
+        $Q_WK = -1
+        $Q_5H_R = -1
+        $Q_WK_R = -1
+    }
 }
 
 $QUOTA_FMT = ""

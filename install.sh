@@ -79,6 +79,13 @@ else
   chmod +x "$UNINSTALL_TARGET"
 fi
 
+# Capture optional script arguments to pass to the statusline (e.g. --medium)
+EXTRA_ARGS=""
+if [ "$#" -gt 0 ]; then
+  EXTRA_ARGS=" $@"
+fi
+COMMAND_STRING="${SCRIPT_TARGET}${EXTRA_ARGS}"
+
 # 4. Configure settings.json
 SETTINGS_FILE="$HOME/.gemini/antigravity-cli/settings.json"
 SETTINGS_DIR="$(dirname "$SETTINGS_FILE")"
@@ -90,7 +97,7 @@ if [ -f "$SETTINGS_FILE" ]; then
   echo -e "${YELLOW}Backed up original settings to ${SETTINGS_FILE}.bak${RESET}"
 
   # Merge using jq
-  jq '.statusLine = { "type": "", "command": "'"${SCRIPT_TARGET}"'", "enabled": true }' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp"
+  jq '.statusLine = { "type": "", "command": "'"${COMMAND_STRING}"'", "enabled": true }' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp"
   cat "${SETTINGS_FILE}.tmp" > "$SETTINGS_FILE"
   rm -f "${SETTINGS_FILE}.tmp"
 else
@@ -102,7 +109,7 @@ else
 {
   "statusLine": {
     "type": "",
-    "command": "${SCRIPT_TARGET}",
+    "command": "${COMMAND_STRING}",
     "enabled": true
   }
 }
