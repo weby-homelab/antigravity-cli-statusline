@@ -119,7 +119,8 @@ _SUBAGENT_TRUTH_FILE="/tmp/agy_subagent_truth"
 
 # If the truth file says 0 and the JSON says >0, the JSON is stale — use 0.
 if [ -f "$_SUBAGENT_TRUTH_FILE" ]; then
-  _TRUTH_VAL=$(cat "$_SUBAGENT_TRUTH_FILE" 2>/dev/null || echo "")
+  _TRUTH_VAL=""
+  read -r _TRUTH_VAL < "$_SUBAGENT_TRUTH_FILE" 2>/dev/null || _TRUTH_VAL=""
   _TRUTH_TIME=$(stat -f "%m" "$_SUBAGENT_TRUTH_FILE" 2>/dev/null || stat -c "%Y" "$_SUBAGENT_TRUTH_FILE" 2>/dev/null || echo "0")
   _NOW=$(date +%s)
   _AGE=$(( _NOW - _TRUTH_TIME ))
@@ -128,12 +129,10 @@ if [ -f "$_SUBAGENT_TRUTH_FILE" ]; then
   fi
 fi
 if [ "${SUBAGENTS:-0}" = "0" ]; then
-  ( echo "0" > "$_SUBAGENT_TRUTH_FILE" ) 2>/dev/null || true
+  echo "0" > "$_SUBAGENT_TRUTH_FILE" 2>/dev/null || true
 fi
 
 # ─── Fix 2: Real-time quota countdown (tick between agy polls) ───────────────
-# agy only passes reset_in_seconds as a snapshot. We cache it + current epoch
-# and subtract elapsed time on every render so it ticks in real time.
 _tick_countdown() {
   local val="$1"        # current seconds from JSON
   local cache_file="$2" # e.g. /tmp/agy_quota_5h
@@ -146,29 +145,31 @@ _tick_countdown() {
   fi
 
   if [ -f "$cache_file" ]; then
-    local cached; cached=$(cat "$cache_file" 2>/dev/null || echo "")
+    local cached=""
+    read -r cached < "$cache_file" 2>/dev/null || cached=""
     if [ -z "$cached" ]; then
-      ( echo "${val}:${now}" > "$cache_file" ) 2>/dev/null || true
+      echo "${val}:${now}" > "$cache_file" 2>/dev/null || true
       echo "$val"; return
     fi
-    local cached_sec cached_epoch
-    cached_sec=$(echo "$cached" | cut -d: -f1)
-    cached_epoch=$(echo "$cached" | cut -d: -f2)
+    local cached_sec="${cached%%:*}"
+    local cached_epoch="${cached#*:}"
     local elapsed=$(( now - cached_epoch ))
     local live=$(( cached_sec - elapsed ))
 
-    # If agy gave us a fresher (larger) value, or cache is stale (>10min drift),
-    # reset the cache with the new agy value.
-    local drift=$(( val - live ))
-    [ "$drift" -lt 0 ] && drift=$(( -drift ))
-    if [ "$drift" -gt 120 ] || [ "$live" -le 0 ]; then
-      ( echo "${val}:${now}" > "$cache_file" ) 2>/dev/null || true
-      echo "$val"
+    if [ "$live" -le 0 ]; then
+      echo "0"
     else
-      echo "$live"
+      local drift=$(( val - cached_sec ))
+      [ "$drift" -lt 0 ] && drift=$(( -drift ))
+      if [ "$drift" -gt 10 ]; then
+        echo "${val}:${now}" > "$cache_file" 2>/dev/null || true
+        echo "$val"
+      else
+        echo "$live"
+      fi
     fi
   else
-    ( echo "${val}:${now}" > "$cache_file" ) 2>/dev/null || true
+    echo "${val}:${now}" > "$cache_file" 2>/dev/null || true
     echo "$val"
   fi
 }
