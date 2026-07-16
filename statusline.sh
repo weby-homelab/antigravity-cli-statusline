@@ -685,7 +685,7 @@ if [ -n "$AC_ONLINE_PATH" ]; then
   fi
   
   if [ "$AC_ON" = "0" ]; then
-    local label="BAT"
+    label="BAT"
     if [ -n "$BAT_CAP" ]; then
       label="${BAT_CAP}%"
     fi
