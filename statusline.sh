@@ -3,6 +3,7 @@
 # Built with premium 256-color powerline theme & instant system diagnostics
 
 set -euo pipefail
+export LC_NUMERIC=C
 INPUT_JSON=$(cat)
 
 # ─── ANSI Helpers (Standard colors) ───────────────────────────────────────────
@@ -375,8 +376,12 @@ fi
 
 # ─── Power / Battery Scanner ─────────────────────────────────────────────────
 POWER_FMT=""
-AC_ONLINE_PATH=$(ls /sys/class/power_supply/*/online 2>/dev/null | head -n 1)
-BAT_CAP_PATH=$(ls /sys/class/power_supply/*/capacity 2>/dev/null | head -n 1)
+AC_ONLINE_PATH=""
+BAT_CAP_PATH=""
+if [ -d /sys/class/power_supply ]; then
+  AC_ONLINE_PATH=$(ls /sys/class/power_supply/*/online 2>/dev/null | head -n 1 || true)
+  BAT_CAP_PATH=$(ls /sys/class/power_supply/*/capacity 2>/dev/null | head -n 1 || true)
+fi
 
 # ─── Segment powerline formatter ──────────────────────────────────────────────
 make_segment() {
