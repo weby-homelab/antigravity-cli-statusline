@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-07-22
+### Fixed & Hardened
+- **Atomic File Replacement**: Updated `install.sh` to copy files to temporary `.tmp` targets before executing an atomic `mv -f` replacement, preventing race-condition syntax errors when background statusline runners poll during installation.
+- **Cross-Platform Battery Scanner**: Integrated native macOS `pmset` power/battery scanner fallback alongside Linux `/sys/class/power_supply` and Windows WMI/CIM.
+
 ## [0.2.1] - 2026-07-22
 ### Fixed & Hardened
 - **Smart Dynamic Line-Packing Engine**: Replaced rigid fixed-line layouts with an adaptive, greedy line-packing engine. Telemetry badges dynamically flow into cleanly framed boxed rows (`╭─`, `├─`, `╰─`) according to exact visible character lengths, eliminating line wrapping across ALL terminal widths (from 60 to 250+ cols).
