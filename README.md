@@ -156,15 +156,9 @@ To remove the statusline and restore backup configuration:
 
 ---
 
-## 📝 Release History
+## 📝 Changelog
 
-* **v0.2.2 (July 22, 2026):** Atomic file replacement in `install.sh` to prevent race condition syntax errors during background execution. Added macOS `pmset` native battery scanner fallback.
-* **v0.2.1 (July 22, 2026):** Smart Dynamic Line-Packing Engine ensuring 100% telemetry visibility with zero line wrapping across all terminal widths.
-* **v0.2.0 (July 22, 2026):** Added `👤 Plan (Email)` user account badge and turn-by-turn token metrics (`turn: +IN/OUT`).
-* **v0.1.9 (July 22, 2026):** Defensive payload numeric sanitization under `set -e` and PowerShell null-safety navigation.
-* **v0.1.8 (July 22, 2026):** Real-time subagent `/tmp/agy_subagent_truth` caching and 3P model quota pattern matcher.
-* **v0.1.7 (July 13, 2026):** Symlink preservation during configuration updates.
-* **v0.1.6 (July 9, 2026):** Subprocess-free load average calculation and Windows PowerShell Git timeout safeguards.
+For a detailed list of changes, fixes, and release history, please see the **[CHANGELOG.md](CHANGELOG.md)**.
 
 ---
 
