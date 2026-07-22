@@ -18,7 +18,7 @@ $settingsFile = "$HOME\.gemini\antigravity-cli\settings.json"
 if (Test-Path $settingsFile) {
     if (Test-Path "${settingsFile}.bak") {
         Write-Host "Restoring backup settings from ${settingsFile}.bak..."
-        Copy-Item -Path "${settingsFile}.bak" -Destination $settingsFile -Force
+        Get-Content -Raw -Path "${settingsFile}.bak" | Out-File -FilePath $settingsFile -Encoding utf8
         Remove-Item -Path "${settingsFile}.bak" -Force
     } else {
         Write-Host "Disabling statusLine in settings.json..."

@@ -11,7 +11,7 @@ BLUE='\033[0;34m'
 RESET='\033[0m'
 
 # Check if running via sudo
-if [ -n "${SUDO_USER:-}" ]; then
+if [ -n "${SUDO_USER:-}" ] || ( [ "$(id -u)" -eq 0 ] && [ ! -O "${HOME:-}" ] ); then
   echo -e "${RED}Error: This script should NOT be run with sudo or as root via sudo.${RESET}"
   echo -e "${YELLOW}The statusline installs locally in your home directory (~/.antigravity).${RESET}"
   echo -e "${YELLOW}Running with sudo will cause file permission issues for your user account.${RESET}"
@@ -51,7 +51,7 @@ COMMAND_STRING="${SCRIPT_TARGET}${EXTRA_ARGS}"
 UNINSTALL_TARGET="${INSTALL_DIR}/uninstall.sh"
 
 LOCAL_DIR=""
-if [ -f "$(dirname "$0")/statusline.sh" ]; then
+if [ -f "$0" ] && [ -f "$(dirname "$0")/statusline.sh" ]; then
   LOCAL_DIR="$(dirname "$0")"
 fi
 

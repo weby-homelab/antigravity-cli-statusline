@@ -89,15 +89,16 @@ $CTX_USED = $INPUT_TOKENS + $OUTPUT_TOKENS
 $REM_PCT = if ($data.context_window.remaining_percentage -ne $null) { $data.context_window.remaining_percentage } else { 100 }
 
 # Quotas
-$GEMINI_5H = if ($data.quota.'gemini-5h'.remaining_fraction -ne $null) { [Math]::Round($data.quota.'gemini-5h'.remaining_fraction * 100, 1) } else { -1 }
-$GEMINI_WK = if ($data.quota.'gemini-weekly'.remaining_fraction -ne $null) { [Math]::Round($data.quota.'gemini-weekly'.remaining_fraction * 100, 1) } else { -1 }
-$TP_5H = if ($data.quota.'3p-5h'.remaining_fraction -ne $null) { [Math]::Round($data.quota.'3p-5h'.remaining_fraction * 100, 1) } else { -1 }
-$TP_WK = if ($data.quota.'3p-weekly'.remaining_fraction -ne $null) { [Math]::Round($data.quota.'3p-weekly'.remaining_fraction * 100, 1) } else { -1 }
+$hasQuota = ($null -ne $data.quota)
+$GEMINI_5H = if ($hasQuota -and $null -ne $data.quota.'gemini-5h' -and $null -ne $data.quota.'gemini-5h'.remaining_fraction) { [Math]::Round($data.quota.'gemini-5h'.remaining_fraction * 100, 1) } else { -1 }
+$GEMINI_WK = if ($hasQuota -and $null -ne $data.quota.'gemini-weekly' -and $null -ne $data.quota.'gemini-weekly'.remaining_fraction) { [Math]::Round($data.quota.'gemini-weekly'.remaining_fraction * 100, 1) } else { -1 }
+$TP_5H = if ($hasQuota -and $null -ne $data.quota.'3p-5h' -and $null -ne $data.quota.'3p-5h'.remaining_fraction) { [Math]::Round($data.quota.'3p-5h'.remaining_fraction * 100, 1) } else { -1 }
+$TP_WK = if ($hasQuota -and $null -ne $data.quota.'3p-weekly' -and $null -ne $data.quota.'3p-weekly'.remaining_fraction) { [Math]::Round($data.quota.'3p-weekly'.remaining_fraction * 100, 1) } else { -1 }
 
-$GEMINI_5H_RESET = if ($data.quota.'gemini-5h'.reset_in_seconds -ne $null) { $data.quota.'gemini-5h'.reset_in_seconds } else { -1 }
-$GEMINI_WK_RESET = if ($data.quota.'gemini-weekly'.reset_in_seconds -ne $null) { $data.quota.'gemini-weekly'.reset_in_seconds } else { -1 }
-$TP_5H_RESET = if ($data.quota.'3p-5h'.reset_in_seconds -ne $null) { $data.quota.'3p-5h'.reset_in_seconds } else { -1 }
-$TP_WK_RESET = if ($data.quota.'3p-weekly'.reset_in_seconds -ne $null) { $data.quota.'3p-weekly'.reset_in_seconds } else { -1 }
+$GEMINI_5H_RESET = if ($hasQuota -and $null -ne $data.quota.'gemini-5h' -and $null -ne $data.quota.'gemini-5h'.reset_in_seconds) { $data.quota.'gemini-5h'.reset_in_seconds } else { -1 }
+$GEMINI_WK_RESET = if ($hasQuota -and $null -ne $data.quota.'gemini-weekly' -and $null -ne $data.quota.'gemini-weekly'.reset_in_seconds) { $data.quota.'gemini-weekly'.reset_in_seconds } else { -1 }
+$TP_5H_RESET = if ($hasQuota -and $null -ne $data.quota.'3p-5h' -and $null -ne $data.quota.'3p-5h'.reset_in_seconds) { $data.quota.'3p-5h'.reset_in_seconds } else { -1 }
+$TP_WK_RESET = if ($hasQuota -and $null -ne $data.quota.'3p-weekly' -and $null -ne $data.quota.'3p-weekly'.reset_in_seconds) { $data.quota.'3p-weekly'.reset_in_seconds } else { -1 }
 
 # ANSI Helpers
 $ESC = [char]27
