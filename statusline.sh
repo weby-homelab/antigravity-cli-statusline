@@ -461,6 +461,9 @@ fi
 POWER_FMT=""
 AC_ONLINE_PATH=""
 BAT_CAP_PATH=""
+MACOS_AC_ON=""
+MACOS_BAT_CAP=""
+
 if [ -d /sys/class/power_supply ]; then
   for path in /sys/class/power_supply/*/online; do
     if [ -f "$path" ]; then
@@ -474,6 +477,14 @@ if [ -d /sys/class/power_supply ]; then
       break
     fi
   done
+elif command -v pmset &>/dev/null; then
+  pmset_out=$(pmset -g batt 2>/dev/null || echo "")
+  if echo "$pmset_out" | grep -q "AC Power"; then
+    MACOS_AC_ON="1"
+  else
+    MACOS_AC_ON="0"
+  fi
+  MACOS_BAT_CAP=$(echo "$pmset_out" | grep -o "[0-9]\{1,3\}%" | tr -d "%" | head -n 1 || echo "")
 fi
 
 # ─── Segment powerline formatter ──────────────────────────────────────────────
@@ -820,6 +831,16 @@ if [ -n "$AC_ONLINE_PATH" ]; then
     label="BAT"
     if [ -n "$BAT_CAP" ]; then
       label="${BAT_CAP}%"
+    fi
+    POWER_FMT=$(make_badge "${ICON_BAT}" "$label" "214")
+  else
+    POWER_FMT=$(make_badge "${ICON_AC}" "AC" "76")
+  fi
+elif [ -n "$MACOS_AC_ON" ]; then
+  if [ "$MACOS_AC_ON" = "0" ]; then
+    label="BAT"
+    if [ -n "$MACOS_BAT_CAP" ]; then
+      label="${MACOS_BAT_CAP}%"
     fi
     POWER_FMT=$(make_badge "${ICON_BAT}" "$label" "214")
   else
