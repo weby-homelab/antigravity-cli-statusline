@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-07-22
+### Added
+- **Maximized Telemetry Dashboard**: Restored and expanded full telemetry fields across all layouts, including User Plan Tier (`PLAN_TIER`), Account Email (`USER_EMAIL`), and turn-by-turn token delta counters (`turn: +IN/OUT`).
+- **User Account Segment**: Added dynamic `👤 Plan (Email)` segment to LINE1 Powerline status bar for terminal widths >= 130 chars.
+- **Detailed Token Metrics**: Enabled full session token breakdown (`(total: IN/OUT | turn: +IN/OUT)`) across Medium, Medium-Wide, and Wide layouts.
+- **Full Platform Parity**: Synchronized all maximized telemetry fields across Linux/macOS (`statusline.sh`) and Windows PowerShell (`statusline.ps1`).
+
 ## [0.1.9] - 2026-07-22
 ### Fixed
 - **Global Scope Syntax Error**: Fixed `local: can only be used in a function` crash on battery-powered laptops by removing invalid `local` keyword from global scope in battery scanner block.

@@ -912,7 +912,28 @@ if [ -n "$CWD_SHORT" ]; then
   ACTIVE_FGS+=("$FG_DIR_TEXT")
 fi
 
-# 5. Conversation
+# 5. User Plan & Account
+if [ -n "$PLAN_TIER" ] || [ -n "$USER_EMAIL" ]; then
+  u_label="${PLAN_TIER}"
+  if [ -n "$USER_EMAIL" ]; then
+    if [ -n "$u_label" ]; then
+      u_label="${u_label} (${USER_EMAIL})"
+    else
+      u_label="${USER_EMAIL}"
+    fi
+  fi
+  if [ "$COLS" -ge 130 ]; then
+    if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+      ACTIVE_SEGS+=("${u_label}")
+    else
+      ACTIVE_SEGS+=("👤 ${u_label}")
+    fi
+    ACTIVE_BGS+=("$BG_META")
+    ACTIVE_FGS+=("$FG_META_TEXT")
+  fi
+fi
+
+# 6. Conversation
 if [ -n "$CONV_ID" ] && [ "$COLS" -ge 80 ]; then
   ACTIVE_SEGS+=("${ICON_CONV} ${CONV_ID:0:8}")
   ACTIVE_BGS+=("$BG_META")
@@ -977,7 +998,7 @@ if [ "$COLS" -ge 180 ]; then
 
 elif [ "$COLS" -ge 140 ]; then
   # Medium-Wide Layout: 2-line boxed display
-  LINE2="${CTX_BAR}${TOK_DETAILS_MED}"
+  LINE2="${CTX_BAR}${TOK_DETAILS_WIDE}"
   for badge in "$SYS_FMT" "$ART_FMT" "$SUB_FMT" "$BG_FMT" "$SB_FMT"; do
     if [ -n "$badge" ]; then
       LINE2="${LINE2}${sep}${badge}"
@@ -991,7 +1012,7 @@ elif [ "$COLS" -ge 140 ]; then
 
 elif [ "$COLS" -ge 100 ]; then
   # Medium Layout: 3-row display to avoid wrapping
-  LINE2="${CTX_BAR}${TOK_DETAILS_MED}"
+  LINE2="${CTX_BAR}${TOK_DETAILS_WIDE}"
   for badge in "$SYS_FMT" "$ART_FMT" "$SUB_FMT" "$BG_FMT" "$SB_FMT"; do
     if [ -n "$badge" ]; then
       LINE2="${LINE2}${sep}${badge}"
@@ -1016,7 +1037,7 @@ elif [ "$COLS" -ge 100 ]; then
 
 else
   # Compact Layout: 4-row display ensuring all blocks fit perfectly
-  LINE2="${CTX_BAR}${TOK_DETAILS_MED}"
+  LINE2="${CTX_BAR}${TOK_DETAILS_WIDE}"
   
   LINE3=""
   for badge in "$SYS_FMT" "$ART_FMT" "$SUB_FMT" "$BG_FMT" "$SB_FMT"; do
