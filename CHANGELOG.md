@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.9] - 2026-07-22
+### Fixed
+- **Global Scope Syntax Error**: Fixed `local: can only be used in a function` crash on battery-powered laptops by removing invalid `local` keyword from global scope in battery scanner block.
+- **Defensive Payload Sanitization**: Added regex-based numeric variable validation for all JSON telemetry fields in Bash (`statusline.sh`), ensuring safe execution under `set -e` even with malformed or invalid string inputs.
+- **PowerShell Null-Safety**: Implemented defensive null navigation checks in `statusline.ps1` for missing `quota` and `context_window` JSON structures.
+- **Symlink Preservation**: Updated `uninstall.ps1` to use `Get-Content | Out-File` pipeline when restoring `settings.json.bak`, preventing symlinks from being replaced by regular file copies on Windows.
+
+## [0.1.8] - 2026-07-22
+### Added
+- **Layout Size Options**: Added `--compact`, `--medium`, and `--medium-wide` CLI override flags to force specific statusline widths.
+- **Subagent Real-Time Caching**: Integrated `/tmp/agy_subagent_truth` caching to immediately drop the UI counter to 0 upon subagent process completion.
+- **Real-Time Quota Countdown**: Implemented `_tick_countdown` in-memory helper to dynamically decrement reset timers on every prompt refresh.
+- **3P Model Quota Resolver**: Added native Bash `case` pattern matcher to dynamically select Third-Party (Claude/GPT/OpenAI) or Gemini quotas.
+### Fixed
+- **macOS & Linux Power Supply Detection**: Replaced fragile `ls` subshell calls under `set -o pipefail` with direct glob expansion loops for `/sys/class/power_supply/*/online` and `/capacity`.
+- **Locale Decimal Crash**: Added `export LC_NUMERIC=C` to prevent `printf` float syntax crashes in non-English locales.
+- **Installer Safety**: Updated `install.sh` to use `jq --arg` for safe JSON escaping and added root/user home mismatch checks.
+
 ## [0.1.7] - 2026-07-13
 ### Fixed
 - **Symlink Preservation**: Modified installers and uninstallers (`install.sh`, `uninstall.sh`, and `uninstall.ps1`) to avoid breaking symlinks when updating `settings.json`. Instead of using `mv`/`Move-Item` which replaces whole files, the scripts now use redirection (`cat > file`) and copying (`Copy-Item` / `Remove-Item`) to perform disjoint-key updates directly on the target configurations. This prevents breaking user setups managed by dotfile managers (like chezmoi, stow, or custom symlinked setups).
