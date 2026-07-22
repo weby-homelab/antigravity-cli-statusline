@@ -3,6 +3,7 @@
 # Built with premium 256-color powerline theme & instant system diagnostics
 
 set -euo pipefail
+export LC_NUMERIC=C
 INPUT_JSON=$(cat)
 
 # ─── ANSI Helpers (Standard colors) ───────────────────────────────────────────
@@ -109,10 +110,69 @@ NUM_COLOR="${FG_BRIGHT_WHITE}${B}"
   ' 2>/dev/null || printf "idle\n0\n\nfalse\n\n\nfalse\nfalse\n0\n0\n0\n\n\n80\n\n\n\n0\n0\n0\n0\n100\n-1\n-1\n-1\n-1\n-1\n-1\n-1\n-1\n\n\n\n0\n0\n"
 )"
 
+
+# ─── Subagent Truth Caching & Countdown Helpers ─────────────────────────────
+_SUBAGENT_TRUTH_FILE="/tmp/agy_subagent_truth"
+if [ -f "$_SUBAGENT_TRUTH_FILE" ]; then
+  _TRUTH_VAL=$(< "$_SUBAGENT_TRUTH_FILE") 2>/dev/null || _TRUTH_VAL=""
+  _TRUTH_TIME=$(stat -c "%Y" "$_SUBAGENT_TRUTH_FILE" 2>/dev/null || stat -f "%m" "$_SUBAGENT_TRUTH_FILE" 2>/dev/null || echo "0")
+  _TRUTH_TIME=${_TRUTH_TIME:-0}
+  _NOW=$(date +%s)
+  _AGE=$(( _NOW - _TRUTH_TIME )) 2>/dev/null || _AGE=999
+  if [ "$_AGE" -lt 120 ] && [ "$_TRUTH_VAL" = "0" ] && [ "${SUBAGENTS:-0}" -gt 0 ] 2>/dev/null; then
+    SUBAGENTS=0
+  fi
+fi
+if [ "${SUBAGENTS:-0}" = "0" ]; then
+  echo "0" > "$_SUBAGENT_TRUTH_FILE" 2>/dev/null || true
+fi
+
+_tick_countdown() {
+  local val="$1"
+  local cache_file="$2"
+  local now; now=$(date +%s)
+
+  if [ -z "$val" ] || [ "$val" -le 0 ] 2>/dev/null; then
+    rm -f "$cache_file" 2>/dev/null || true
+    echo "-1"
+    return
+  fi
+
+  if [ -f "$cache_file" ]; then
+    local cached; cached=$(< "$cache_file") 2>/dev/null || cached=""
+    if [ -z "$cached" ]; then
+      echo "${val}:${now}" > "$cache_file" 2>/dev/null || true
+      echo "$val"; return
+    fi
+    local cached_sec="${cached%%:*}"
+    local cached_epoch="${cached#*:}"
+    local elapsed=$(( now - cached_epoch ))
+    local live=$(( cached_sec - elapsed ))
+
+    local drift=$(( val - live ))
+    drift=${drift#-}
+    if [ "$drift" -gt 120 ] || [ "$live" -le 0 ]; then
+      echo "${val}:${now}" > "$cache_file" 2>/dev/null || true
+      echo "$val"
+    else
+      echo "$live"
+    fi
+  else
+    echo "${val}:${now}" > "$cache_file" 2>/dev/null || true
+    echo "$val"
+  fi
+}
+
 # ─── Parse CLI Arguments & Theme ─────────────────────────────────────────────
 USE_CLASSIC_ICONS=false
 for arg in "$@"; do
-  if [ "$arg" = "--classic" ] || [ "$arg" = "--no-nerdfont" ] || [ "$arg" = "--compatibility" ] || [ "$arg" = "-l" ] || [ "$arg" = "--legend" ] || [ "$arg" = "legend" ]; then
+  if [ "$arg" = "--compact" ]; then
+    COLS=89
+  elif [ "$arg" = "--medium" ]; then
+    COLS=120
+  elif [ "$arg" = "--medium-wide" ]; then
+    COLS=150
+  elif [ "$arg" = "--classic" ] || [ "$arg" = "--no-nerdfont" ] || [ "$arg" = "--compatibility" ] || [ "$arg" = "-l" ] || [ "$arg" = "--legend" ] || [ "$arg" = "legend" ]; then
     # We parse argument to see if it is legend command
     if [ "$arg" = "--legend" ] || [ "$arg" = "-l" ] || [ "$arg" = "legend" ]; then
       echo -e "${FG_BRIGHT_GREEN}${B}🚀 Antigravity CLI Maximized Statusline Legend${R}"
@@ -273,7 +333,7 @@ fi
 # ─── Git Timeout Resilience Wrapper ──────────────────────────────────────────
 run_with_timeout() {
   if command -v timeout &>/dev/null; then
-    timeout 1s "$@"
+    timeout 1 "$@"
   else
     "$@"
   fi
@@ -375,8 +435,22 @@ fi
 
 # ─── Power / Battery Scanner ─────────────────────────────────────────────────
 POWER_FMT=""
-AC_ONLINE_PATH=$(ls /sys/class/power_supply/*/online 2>/dev/null | head -n 1)
-BAT_CAP_PATH=$(ls /sys/class/power_supply/*/capacity 2>/dev/null | head -n 1)
+AC_ONLINE_PATH=""
+BAT_CAP_PATH=""
+if [ -d /sys/class/power_supply ]; then
+  for path in /sys/class/power_supply/*/online; do
+    if [ -f "$path" ]; then
+      AC_ONLINE_PATH="$path"
+      break
+    fi
+  done
+  for path in /sys/class/power_supply/*/capacity; do
+    if [ -f "$path" ]; then
+      BAT_CAP_PATH="$path"
+      break
+    fi
+  done
+fi
 
 # ─── Segment powerline formatter ──────────────────────────────────────────────
 make_segment() {
@@ -556,21 +630,55 @@ make_quota_bar() {
 }
 
 # Determine active quota based on actual availability
-if { [ -n "$GEMINI_5H" ] && [ "$GEMINI_5H" != "-1" ]; } || { [ -n "$GEMINI_WK" ] && [ "$GEMINI_WK" != "-1" ]; }; then
-  Q_5H="$GEMINI_5H"
-  Q_WK="$GEMINI_WK"
-  Q_5H_R="$GEMINI_5H_RESET"
-  Q_WK_R="$GEMINI_WK_RESET"
-elif { [ -n "$TP_5H" ] && [ "$TP_5H" != "-1" ]; } || { [ -n "$TP_WK" ] && [ "$TP_WK" != "-1" ]; }; then
-  Q_5H="$TP_5H"
-  Q_WK="$TP_WK"
-  Q_5H_R="$TP_5H_RESET"
-  Q_WK_R="$TP_WK_RESET"
+IS_3P=false
+case "$MODEL_ID" in
+  *[Cc][Ll][Aa][Uu][Dd][Ee]*|*[Gg][Pp][Tt]*|*[Aa][Nn][Tt][Hh][Rr][Oo][Pp][Ii][Cc]*|*[Oo][Pp][Ee][Nn][Aa][Ii]*|*[Oo]1*|*[Oo]3*|*3[Pp]*)
+    IS_3P=true
+    ;;
+esac
+
+if [ "$IS_3P" = true ]; then
+  if { [ -n "$TP_5H" ] && [ "$TP_5H" != "-1" ]; } || { [ -n "$TP_WK" ] && [ "$TP_WK" != "-1" ]; }; then
+    Q_5H="$TP_5H"
+    Q_WK="$TP_WK"
+    Q_5H_R="$TP_5H_RESET"
+    Q_WK_R="$TP_WK_RESET"
+  elif { [ -n "$GEMINI_5H" ] && [ "$GEMINI_5H" != "-1" ]; } || { [ -n "$GEMINI_WK" ] && [ "$GEMINI_WK" != "-1" ]; }; then
+    Q_5H="$GEMINI_5H"
+    Q_WK="$GEMINI_WK"
+    Q_5H_R="$GEMINI_5H_RESET"
+    Q_WK_R="$GEMINI_WK_RESET"
+  else
+    Q_5H="-1"
+    Q_WK="-1"
+    Q_5H_R="-1"
+    Q_WK_R="-1"
+  fi
 else
-  Q_5H="-1"
-  Q_WK="-1"
-  Q_5H_R="-1"
-  Q_WK_R="-1"
+  if { [ -n "$GEMINI_5H" ] && [ "$GEMINI_5H" != "-1" ]; } || { [ -n "$GEMINI_WK" ] && [ "$GEMINI_WK" != "-1" ]; }; then
+    Q_5H="$GEMINI_5H"
+    Q_WK="$GEMINI_WK"
+    Q_5H_R="$GEMINI_5H_RESET"
+    Q_WK_R="$GEMINI_WK_RESET"
+  elif { [ -n "$TP_5H" ] && [ "$TP_5H" != "-1" ]; } || { [ -n "$TP_WK" ] && [ "$TP_WK" != "-1" ]; }; then
+    Q_5H="$TP_5H"
+    Q_WK="$TP_WK"
+    Q_5H_R="$TP_5H_RESET"
+    Q_WK_R="$TP_WK_RESET"
+  else
+    Q_5H="-1"
+    Q_WK="-1"
+    Q_5H_R="-1"
+    Q_WK_R="-1"
+  fi
+fi
+
+
+if [ "${Q_5H_R:- -1}" -gt 0 ] 2>/dev/null; then
+  Q_5H_R=$(_tick_countdown "$Q_5H_R" "/tmp/agy_quota_5h_reset")
+fi
+if [ "${Q_WK_R:- -1}" -gt 0 ] 2>/dev/null; then
+  Q_WK_R=$(_tick_countdown "$Q_WK_R" "/tmp/agy_quota_wk_reset")
 fi
 
 QUOTA_FMT=""

@@ -72,6 +72,14 @@ The statusline features a modern, high-density telemetry layout built with two k
 2. **Rounded Pill Badges (LINE2/3/4):** Right-aligned/stacked telemetry items (e.g. Host CPU/RAM diagnostics, Artifacts, Subagents, Background Tasks, Sandbox networking, Context Usage bar, Quota metrics, Power state) are rendered as isolated capsules enclosed in rounded caps `` (U+E0B6) and `` (U+E0B4) with a clean, dark-gray background (`#303030`).
 3. **Dynamic Warnings:** Icons inside badges dynamically change colors to signal bottleneck conditions (e.g. CPU/RAM load, critical quota limits, battery power under blackouts).
 
+
+### 📐 Layout Size Options
+
+You can force a specific layout width regardless of your terminal size by passing one of the following flags:
+* `--compact` (or `< 100` width): Force 4-line stacked compact layout.
+* `--medium` (100–139 width): Force 3-line medium layout.
+* `--medium-wide` (140–179 width): Force 2-line boxed layout.
+
 ### 🛠️ Configuration and Font Setup
 
 To configure the statusline icons correctly and prevent rendering issues (e.g., icons showing up as boxes or question marks):

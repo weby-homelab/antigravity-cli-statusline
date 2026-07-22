@@ -42,6 +42,12 @@ mkdir -p "$INSTALL_DIR"
 
 # 3. Copy/Download files
 SCRIPT_TARGET="${INSTALL_DIR}/statusline.sh"
+EXTRA_ARGS=""
+if [ "$#" -gt 0 ]; then
+  EXTRA_ARGS=" $*"
+fi
+COMMAND_STRING="${SCRIPT_TARGET}${EXTRA_ARGS}"
+
 UNINSTALL_TARGET="${INSTALL_DIR}/uninstall.sh"
 
 LOCAL_DIR=""
@@ -89,8 +95,8 @@ if [ -f "$SETTINGS_FILE" ]; then
   cp "$SETTINGS_FILE" "${SETTINGS_FILE}.bak"
   echo -e "${YELLOW}Backed up original settings to ${SETTINGS_FILE}.bak${RESET}"
 
-  # Merge using jq
-  jq '.statusLine = { "type": "", "command": "'"${SCRIPT_TARGET}"'", "enabled": true }' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp"
+  # Merge using jq safely
+  jq --arg cmd "$COMMAND_STRING" '.statusLine = { "type": "", "command": $cmd, "enabled": true }' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp"
   cat "${SETTINGS_FILE}.tmp" > "$SETTINGS_FILE"
   rm -f "${SETTINGS_FILE}.tmp"
 else
@@ -98,15 +104,7 @@ else
   mkdir -p "$SETTINGS_DIR"
   # Write new config
   echo -e "Creating a new settings.json configuration..."
-  cat <<EOF > "$SETTINGS_FILE"
-{
-  "statusLine": {
-    "type": "",
-    "command": "${SCRIPT_TARGET}",
-    "enabled": true
-  }
-}
-EOF
+  jq -n --arg cmd "$COMMAND_STRING" '{ statusLine: { type: "", command: $cmd, enabled: true } }' > "$SETTINGS_FILE"
 fi
 
 echo -e "${BLUE}====================================================${RESET}"

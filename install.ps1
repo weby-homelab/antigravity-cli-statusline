@@ -39,10 +39,10 @@ if ($isLocal) {
 } else {
     Write-Host "Installing from remote repository..."
     Write-Host "Downloading statusline.ps1..."
-    Invoke-WebRequest -Uri "$rawUrl/statusline.ps1" -OutFile $targetScript -UseBasicParsing
+    Invoke-WebRequest -Uri "$rawUrl/statusline.ps1" -OutFile $targetScript -UseBasicParsing -ErrorAction Stop
     
     Write-Host "Downloading uninstall.ps1..."
-    Invoke-WebRequest -Uri "$rawUrl/uninstall.ps1" -OutFile $targetUninstall -UseBasicParsing
+    Invoke-WebRequest -Uri "$rawUrl/uninstall.ps1" -OutFile $targetUninstall -UseBasicParsing -ErrorAction Stop
 }
 
 # Configuration file
@@ -55,7 +55,11 @@ if (-not (Test-Path $settingsDir)) {
 
 # Format script path for settings.json compatibility (using forward slashes)
 $escapedScriptPath = $targetScript.Replace('\', '/')
-$commandString = "powershell -NoProfile -ExecutionPolicy Bypass -File `"$escapedScriptPath`""
+$extraArgs = ""
+if ($args.Count -gt 0) {
+    $extraArgs = " " + ($args -join " ")
+}
+$commandString = "powershell -NoProfile -ExecutionPolicy Bypass -File `"$escapedScriptPath`"$extraArgs"
 
 Write-Host "Configuring statusline in settings.json..."
 if (Test-Path $settingsFile) {
