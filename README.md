@@ -85,38 +85,53 @@ Unlike legacy statuslines that hardcode static rows and cause ugly text wrapping
 
 ---
 
-## 📖 Complete Telemetry Legend (14 Components)
+## 📖 Complete Telemetry Legend
 
 ![Telemetry Legend Showcase](screenshots/Gemini_AGY-CLI-Statusline-LEGEND.png)
 
-| Component | Nerd Font Icon | Classic Icon | Description |
+> [!IMPORTANT]
+> **Nerd Font Glyphs Rendering:** The icons in the "Nerd Font Icon" column utilize characters from Nerd Fonts (V3+). Web browsers do not render Nerd Fonts by default, so hex codepoints (e.g. `U+F192`) are provided for exact font inspection.
+
+| Component | Nerd Font Icon (Codepoint) | Classic Icon | Description |
 | :--- | :---: | :---: | :--- |
-| **State: READY** | `` READY | `●` READY | Agent is idle, waiting for commands. |
-| **State: THINKING** | `󰟷` THINKING | `◆` THINKING | Agent is currently thinking/processing request. |
-| **State: WORKING** | `` WORKING | `⚙` WORKING | Agent is performing background operations. |
-| **State: TOOL** | `` TOOL | `🔧` TOOL | Agent is executing a tool call. |
-| **VCS Branch** | `` branch | `╱` branch | Active Git branch name (Red + `*` if dirty). |
-| **Active Model** | `` model | `model` | Active LLM model name or ID (e.g. Gemini 3.6 Flash). |
-| **User Account & Tier** | `👤` Plan (email) | `Plan (email)` | User subscription tier (e.g. Pro) and account email. |
-| **Sandbox (Network)** | `󰒙` ON (net) | `ON (net)` | Sandbox enabled with full network access. |
-| **Sandbox (Restricted)** | `󰴴` ON (no-net) | `ON (no-net)` | Sandbox enabled with disabled network. |
-| **Sandbox (Off)** | `󰦜` OFF | `sandbox off` | Sandbox disabled (commands execute on host). |
-| **Context Window Bar** | `󱍏` █░░... | `ctx` █··... | Visual context usage bar (10 or 20 segments) + %. |
-| **Token Metrics** | `` total / turn | `total / turn` | Session total input/output tokens + turn delta (`+IN/OUT`). |
-| **System Diagnostics** | `` RAM/ld | `sys` RAM/ld | Real-time host CPU 1-min load average & RAM utilization. |
-| **Artifacts Counter** | `` count | `artifacts` count | Active workspace output artifacts. |
-| **Subagents Counter** | `󱙺` count | `subagents` count | Spawned active subagent processes. |
-| **Background Tasks** | `` count | `tasks` count | Running background asynchronous tasks. |
-| **Current Directory** | `` path | `╱` path | Shortened current working directory path. |
-| **Conversation ID** | `󰍪` id | `╱` id | 8-character prefix of current session ID. |
-| **Host & Tailscale IP** | `󰒋` Host (IP) | `Host (IP)` | Hostname and active Tailscale connection IP address. |
-| **Quota Reset** | `⌛️` time | `⌛` time | Remaining time until model API quota limits reset. |
-| **Power (Mains/AC)** | `󰚥` AC | `AC` | Connected to external AC power. |
-| **Power (Battery)** | `🔋` charge% | `BAT:`charge% | Running on battery/UPS (shows charge percentage). |
+| **State: READY** | ` (U+F192)` READY | `●` READY | Agent is idle, waiting for commands. |
+| **State: THINKING** | `󰟷 (U+F07F7)` THINKING | `◆` THINKING | Agent is currently thinking/processing request. |
+| **State: WORKING** | ` (U+F423)` WORKING | `⚙` WORKING | Agent is performing background operations. |
+| **State: TOOL** | ` (U+F425)` TOOL | `🔧` TOOL | Agent is executing a tool call. |
+| **State: UNKNOWN** | ` (U+F252)` STATE | `⏳` STATE | Agent state is unknown or initializing. |
+| **VCS Branch** | ` (U+F418)` branch | `╱` branch | Active Git branch name (Red + `*` if dirty). |
+| **Active Model** | ` (U+F400)` model | `model` | Active LLM model name or ID (e.g. Gemini 3.6 Flash). |
+| **User Account & Tier** | `👤 (U+1F464)` Plan (email) | `Plan (email)` | User subscription tier (e.g. Pro) and account email. |
+| **Sandbox (Network)** | `󰒙 (U+F0499)` ON (net) | `ON (net)` | Sandbox enabled with full network access. |
+| **Sandbox (Restricted)** | `󰴴 (U+F0D34)` ON (no-net) | `ON (no-net)` | Sandbox enabled with disabled network. |
+| **Sandbox (Off)** | `󰦜 (U+F099C)` OFF | `sandbox off` | Sandbox disabled (commands execute on host). |
+| **Context Window Bar** | `󱍏 (U+F134F)` █░░... | `ctx` █··... | Visual context usage bar (10 or 20 segments) + %. |
+| **Token Metrics** | ` (U+E26B)` total / turn | `total / turn` | Session total input/output tokens + turn delta (`+IN/OUT`). |
+| **System Diagnostics** | ` (U+F04BC)` RAM/ld | `sys` RAM/ld | Real-time host CPU 1-min load average & RAM utilization. |
+| **Artifacts Counter** | ` (U+F0F6)` count | `artifacts` count | Active workspace output artifacts. |
+| **Subagents Counter** | `󱙺 (U+F167A)` count | `subagents` count | Spawned active subagent processes. |
+| **Background Tasks** | ` (U+F0AE)` count | `tasks` count | Running background asynchronous tasks. |
+| **Current Directory** | ` (U+EA83)` path | `╱` path | Shortened current working directory path. |
+| **Conversation ID** | `󰍪 (U+F036A)` id | `╱` id | 8-character prefix of current session ID. |
+| **Host & Tailscale IP** | `󰒋 (U+F048B)` Host (IP) | `Host (IP)` | Hostname and active Tailscale connection IP address. |
+| **Quota Reset** | `⌛️ (U+231B)` time | `⌛` time | Remaining time until model API quota limits reset. |
+| **Power (Mains/AC)** | `󰚥 (U+F06A5)` AC | `AC` | Connected to external AC power. |
+| **Power (Battery)** | `🔋 (U+1F50B)` charge% | `BAT:`charge% | Running on battery/UPS (shows charge percentage). |
+| **Segment Divider** | ` (U+E0B0)` | ` ` | Powerline transition symbol for active line segments. |
+| **Pill Capsule Caps** | ` (U+E0B6)` / ` (U+E0B4)` | ` ` | Left and right caps enclosing telemetry badges. |
+
+---
+
+## 🌐 Platform & Cross-Platform Compatibility
+
+The statusline is designed for 100% native execution across Linux, macOS, and Windows without external Python or heavy interpreter dependencies.
 
 ---
 
 ## 📥 Installation & Upgrade
+
+> [!NOTE]
+> This statusline plugin is pre-configured by default in the **[Antigravity CLI (Community Fork)](https://github.com/weby-homelab/antigravity-cli)**. Manual installation is only required if you are using the upstream CLI release or wish to reinstall separately.
 
 > [!WARNING]
 > Do **NOT** run installation commands with `sudo`. The statusline installs locally in your home directory (`~/.antigravity` and `~/.gemini/`).
@@ -142,6 +157,29 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "iex (irm https://raw.git
 
 ---
 
+### 📁 Installation Directory Structure
+
+* **Linux / macOS:**
+  ```text
+  ~/.antigravity/
+  ├── statusline.sh              # Main statusline script
+  └── uninstall.sh               # Uninstallation script
+
+  ~/.gemini/antigravity-cli/
+  └── settings.json              # Antigravity CLI configuration
+  ```
+* **Windows (PowerShell):**
+  ```text
+  C:\Users\<username>\.antigravity\
+  ├── statusline.ps1             # Main PowerShell statusline script
+  └── uninstall.ps1              # PowerShell uninstallation script
+
+  C:\Users\.gemini\antigravity-cli\
+  └── settings.json              # Antigravity CLI configuration
+  ```
+
+---
+
 ## ⚙️ Configuration (`settings.json`)
 
 The statusline is registered in `~/.gemini/antigravity-cli/settings.json` (macOS/Linux) or `%USERPROFILE%\.gemini\antigravity-cli\settings.json` (Windows):
@@ -152,6 +190,17 @@ The statusline is registered in `~/.gemini/antigravity-cli/settings.json` (macOS
   "statusLine": {
     "type": "",
     "command": "/home/user/.antigravity/statusline.sh",
+    "enabled": true
+  }
+}
+```
+
+### 🪟 Windows (PowerShell) Configuration
+```json
+{
+  "statusLine": {
+    "type": "",
+    "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"C:/Users/user/.antigravity/statusline.ps1\"",
     "enabled": true
   }
 }
@@ -188,3 +237,20 @@ For a detailed list of changes, fixes, and release history, please see the **[CH
   Built in Ukraine under air raid sirens &amp; blackouts ⚡<br>
   &copy; 2026 Weby Homelab
 </p>
+
+<!--
+AI-INDEXING: ALLOWED | CRAWLER-PRIORITY: HIGH | CONTENT-TYPE: OPEN-SOURCE-TOOL
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "antigravity-cli-statusline",
+  "description": "Advanced responsive statusline plugin for the Antigravity CLI (agy). Features multi-layout, real-time Git status, token counting, active model quotas, and sandbox badges.",
+  "url": "https://github.com/weby-homelab/antigravity-cli-statusline",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Linux, macOS, Windows",
+  "keywords": ["statusline", "Antigravity", "CLI", "plugin", "terminal", "AI", "git-status", "token-counter"],
+  "author": {"@type": "Organization", "name": "Weby Homelab", "url": "https://github.com/weby-homelab"},
+  "codeRepository": "https://github.com/weby-homelab/antigravity-cli-statusline",
+  "isAccessibleForFree": true
+}
+-->
