@@ -8,6 +8,26 @@ An advanced, responsive, zero-line-wrapping statusline extension for the **[Anti
 
 ---
 
+## 🎨 Layout Showcase
+
+### 👑 Ultra / Wide Layout (Terminal width $\ge$ 180 chars)
+The ultimate high-information layout displaying all telemetry fields: system metrics, Git status, active subagents, background tasks, model quotas, and power/battery state in a single aligned row.
+![Ultra Layout](screenshots/Antigravity-cli-statusline-ULTRA-2.png)
+
+### ⚡ Medium-Wide / Two-Line Layout (Terminal width 140 to 179 chars)
+Encloses the statusline powerline segments and all telemetry badges into a space-efficient, beautifully boxed 2-line layout.
+![Medium-Wide Layout](screenshots/Antigravity-cli-statusline-2-Rows.png)
+
+### 📱 Medium Layout (Terminal width 100 to 139 chars)
+Stacks status segments and telemetry badges into a clean 3-line layout to prevent command output wrapping on standard terminals.
+![Medium Layout](screenshots/Antigravity-cli-statusline-MEDIUM-2.png)
+
+### 📟 Small / Compact Layout (Terminal width < 100 chars)
+Ensures all metrics (READY, model, CWD, tokens, resources, and power) fit perfectly in a stacked 4-line layout on narrower terminals.
+![Compact Layout](screenshots/Antigravity-cli-statusline-SMALL-2.png)
+
+---
+
 ## 🔍 How to Check Installed Version & Preset
 
 Users can inspect their installed version and current telemetry mapping directly from the terminal at any time:
@@ -66,6 +86,8 @@ Unlike legacy statuslines that hardcode static rows and cause ugly text wrapping
 ---
 
 ## 📖 Complete Telemetry Legend (14 Components)
+
+![Telemetry Legend Showcase](screenshots/Gemini_AGY-CLI-Statusline-LEGEND.png)
 
 | Component | Nerd Font Icon | Classic Icon | Description |
 | :--- | :---: | :---: | :--- |
