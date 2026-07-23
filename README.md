@@ -1,256 +1,248 @@
-# 🚀 Antigravity CLI Statusline (v0.2.2)
+# Antigravity CLI Statusline
 
-[![Release](https://img.shields.io/badge/release-v0.2.2-brightgreen.svg)](https://github.com/weby-homelab/antigravity-cli-statusline/releases/tag/v0.2.2)
-[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-blue.svg)](#-platform--cross-platform-compatibility)
-[![License](https://img.shields.io/badge/license-GPL--3.0-orange.svg)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/weby-homelab/antigravity-cli-statusline?display_name=tag&sort=semver)](https://github.com/weby-homelab/antigravity-cli-statusline/releases/latest)
+[![Platforms](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-2563eb)](#supported-platforms)
 
-An advanced, responsive, zero-line-wrapping statusline extension for the **[Antigravity CLI (Community Fork)](https://github.com/weby-homelab/antigravity-cli)** (`agy`). It features a high-density telemetry dashboard, real-time Git status, turn-by-turn token tracking, model quota reset countdowns, sandbox networking badges, user subscription tier indicators, and cross-platform hardware diagnostics.
+Add an adaptive telemetry statusline to [Antigravity CLI](https://github.com/weby-homelab/antigravity-cli). It shows session, model, Git, context, quota, sandbox, task, host, and power data, then packs available fields across rows as terminal width changes.
 
----
-
-## 🎨 Layout Showcase
-
-### 👑 Ultra / Wide Layout (Terminal width $\ge$ 180 chars)
-The ultimate high-information layout displaying all telemetry fields: system metrics, Git status, active subagents, background tasks, model quotas, and power/battery state in a single aligned row.
-![Ultra Layout](screenshots/Antigravity-cli-statusline-ULTRA-2.png)
-
-### ⚡ Medium-Wide / Two-Line Layout (Terminal width 140 to 179 chars)
-Encloses the statusline powerline segments and all telemetry badges into a space-efficient, beautifully boxed 2-line layout.
-![Medium-Wide Layout](screenshots/Antigravity-cli-statusline-2-Rows.png)
-
-### 📱 Medium Layout (Terminal width 100 to 139 chars)
-Stacks status segments and telemetry badges into a clean 3-line layout to prevent command output wrapping on standard terminals.
-![Medium Layout](screenshots/Antigravity-cli-statusline-MEDIUM-2.png)
-
-### 📟 Small / Compact Layout (Terminal width < 100 chars)
-Ensures all metrics (READY, model, CWD, tokens, resources, and power) fit perfectly in a stacked 4-line layout on narrower terminals.
-![Compact Layout](screenshots/Antigravity-cli-statusline-SMALL-2.png)
-
----
-
-## 🔍 How to Check Installed Version & Preset
-
-Users can inspect their installed version and current telemetry mapping directly from the terminal at any time:
-
-### 1. Check Installed Version
-* **Linux / macOS:**
-  ```bash
-  ~/.antigravity/statusline.sh --version   # (or -v)
-  # Output: Antigravity CLI Statusline v0.2.2
-  ```
-* **Windows (PowerShell):**
-  ```powershell
-  powershell -NoProfile -ExecutionPolicy Bypass -File $HOME\.antigravity\statusline.ps1 -Version
-  ```
-
-### 2. View Telemetry Legend & Active Graphic Preset
-* **Linux / macOS:**
-  ```bash
-  ~/.antigravity/statusline.sh --legend   # (or -l / legend)
-  ```
-* **Windows (PowerShell):**
-  ```powershell
-  powershell -NoProfile -ExecutionPolicy Bypass -File $HOME\.antigravity\statusline.ps1 -Legend
-  ```
-
----
-
-## 🎨 Graphic Presets & Options
-
-The statusline supports two main graphical presets to suit any terminal environment:
-
-### 1. Modern Powerline & Pill Preset (Default)
-Requires a [Nerd Font (V3.0+)](https://www.nerdfonts.com/) active in your terminal emulator (e.g. *JetBrainsMono*, *Hack*, *FiraCode*, *Inter*).
-* **Header (LINE1):** Left-aligned metadata components rendered as connected Powerline blocks using classic `` (U+E0B0) dividers and custom 256-color palettes.
-* **Telemetry Badges (LINE2+):** Telemetry items styled as rounded capsules enclosed in `` (U+E0B6) and `` (U+E0B4) dark-gray pills (`#303030`).
-
-### 2. Classic Compatibility Preset (`--classic`)
-Replaces Nerd Font glyphs with standard Unicode symbols (`●`, `◆`, `⚙`, `🔧`, `ctx`, `sys`) and 16-color ANSI output. Recommended for legacy TTYs, ChromeOS Terminal, Emacs, or SSH sessions without Nerd Fonts.
-* **Enable in `settings.json`:** Append `--classic` (or `--no-nerdfont` / `--compatibility`) to the statusline command.
-
-### 📐 Manual Layout Override Flags
-Override automatic terminal width detection by passing one of the following CLI flags in `settings.json`:
-* `--compact`: Force compact stacked layout (< 100 cols).
-* `--medium`: Force medium 3-line layout (100–139 cols).
-* `--medium-wide`: Force 2-line boxed layout (140–179 cols).
-
----
-
-## 🧠 Smart Dynamic Line-Packing Engine (v0.2.2)
-
-Unlike legacy statuslines that hardcode static rows and cause ugly text wrapping on small screens, **v0.2.2** introduces a greedy, adaptive **Line-Packing Engine**:
-1. Calculates exact printed Unicode character lengths for every active badge (stripping ANSI color sequences).
-2. Dynamically packs badges into cleanly framed boxed rows (`╭─`, `├─`, `╰─`) within `terminal_width - 4`.
-3. **Guarantees ZERO line wrapping and 100% telemetry visibility** on any terminal width from 60 to 250+ columns.
-
----
-
-## 📖 Complete Telemetry Legend
-
-![Telemetry Legend Showcase](screenshots/Gemini_AGY-CLI-Statusline-LEGEND.png)
-
-> [!IMPORTANT]
-> **Nerd Font Glyphs Rendering:** The icons in the "Nerd Font Icon" column utilize characters from Nerd Fonts (V3+). Web browsers do not render Nerd Fonts by default, so hex codepoints (e.g. `U+F192`) are provided for exact font inspection.
-
-| Component | Nerd Font Icon (Codepoint) | Classic Icon | Description |
-| :--- | :---: | :---: | :--- |
-| **State: READY** | ` (U+F192)` READY | `●` READY | Agent is idle, waiting for commands. |
-| **State: THINKING** | `󰟷 (U+F07F7)` THINKING | `◆` THINKING | Agent is currently thinking/processing request. |
-| **State: WORKING** | ` (U+F423)` WORKING | `⚙` WORKING | Agent is performing background operations. |
-| **State: TOOL** | ` (U+F425)` TOOL | `🔧` TOOL | Agent is executing a tool call. |
-| **State: UNKNOWN** | ` (U+F252)` STATE | `⏳` STATE | Agent state is unknown or initializing. |
-| **VCS Branch** | ` (U+F418)` branch | `╱` branch | Active Git branch name (Red + `*` if dirty). |
-| **Active Model** | ` (U+F400)` model | `model` | Active LLM model name or ID (e.g. Gemini 3.6 Flash). |
-| **User Account & Tier** | `👤 (U+1F464)` Plan (email) | `Plan (email)` | User subscription tier (e.g. Pro) and account email. |
-| **Sandbox (Network)** | `󰒙 (U+F0499)` ON (net) | `ON (net)` | Sandbox enabled with full network access. |
-| **Sandbox (Restricted)** | `󰴴 (U+F0D34)` ON (no-net) | `ON (no-net)` | Sandbox enabled with disabled network. |
-| **Sandbox (Off)** | `󰦜 (U+F099C)` OFF | `sandbox off` | Sandbox disabled (commands execute on host). |
-| **Context Window Bar** | `󱍏 (U+F134F)` █░░... | `ctx` █··... | Visual context usage bar (10 or 20 segments) + %. |
-| **Token Metrics** | ` (U+E26B)` total / turn | `total / turn` | Session total input/output tokens + turn delta (`+IN/OUT`). |
-| **System Diagnostics** | ` (U+F04BC)` RAM/ld | `sys` RAM/ld | Real-time host CPU 1-min load average & RAM utilization. |
-| **Artifacts Counter** | ` (U+F0F6)` count | `artifacts` count | Active workspace output artifacts. |
-| **Subagents Counter** | `󱙺 (U+F167A)` count | `subagents` count | Spawned active subagent processes. |
-| **Background Tasks** | ` (U+F0AE)` count | `tasks` count | Running background asynchronous tasks. |
-| **Current Directory** | ` (U+EA83)` path | `╱` path | Shortened current working directory path. |
-| **Conversation ID** | `󰍪 (U+F036A)` id | `╱` id | 8-character prefix of current session ID. |
-| **Host & Tailscale IP** | `󰒋 (U+F048B)` Host (IP) | `Host (IP)` | Hostname and active Tailscale connection IP address. |
-| **Quota Reset** | `⌛️ (U+231B)` time | `⌛` time | Remaining time until model API quota limits reset. |
-| **Power (Mains/AC)** | `󰚥 (U+F06A5)` AC | `AC` | Connected to external AC power. |
-| **Power (Battery)** | `🔋 (U+1F50B)` charge% | `BAT:`charge% | Running on battery/UPS (shows charge percentage). |
-| **Segment Divider** | ` (U+E0B0)` | ` ` | Powerline transition symbol for active line segments. |
-| **Pill Capsule Caps** | ` (U+E0B6)` / ` (U+E0B4)` | ` ` | Left and right caps enclosing telemetry badges. |
-
----
-
-## 🌐 Platform & Cross-Platform Compatibility
-
-The statusline is designed for 100% native execution across Linux, macOS, and Windows without external Python or heavy interpreter dependencies.
-
----
-
-## 📥 Installation & Upgrade
+![Antigravity CLI Statusline in a wide terminal](screenshots/Antigravity-cli-statusline-ULTRA-2.png)
 
 > [!NOTE]
-> This statusline plugin is pre-configured by default in the **[Antigravity CLI (Community Fork)](https://github.com/weby-homelab/antigravity-cli)**. Manual installation is only required if you are using the upstream CLI release or wish to reinstall separately.
+> The Weby Homelab community fork of Antigravity CLI installs this statusline by default. Follow this README to install it with another Antigravity CLI build, reinstall it, or change its display mode.
+
+## What the statusline shows
+
+The renderer combines data from the Antigravity CLI statusline payload with local Git and host diagnostics:
+
+- **Session**: agent state, active model, CLI version, account tier, email, and conversation ID
+- **Workspace**: shortened working directory, Git branch, and dirty state
+- **Usage**: context consumption, session and current-turn tokens, active model quota, and reset countdowns
+- **Execution**: sandbox network mode, artifacts, subagents, and background tasks
+- **Host**: hostname, Tailscale IPv4 address when available, power source, and battery charge
+- **Linux diagnostics**: memory use and one-minute load average when `/proc` exposes them
+
+The statusline reads Antigravity CLI data from standard input. The renderer itself does not send session data over the network.
+
+## Choose a display mode
+
+The default preset uses 256-color ANSI styling and [Nerd Fonts 3](https://www.nerdfonts.com/) glyphs. Its line-packing engine measures each telemetry badge and adds rows when the current terminal width cannot contain the next badge.
+
+| Bash terminal width | Representative output | Context and quota bars |
+| --- | --- | --- |
+| 180 columns or wider | Wide layout | 20 and 15 segments |
+| Below 180 columns | Packed multiline layout | 10 and 8 segments |
+
+The PowerShell renderer uses 20-segment context and quota bars at every width. On both renderers, the final row count depends on the telemetry available in the current session. These screenshots show common Bash results at four widths.
+
+<details>
+<summary>View responsive layout examples</summary>
+
+### Wide terminal
+
+![Wide statusline layout](screenshots/Antigravity-cli-statusline-ULTRA-2.png)
+
+### Medium-wide terminal
+
+![Medium-wide statusline layout](screenshots/Antigravity-cli-statusline-2-Rows.png)
+
+### Medium terminal
+
+![Medium statusline layout](screenshots/Antigravity-cli-statusline-MEDIUM-2.png)
+
+### Compact terminal
+
+![Compact statusline layout](screenshots/Antigravity-cli-statusline-SMALL-2.png)
+
+</details>
+
+Use classic mode when your terminal does not have a Nerd Font. It replaces private-use glyphs and 256-color capsules with Unicode labels and 16-color ANSI output.
+
+## Supported platforms
+
+Install the implementation for your operating system:
+
+| Platform | Renderer | Requirements | Optional integrations |
+| --- | --- | --- | --- |
+| Linux | `statusline.sh` | Bash and `jq` | Git, GNU `timeout`, Tailscale, `/proc`, `/sys/class/power_supply` |
+| macOS | `statusline.sh` | Bash and `jq` | Git, Tailscale, `pmset` |
+| Windows | `statusline.ps1` | Windows PowerShell 5.1 or newer | Git, Tailscale, Common Information Model (CIM) battery data |
+
+Git is optional. Without it, the statusline omits live branch and dirty-state data.
+
+## Install or upgrade
+
+The installers copy the renderer and uninstaller to `~/.antigravity`, update the `statusLine` object in Antigravity CLI settings, and preserve existing settings in `settings.json.bak`.
 
 > [!WARNING]
-> Do **NOT** run installation commands with `sudo`. The statusline installs locally in your home directory (`~/.antigravity` and `~/.gemini/`).
+> Run the installer as your normal account. Do not use `sudo`: the installer writes to your home directory.
 
-### 🐧 macOS / Linux
-**One-command install / upgrade (curl):**
+> [!TIP]
+> Review [`install.sh`](install.sh) or [`install.ps1`](install.ps1) before executing a remote script.
+
+### Linux and macOS
+
+Install `jq`, then run the installer with either `curl` or `wget`.
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/weby-homelab/antigravity-cli-statusline/main/install.sh | bash
 ```
 
-**One-command install / upgrade (wget):**
+The equivalent `wget` command is:
+
 ```bash
 wget -qO- https://raw.githubusercontent.com/weby-homelab/antigravity-cli-statusline/main/install.sh | bash
 ```
 
----
+### Windows PowerShell
 
-### 🪟 Windows (PowerShell)
-**One-command install / upgrade (PowerShell WebRequest):**
+Run the installer from PowerShell:
+
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -Command "iex (irm https://raw.githubusercontent.com/weby-homelab/antigravity-cli-statusline/main/install.ps1)"
 ```
 
----
+Restart Antigravity CLI after installation. Rerun the same installer to upgrade the statusline.
 
-### 📁 Installation Directory Structure
+## Configure the statusline
 
-* **Linux / macOS:**
-  ```text
-  ~/.antigravity/
-  ├── statusline.sh              # Main statusline script
-  └── uninstall.sh               # Uninstallation script
+The installer updates one of these files:
 
-  ~/.gemini/antigravity-cli/
-  └── settings.json              # Antigravity CLI configuration
-  ```
-* **Windows (PowerShell):**
-  ```text
-  C:\Users\<username>\.antigravity\
-  ├── statusline.ps1             # Main PowerShell statusline script
-  └── uninstall.ps1              # PowerShell uninstallation script
+- **Linux and macOS**: `~/.gemini/antigravity-cli/settings.json`
+- **Windows**: `%USERPROFILE%\.gemini\antigravity-cli\settings.json`
 
-  C:\Users\.gemini\antigravity-cli\
-  └── settings.json              # Antigravity CLI configuration
-  ```
+A Linux configuration has this shape:
 
----
-
-## ⚙️ Configuration (`settings.json`)
-
-The statusline is registered in `~/.gemini/antigravity-cli/settings.json` (macOS/Linux) or `%USERPROFILE%\.gemini\antigravity-cli\settings.json` (Windows):
-
-### 🐧 macOS / Linux Configuration
 ```json
 {
   "statusLine": {
     "type": "",
-    "command": "/home/user/.antigravity/statusline.sh",
+    "command": "/home/your_username/.antigravity/statusline.sh",
     "enabled": true
   }
 }
 ```
 
-### 🪟 Windows (PowerShell) Configuration
+On macOS, replace `/home/your_username` with `/Users/your_username`. On Windows, use this command value:
+
 ```json
 {
   "statusLine": {
     "type": "",
-    "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"C:/Users/user/.antigravity/statusline.ps1\"",
+    "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"C:/Users/your_username/.antigravity/statusline.ps1\"",
     "enabled": true
   }
 }
 ```
 
-### Enabling Classic Mode in `settings.json`:
+### Use classic mode
+
+Append `--classic` to the configured command:
+
 ```json
 {
   "statusLine": {
     "type": "",
-    "command": "/home/user/.antigravity/statusline.sh --classic",
+    "command": "/home/your_username/.antigravity/statusline.sh --classic",
     "enabled": true
   }
 }
 ```
 
----
+The Bash and PowerShell renderers also accept `--no-nerdfont` and `--compatibility`.
 
-## 🗑️ Uninstallation
+### Override the Bash layout width
 
-To remove the statusline and restore backup configuration:
-* **Linux / macOS:** `~/.antigravity/uninstall.sh`
-* **Windows (PowerShell):** `powershell -NoProfile -ExecutionPolicy Bypass -File $HOME\.antigravity\uninstall.ps1`
+The Bash renderer accepts three flags that replace the width reported by Antigravity CLI:
 
----
+| Flag | Effective width | Intended result |
+| --- | ---: | --- |
+| `--compact` | 89 columns | Compact packed output |
+| `--medium` | 120 columns | Medium packed output |
+| `--medium-wide` | 150 columns | Medium-wide packed output |
 
-## 📝 Changelog
+Append one flag to the `command` value in `settings.json`. The PowerShell renderer does not currently implement these width overrides.
 
-For a detailed list of changes, fixes, and release history, please see the **[CHANGELOG.md](CHANGELOG.md)**.
+## Verify the installation
 
----
+Check the installed version and print the live icon legend after installation.
+
+### Linux and macOS
+
+```bash
+~/.antigravity/statusline.sh --version
+~/.antigravity/statusline.sh --legend
+```
+
+The short forms are `-v` and `-l`.
+
+### Windows PowerShell
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File "$HOME\.antigravity\statusline.ps1" -Version
+powershell -NoProfile -ExecutionPolicy Bypass -File "$HOME\.antigravity\statusline.ps1" -Legend
+```
+
+The Windows renderer also accepts `--version`, `-v`, `--legend`, and `-l`.
+
+<details>
+<summary>View the graphical telemetry legend</summary>
+
+![Antigravity CLI Statusline telemetry legend](screenshots/Gemini_AGY-CLI-Statusline-LEGEND.png)
+
+</details>
+
+## Understand installed files
+
+The installation keeps its executable files separate from Antigravity CLI settings:
+
+```text
+~/.antigravity/
+├── statusline.sh
+└── uninstall.sh
+
+~/.gemini/antigravity-cli/
+├── settings.json
+└── settings.json.bak     # Present when the installer backed up existing settings
+```
+
+Windows uses the same directory names under `%USERPROFILE%` and installs `statusline.ps1` plus `uninstall.ps1`.
+
+The Bash renderer also stores short-lived subagent and quota countdown caches under `/tmp`. It recreates them as needed.
+
+## Uninstall
+
+The uninstaller removes the renderer and restores `settings.json.bak` when that backup exists. Without a backup, it sets `statusLine.enabled` to `false`.
+
+Run the Linux or macOS uninstaller:
+
+```bash
+~/.antigravity/uninstall.sh
+```
+
+Run the Windows uninstaller:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File "$HOME\.antigravity\uninstall.ps1"
+```
+
+## Troubleshoot common problems
+
+Use these checks when the statusline does not render as expected:
+
+- **Icons appear as boxes**: install and select a Nerd Font 3 font, or add `--classic` to the configured command
+- **No statusline appears**: confirm that `statusLine.enabled` is `true`, check the command path, and restart Antigravity CLI
+- **Linux or macOS renderer exits**: run `jq --version`; the Bash implementation requires `jq`
+- **Git data is missing**: install Git and confirm the current working directory belongs to a Git repository
+- **A narrow terminal adds more rows**: increase the terminal width or use a Bash layout override to test a fixed width
+- **Host fields are missing**: the renderer omits diagnostics that the operating system or local tools do not expose
+
+If the issue persists, open a [GitHub issue](https://github.com/weby-homelab/antigravity-cli-statusline/issues) with your operating system, terminal, Antigravity CLI version, statusline version, and a screenshot. Remove account email, hostnames, IP addresses, conversation IDs, and repository details before posting.
+
+## Release history
+
+See [CHANGELOG.md](CHANGELOG.md) for versioned changes and [GitHub Releases](https://github.com/weby-homelab/antigravity-cli-statusline/releases) for downloadable release records.
 
 <p align="center">
-  Built in Ukraine under air raid sirens &amp; blackouts ⚡<br>
+  Built in Ukraine under air raid sirens and blackouts ⚡<br>
   &copy; 2026 Weby Homelab
 </p>
-
-<!--
-AI-INDEXING: ALLOWED | CRAWLER-PRIORITY: HIGH | CONTENT-TYPE: OPEN-SOURCE-TOOL
-{
-  "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  "name": "antigravity-cli-statusline",
-  "description": "Advanced responsive statusline plugin for the Antigravity CLI (agy). Features multi-layout, real-time Git status, token counting, active model quotas, and sandbox badges.",
-  "url": "https://github.com/weby-homelab/antigravity-cli-statusline",
-  "applicationCategory": "DeveloperApplication",
-  "operatingSystem": "Linux, macOS, Windows",
-  "keywords": ["statusline", "Antigravity", "CLI", "plugin", "terminal", "AI", "git-status", "token-counter"],
-  "author": {"@type": "Organization", "name": "Weby Homelab", "url": "https://github.com/weby-homelab"},
-  "codeRepository": "https://github.com/weby-homelab/antigravity-cli-statusline",
-  "isAccessibleForFree": true
-}
--->
