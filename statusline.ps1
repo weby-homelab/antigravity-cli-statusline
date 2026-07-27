@@ -278,6 +278,30 @@ function visible_len($str) {
     return $stripped.Length
 }
 
+function to_ansi_color($code) {
+    switch ($code) {
+        "220" { return $FG_YELLOW }
+        "75"  { return $FG_BRIGHT_CYAN }
+        "37"  { return $FG_CYAN }
+        "135" { return $FG_MAGENTA }
+        "76"  { return $FG_GREEN }
+        "197" { return $FG_RED }
+        "214" { return $FG_BRIGHT_YELLOW }
+        "244" { return $FG_GRAY }
+        default { return "" }
+    }
+}
+
+function make_badge($icon, $val, $icon_color) {
+    $bg_color = "236"
+    if ($USE_CLASSIC_ICONS) {
+        $ansi_c = to_ansi_color $icon_color
+        return "${ansi_c}${icon} ${NUM_COLOR}${val}${R}"
+    } else {
+        return "$ESC[38;5;${bg_color}m$ESC[48;5;${bg_color}m$ESC[38;5;${icon_color}m${icon} $ESC[38;5;255m${B}${val}${R}$ESC[38;5;${bg_color}m${R}"
+    }
+}
+
 $CLI_VER_FMT = ""
 if ($CLI_VERSION) {
     $CLI_VER_FMT = "${DOT_L1}${FG_GRAY}v${CLI_VERSION}${R}"
@@ -615,6 +639,7 @@ function print_right_aligned($left, $right, $total_cols) {
 }
 
 # Smart Dynamic Line-Packing Engine
+$LINE1 = "$S$V$M$DIR_FMT$CONV_FMT$HOST_FMT$USER_FMT$CLI_VER_FMT"
 $BADGE_LIST = @()
 if ($CTX_BAR) { $BADGE_LIST += $CTX_BAR }
 if ($CTX_USED -gt 0) {
@@ -628,13 +653,12 @@ if ($CTX_USED -gt 0) {
         $BADGE_LIST += (make_badge $ICON_TOK_SUM "total: ${INPUT_TOK_FMT}/${OUTPUT_TOK_FMT}${turn_str}" "220")
     }
 }
-if ($SYS_FMT) { $BADGE_LIST += $SYS_FMT }
 if ($ART_FMT) { $BADGE_LIST += $ART_FMT }
 if ($SUB_FMT) { $BADGE_LIST += $SUB_FMT }
 if ($BG_FMT) { $BADGE_LIST += $BG_FMT }
-if ($SB_FMT) { $BADGE_LIST += $SB_FMT }
-if ($Q_5H -ne $null -and $Q_5H -ne -1) { $BADGE_LIST += (make_quota_bar $Q_5H "5H" "37" $Q_5H_R) }
-if ($Q_WK -ne $null -and $Q_WK -ne -1) { $BADGE_LIST += (make_quota_bar $Q_WK "7D" "135" $Q_WK_R) }
+if ($SB) { $BADGE_LIST += $SB }
+if ($Q_5H -ne $null -and $Q_5H -ne -1) { $BADGE_LIST += (make_quota_bar $Q_5H "5H" $FG_BRIGHT_CYAN $Q_5H_R) }
+if ($Q_WK -ne $null -and $Q_WK -ne -1) { $BADGE_LIST += (make_quota_bar $Q_WK "7D" $FG_BRIGHT_MAGENTA $Q_WK_R) }
 if ($POWER_FMT) { $BADGE_LIST += $POWER_FMT }
 
 $PACKED_LINES = @()
