@@ -6,11 +6,11 @@ set -euo pipefail
 export LC_NUMERIC=C
 for arg in "$@"; do
   if [ "$arg" = "--version" ] || [ "$arg" = "-v" ]; then
-    echo "Antigravity CLI Statusline v0.2.2"
+    echo "Antigravity CLI Statusline v0.2.3"
     exit 0
   fi
   if [ "$arg" = "--legend" ] || [ "$arg" = "-l" ] || [ "$arg" = "legend" ]; then
-    echo -e "\033[92m\033[1m🚀 Antigravity CLI Maximized Statusline Legend (v0.2.2)\033[0m"
+    echo -e "\033[92m\033[1m🚀 Antigravity CLI Maximized Statusline Legend (v0.2.3)\033[0m"
     echo -e "This statusline adapts dynamically to terminal width and displays high-density system & agent telemetry."
     echo -e ""
     echo -e "\033[1mLAYOUTS & AUTO-PACKING:\033[0m"
@@ -43,7 +43,37 @@ for arg in "$@"; do
     exit 0
   fi
 done
-INPUT_JSON=$(cat)
+# ─── stdin timeout guard ──────────────────────────────────────────────────────
+# The CLI's statusline runner hard-kills this script (~5-10s) if it never
+# returns. During auth/OAuth refresh or resume-conversation warm-up, stdin can
+# be held open by the runner without being written to or closed, so an
+# unbounded `cat` read on stdin hangs until SIGKILL — and enough
+# consecutive kills auto-disables the custom statusline. Read stdin with a
+# short timeout up front and close it immediately after, so the rest of the
+# script never blocks on it.
+run_with_timeout() {
+  local t="$1"
+  shift
+  if command -v timeout >/dev/null 2>&1; then
+    timeout --foreground "$t" "$@"
+  else
+    "$@" <&0 &
+    local pid=$!
+    ( sleep "$t"; kill "$pid" 2>/dev/null || true ) &
+    local killer=$!
+    wait "$pid" 2>/dev/null
+    local res=$?
+    kill "$killer" 2>/dev/null || true
+    wait "$killer" 2>/dev/null || true
+    return $res
+  fi
+}
+
+INPUT_JSON=$(run_with_timeout 0.25 cat 2>/dev/null || true)
+exec 0</dev/null
+if [ -z "$INPUT_JSON" ]; then
+  INPUT_JSON="{}"
+fi
 
 # ─── ANSI Helpers (Standard colors) ───────────────────────────────────────────
 R="\033[0m"         # Reset
@@ -110,7 +140,7 @@ NUM_COLOR="${FG_BRIGHT_WHITE}${B}"
   read -r TURN_INPUT_TOKENS
   read -r TURN_OUTPUT_TOKENS
 } <<< "$(
-  echo "$INPUT_JSON" | jq -r '
+  printf '%s' "$INPUT_JSON" | jq -r '
     (.agent_state // "idle"),
     (.context_window.used_percentage // 0),
     (.vcs.branch // ""),

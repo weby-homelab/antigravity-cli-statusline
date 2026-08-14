@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] - 2026-08-13
+### Fixed & Hardened
+- **Blocked Stdin Timeout Protection**: Added `run_with_timeout 0.25 cat` stdin timeout guard and immediate `exec 0</dev/null` in `statusline.sh` (and asynchronous `Task` timeout in `statusline.ps1`). Prevents the statusline script from hanging indefinitely during OAuth refresh, authentication, or conversation warm-up when `antigravity-cli` holds stdin open without sending data, avoiding hard SIGKILL shutdowns and plugin auto-disablement.
+
 ## [0.2.2] - 2026-07-22
 ### Fixed & Hardened
 - **Atomic File Replacement**: Updated `install.sh` to copy files to temporary `.tmp` targets before executing an atomic `mv -f` replacement, preventing race-condition syntax errors when background statusline runners poll during installation.

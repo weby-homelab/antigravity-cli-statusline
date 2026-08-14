@@ -7,7 +7,7 @@ $ProgressPreference = 'SilentlyContinue'
 # Check for legend parameter before reading stdin
 foreach ($arg in $args) {
     if ($arg -eq "--version" -or $arg -eq "-v" -or $arg -eq "-Version") {
-        Write-Host "Antigravity CLI Statusline v0.2.2" -ForegroundColor Green
+        Write-Host "Antigravity CLI Statusline v0.2.3" -ForegroundColor Green
         exit
     }
     if ($arg -eq "--legend" -or $arg -eq "-l" -or $arg -eq "-Legend" -or $arg -eq "legend") {
@@ -50,10 +50,22 @@ foreach ($arg in $args) {
     }
 }
 
-# Read JSON input from stdin
-$inputJson = $input | Out-String
+# Read JSON input from stdin with timeout protection (prevents hanging on blocked pipe)
+$inputJson = ""
+try {
+    if ([Console]::IsInputRedirected) {
+        $task = [System.Threading.Tasks.Task]::Run([System.Func[string]]{ [Console]::In.ReadToEnd() })
+        if ($task.Wait(250)) {
+            $inputJson = $task.Result
+        }
+    } else {
+        $inputJson = $input | Out-String
+    }
+} catch {
+    $inputJson = ""
+}
 if (-not $inputJson -or $inputJson.Trim().Length -eq 0) {
-    # If no stdin, output nothing and exit
+    # If no stdin or read timed out, output nothing and exit
     exit
 }
 
