@@ -318,7 +318,8 @@ for arg in "$@"; do
 done
 
 # Set dynamic width boundaries
-if [ "$COLS" -ge 180 ]; then
+# Wide bars (20/15 segments) require >= 235 columns to fit alongside full telemetry without split
+if [ "$COLS" -ge 235 ]; then
   BAR_LEN=20
   QUOTA_BAR_LEN=15
 else
@@ -1131,8 +1132,12 @@ fi
 # Greedy Line-Packing Routine
 PACKED_LINES=()
 curr_line=""
-curr_vis=0
-max_vis=$(( COLS - 4 ))
+# Classic mode lacks box-drawing borders (╭─, ├─, ╰─), so it uses full terminal width
+if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+  max_vis=$(( COLS - 1 ))
+else
+  max_vis=$(( COLS - 4 ))
+fi
 if [ "$max_vis" -lt 40 ]; then max_vis=40; fi
 
 for badge in "${BADGE_LIST[@]}"; do

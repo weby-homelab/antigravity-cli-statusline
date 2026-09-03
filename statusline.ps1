@@ -446,8 +446,8 @@ if ($SANDBOX -eq $true) {
     }
 }
 
-# Context bar
-$BAR_LEN = 20
+# Context bar (wide bar requires >= 235 cols)
+$BAR_LEN = if ($COLS -ge 235) { 20 } else { 10 }
 $FILLED = [int][Math]::Floor(($PCT_INT * $BAR_LEN) / 100)
 $REMAINDER = ($PCT_INT * $BAR_LEN) % 100
 
@@ -587,7 +587,7 @@ function make_quota_bar($val, $label, $bar_color, $reset_sec) {
     if ($val_int -lt 20) { $text_color = $FG_BRIGHT_RED }
     elseif ($val_int -lt 50) { $text_color = $FG_BRIGHT_YELLOW }
 
-    $bar_len = 20
+    $bar_len = if ($COLS -ge 235) { 15 } else { 8 }
     $filled = [int][Math]::Floor(($val_int * $bar_len) / 100)
     $remainder = ($val_int * $bar_len) % 100
 
@@ -691,7 +691,7 @@ if ($POWER_FMT) { $BADGE_LIST += $POWER_FMT }
 $PACKED_LINES = @()
 $curr_line = ""
 $curr_vis = 0
-$max_vis = $COLS - 4
+$max_vis = if ($USE_CLASSIC_ICONS) { $COLS - 1 } else { $COLS - 4 }
 if ($max_vis -lt 40) { $max_vis = 40 }
 
 foreach ($badge in $BADGE_LIST) {
