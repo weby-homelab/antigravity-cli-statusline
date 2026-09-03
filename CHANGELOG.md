@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Enhanced Human Format Rounding**: Improved `human_format` rounding for `K` and `M` token metrics.
 
 ### Fixed & Hardened
+- **Prevent Premature Line Splitting (Issue #59)**: Corrected line-packing boundary check in classic mode to use full terminal width (`max_vis = COLS - 1`) without box-drawing border padding. Optimized wide-bar threshold to 235 columns, eliminating unnecessary line splits and empty row wrapping on wide displays (e.g., 237 columns).
+- **PowerShell Parity & Fixes (PR #58)**: Ported `make_badge` and ANSI color mapper to `statusline.ps1`, restored `$LINE1` concatenation, corrected sandbox reference, and fixed quota bar colors.
 - **Blocked Stdin Timeout Protection**: Added `run_with_timeout 0.25 cat` stdin timeout guard and immediate `exec 0</dev/null` in `statusline.sh` (and asynchronous `Task` timeout in `statusline.ps1`). Prevents the statusline script from hanging indefinitely during OAuth refresh, authentication, or conversation warm-up when `antigravity-cli` holds stdin open without sending data, avoiding hard SIGKILL shutdowns and plugin auto-disablement.
 
 ## [0.2.2] - 2026-07-22
