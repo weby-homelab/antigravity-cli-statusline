@@ -101,7 +101,10 @@ $TURN_OUTPUT_TOKENS = if ($data.context_window.current_usage.output_tokens -ne $
 $INPUT_TOKENS = if ($data.context_window.total_input_tokens -ne $null) { $data.context_window.total_input_tokens } else { 0 }
 $OUTPUT_TOKENS = if ($data.context_window.total_output_tokens -ne $null) { $data.context_window.total_output_tokens } else { 0 }
 $CTX_LIMIT = if ($data.context_window.context_window_size -ne $null) { $data.context_window.context_window_size } else { 0 }
-$CTX_USED = $INPUT_TOKENS + $OUTPUT_TOKENS
+$CTX_USED = if ($data.context_window.total_tokens -ne $null) { $data.context_window.total_tokens } elseif ($INPUT_TOKENS -gt 0) { $INPUT_TOKENS } else { $INPUT_TOKENS + $OUTPUT_TOKENS }
+if (($CTX_LIMIT -eq 0 -or $CTX_LIMIT -eq $null) -and $CTX_USED -gt 0 -and $USED_PCT -gt 0) {
+    $CTX_LIMIT = [int][Math]::Floor($CTX_USED * 100 / $USED_PCT)
+}
 $REM_PCT = if ($data.context_window.remaining_percentage -ne $null) { $data.context_window.remaining_percentage } else { 100 }
 
 # Quotas
@@ -442,7 +445,13 @@ if ($USE_CLASSIC_ICONS) {
             $BAR += "·"
         }
     }
-    $CTX_BAR = "${FG_GRAY}ctx ${FILL_COLOR}${BAR} ${NUM_COLOR}${PCT_FMT}%${R}"
+    if ($CTX_LIMIT -gt 0) {
+        $CTX_BAR = "${FG_GRAY}ctx ${FILL_COLOR}${BAR} ${NUM_COLOR}${PCT_FMT}%${R} ${FG_GRAY}(${CTX_USED_FMT}/${CTX_LIMIT_FMT})${R}"
+    } elseif ($CTX_USED -gt 0) {
+        $CTX_BAR = "${FG_GRAY}ctx ${FILL_COLOR}${BAR} ${NUM_COLOR}${PCT_FMT}%${R} ${FG_GRAY}(${CTX_USED_FMT})${R}"
+    } else {
+        $CTX_BAR = "${FG_GRAY}ctx ${FILL_COLOR}${BAR} ${NUM_COLOR}${PCT_FMT}%${R}"
+    }
 } else {
     $BAR = ""
     for ($i = 0; $i -lt $BAR_LEN; $i++) {
@@ -456,7 +465,13 @@ if ($USE_CLASSIC_ICONS) {
             $BAR += "${FG_GRAY}░${R}"
         }
     }
-    $CTX_BAR = "${FG_YELLOW}${ICON_CONTEXT_BAR}  ${R}${BAR} ${NUM_COLOR}${PCT_FMT}%${R}"
+    if ($CTX_LIMIT -gt 0) {
+        $CTX_BAR = "${FG_YELLOW}${ICON_CONTEXT_BAR}  ${R}${BAR} ${NUM_COLOR}${PCT_FMT}%${R} ${FG_GRAY}(${CTX_USED_FMT}/${CTX_LIMIT_FMT})${R}"
+    } elseif ($CTX_USED -gt 0) {
+        $CTX_BAR = "${FG_YELLOW}${ICON_CONTEXT_BAR}  ${R}${BAR} ${NUM_COLOR}${PCT_FMT}%${R} ${FG_GRAY}(${CTX_USED_FMT})${R}"
+    } else {
+        $CTX_BAR = "${FG_YELLOW}${ICON_CONTEXT_BAR}  ${R}${BAR} ${NUM_COLOR}${PCT_FMT}%${R}"
+    }
 }
 
 # Stats badges

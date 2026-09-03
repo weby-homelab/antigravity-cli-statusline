@@ -161,7 +161,7 @@ NUM_COLOR="${FG_BRIGHT_WHITE}${B}"
     (.context_window.total_input_tokens // 0),
     (.context_window.total_output_tokens // 0),
     (.context_window.context_window_size // 0),
-    ((.context_window.total_input_tokens // 0) + (.context_window.total_output_tokens // 0)),
+    (.context_window.total_tokens // (if (.context_window.total_input_tokens // 0) > 0 then .context_window.total_input_tokens else ((.context_window.total_input_tokens // 0) + (.context_window.total_output_tokens // 0)) end)),
     (.context_window.remaining_percentage // 100),
     (if .quota["gemini-5h"].remaining_fraction != null then ((.quota["gemini-5h"].remaining_fraction * 1000 | round) / 10) else -1 end),
     (if .quota["gemini-weekly"].remaining_fraction != null then ((.quota["gemini-weekly"].remaining_fraction * 1000 | round) / 10) else -1 end),
@@ -191,6 +191,13 @@ if ! [[ "$INPUT_TOKENS" =~ ^[0-9]+$ ]]; then INPUT_TOKENS=0; fi
 if ! [[ "$OUTPUT_TOKENS" =~ ^[0-9]+$ ]]; then OUTPUT_TOKENS=0; fi
 if ! [[ "$CTX_LIMIT" =~ ^[0-9]+$ ]]; then CTX_LIMIT=0; fi
 if ! [[ "$CTX_USED" =~ ^[0-9]+$ ]]; then CTX_USED=0; fi
+if [ "$CTX_LIMIT" -eq 0 ] 2>/dev/null && [ "$CTX_USED" -gt 0 ] 2>/dev/null; then
+  pct_whole=${USED_PCT%.*}
+  pct_whole=${pct_whole:-0}
+  if [ "$pct_whole" -gt 0 ]; then
+    CTX_LIMIT=$(( CTX_USED * 100 / pct_whole ))
+  fi
+fi
 if ! [[ "$TURN_INPUT_TOKENS" =~ ^[0-9]+$ ]]; then TURN_INPUT_TOKENS=0; fi
 if ! [[ "$TURN_OUTPUT_TOKENS" =~ ^[0-9]+$ ]]; then TURN_OUTPUT_TOKENS=0; fi
 
@@ -483,10 +490,10 @@ human_format() {
     echo "0"
     return
   fi
-  if [ "$num" -ge 1000000 ] 2>/dev/null; then
-    echo "$((num / 1000000)).$(((num % 1000000) / 100000))M"
+  if [ "$num" -ge 999500 ] 2>/dev/null; then
+    echo "$(( (num + 50000) / 1000000 )).$((( (num + 50000) % 1000000 ) / 100000 ))M"
   elif [ "$num" -ge 1000 ] 2>/dev/null; then
-    echo "$((num / 1000)).$(((num % 1000) / 100))K"
+    echo "$(( (num + 50) / 1000 )).$((( (num + 50) % 1000 ) / 100 ))K"
   else
     echo "$num"
   fi
@@ -833,7 +840,13 @@ if [ "$USE_CLASSIC_ICONS" = "true" ]; then
     else BAR="${BAR}·"
     fi
   done
-  CTX_BAR="${FG_GRAY}ctx ${FILL_COLOR}${BAR} ${NUM_COLOR}${PCT_FMT}%${R}"
+  if [ "$CTX_LIMIT" -gt 0 ] 2>/dev/null; then
+    CTX_BAR="${FG_GRAY}ctx ${FILL_COLOR}${BAR} ${NUM_COLOR}${PCT_FMT}%${R} ${FG_GRAY}(${CTX_USED_FMT}/${CTX_LIMIT_FMT})${R}"
+  elif [ "$CTX_USED" -gt 0 ] 2>/dev/null; then
+    CTX_BAR="${FG_GRAY}ctx ${FILL_COLOR}${BAR} ${NUM_COLOR}${PCT_FMT}%${R} ${FG_GRAY}(${CTX_USED_FMT})${R}"
+  else
+    CTX_BAR="${FG_GRAY}ctx ${FILL_COLOR}${BAR} ${NUM_COLOR}${PCT_FMT}%${R}"
+  fi
 else
   # Color palette based on context size
   if [ "$PCT_INT" -ge 90 ]; then bar_c="197"; else bar_c="214"; fi
@@ -857,7 +870,13 @@ else
   # Pill badge for Context Bar
   label_bg="236"
   bar_bg="235"
-  CTX_BAR="\033[38;5;${label_bg}m\033[48;5;${label_bg}m\033[38;5;220m${ICON_CONTEXT_BAR} ctx\033[48;5;${bar_bg}m ${BAR}\033[48;5;${label_bg}m \033[38;5;220m\033[1m${PCT_FMT}%\033[0m\033[38;5;${label_bg}m\033[0m"
+  if [ "$CTX_LIMIT" -gt 0 ] 2>/dev/null; then
+    CTX_BAR="\033[38;5;${label_bg}m\033[48;5;${label_bg}m\033[38;5;220m${ICON_CONTEXT_BAR} ctx\033[48;5;${bar_bg}m ${BAR}\033[48;5;${label_bg}m \033[38;5;220m\033[1m${PCT_FMT}%\033[22m \033[38;5;250m(${CTX_USED_FMT}/${CTX_LIMIT_FMT})\033[0m\033[38;5;${label_bg}m\033[0m"
+  elif [ "$CTX_USED" -gt 0 ] 2>/dev/null; then
+    CTX_BAR="\033[38;5;${label_bg}m\033[48;5;${label_bg}m\033[38;5;220m${ICON_CONTEXT_BAR} ctx\033[48;5;${bar_bg}m ${BAR}\033[48;5;${label_bg}m \033[38;5;220m\033[1m${PCT_FMT}%\033[22m \033[38;5;250m(${CTX_USED_FMT})\033[0m\033[38;5;${label_bg}m\033[0m"
+  else
+    CTX_BAR="\033[38;5;${label_bg}m\033[48;5;${label_bg}m\033[38;5;220m${ICON_CONTEXT_BAR} ctx\033[48;5;${bar_bg}m ${BAR}\033[48;5;${label_bg}m \033[38;5;220m\033[1m${PCT_FMT}%\033[0m\033[38;5;${label_bg}m\033[0m"
+  fi
 fi
 
 # ─── Statistics & Telemetry Badges ──────────────────────────────────────────
