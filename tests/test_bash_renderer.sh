@@ -145,6 +145,58 @@ else
   FAILED=$((FAILED + 1))
 fi
 
+# Test 7: Power Supply & Battery Detection (Issue #70)
+echo "--- Testing Power Supply & Battery Detection ---"
+MOCK_PSY=$(mktemp -d)
+
+# 7a: Laptop on AC charging
+mkdir -p "$MOCK_PSY/s1/AC" "$MOCK_PSY/s1/BAT0"
+echo "Mains" > "$MOCK_PSY/s1/AC/type"; echo "1" > "$MOCK_PSY/s1/AC/online"
+echo "Battery" > "$MOCK_PSY/s1/BAT0/type"; echo "Charging" > "$MOCK_PSY/s1/BAT0/status"; echo "45" > "$MOCK_PSY/s1/BAT0/capacity"
+p_out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" bash "$STATUSLINE" 2>&1 || true)
+assert_contains "$p_out" "AC" "Laptop on AC charging renders AC badge"
+assert_not_contains "$p_out" "BAT" "Laptop on AC charging does not render BAT"
+
+# 7b: Laptop on AC threshold (Not charging)
+mkdir -p "$MOCK_PSY/s2/AC" "$MOCK_PSY/s2/BAT0"
+echo "Mains" > "$MOCK_PSY/s2/AC/type"; echo "1" > "$MOCK_PSY/s2/AC/online"
+echo "Battery" > "$MOCK_PSY/s2/BAT0/type"; echo "Not charging" > "$MOCK_PSY/s2/BAT0/status"; echo "80" > "$MOCK_PSY/s2/BAT0/capacity"
+p_out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s2" bash "$STATUSLINE" 2>&1 || true)
+assert_contains "$p_out" "AC" "Laptop on AC threshold (Not charging) renders AC badge"
+
+# 7c: Laptop on Battery discharging with capacity
+mkdir -p "$MOCK_PSY/s3/AC" "$MOCK_PSY/s3/BAT0"
+echo "Mains" > "$MOCK_PSY/s3/AC/type"; echo "0" > "$MOCK_PSY/s3/AC/online"
+echo "Battery" > "$MOCK_PSY/s3/BAT0/type"; echo "Discharging" > "$MOCK_PSY/s3/BAT0/status"; echo "65" > "$MOCK_PSY/s3/BAT0/capacity"
+p_out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s3" bash "$STATUSLINE" 2>&1 || true)
+assert_contains "$p_out" "65%" "Laptop on battery discharging renders 65%"
+assert_contains "$p_out" "🔋" "Laptop on battery discharging renders battery icon"
+
+# 7d: Laptop on AC with peripheral mouse (hidpp_battery_0 scope: Device online: 0)
+mkdir -p "$MOCK_PSY/s4/AC" "$MOCK_PSY/s4/BAT0" "$MOCK_PSY/s4/hidpp_battery_0"
+echo "Mains" > "$MOCK_PSY/s4/AC/type"; echo "1" > "$MOCK_PSY/s4/AC/online"
+echo "Battery" > "$MOCK_PSY/s4/BAT0/type"; echo "Charging" > "$MOCK_PSY/s4/BAT0/status"; echo "90" > "$MOCK_PSY/s4/BAT0/capacity"
+echo "Battery" > "$MOCK_PSY/s4/hidpp_battery_0/type"; echo "Device" > "$MOCK_PSY/s4/hidpp_battery_0/scope"; echo "0" > "$MOCK_PSY/s4/hidpp_battery_0/online"
+p_out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s4" bash "$STATUSLINE" 2>&1 || true)
+assert_contains "$p_out" "AC" "Peripheral mouse with online: 0 does not mask AC power"
+assert_not_contains "$p_out" "BAT" "Peripheral mouse does not cause BAT badge when AC connected"
+
+# 7e: Desktop workstation with only peripheral devices (scope: Device)
+mkdir -p "$MOCK_PSY/s5/hidpp_battery_0" "$MOCK_PSY/s5/ucsi-source-psy"
+echo "Battery" > "$MOCK_PSY/s5/hidpp_battery_0/type"; echo "Device" > "$MOCK_PSY/s5/hidpp_battery_0/scope"; echo "0" > "$MOCK_PSY/s5/hidpp_battery_0/online"
+echo "USB" > "$MOCK_PSY/s5/ucsi-source-psy/type"; echo "Device" > "$MOCK_PSY/s5/ucsi-source-psy/scope"; echo "0" > "$MOCK_PSY/s5/ucsi-source-psy/online"
+p_out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s5" bash "$STATUSLINE" 2>&1 || true)
+assert_contains "$p_out" "AC" "Desktop workstation with peripherals renders AC power"
+assert_not_contains "$p_out" "BAT" "Desktop workstation does not render BAT"
+
+# 7f: Classic mode AC formatting (single AC, not AC AC)
+c_out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" bash "$STATUSLINE" --classic 2>&1 || true)
+c_plain=$(echo "$c_out" | strip_ansi)
+assert_contains "$c_plain" "AC" "Classic mode renders AC"
+assert_not_contains "$c_plain" "AC AC" "Classic mode does not duplicate AC AC"
+
+rm -rf "$MOCK_PSY"
+
 echo "============================================================"
 echo " Statusline Tests Completed: ${PASSED} passed, ${FAILED} failed"
 echo "============================================================"

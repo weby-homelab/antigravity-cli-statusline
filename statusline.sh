@@ -571,32 +571,77 @@ fi
 
 # ─── Power / Battery Scanner ─────────────────────────────────────────────────
 POWER_FMT=""
-AC_ONLINE_PATH=""
-BAT_CAP_PATH=""
-MACOS_AC_ON=""
-MACOS_BAT_CAP=""
+AC_CONNECTED=0
+HAS_SYS_BATTERY=0
+SYS_BAT_CAP=""
+POWER_DIR="${STATUSLINE_POWER_SUPPLY_DIR:-/sys/class/power_supply}"
 
-if [ -d /sys/class/power_supply ]; then
-  for path in /sys/class/power_supply/*/online; do
-    if [ -f "$path" ]; then
-      AC_ONLINE_PATH="$path"
-      break
+if [ -d "$POWER_DIR" ]; then
+  has_ac_adapter=0
+  for d in "$POWER_DIR"/*; do
+    [ -d "$d" ] || continue
+    dev_name=$(basename "$d")
+
+    # Skip peripheral devices (mice, keyboards, controllers)
+    scope=$(cat "$d/scope" 2>/dev/null || echo "")
+    if [ "$scope" = "Device" ] || [[ "$dev_name" =~ ^hidpp_ ]] || [[ "$dev_name" =~ mouse ]] || [[ "$dev_name" =~ keyboard ]]; then
+      continue
+    fi
+
+    psy_type=$(cat "$d/type" 2>/dev/null || echo "")
+
+    # Check for AC / Mains / USB chargers
+    if [ "$psy_type" = "Mains" ] || [[ "$dev_name" =~ ^(AC|ACAD|ADP|Mains) ]]; then
+      has_ac_adapter=1
+      if [ -f "$d/online" ]; then
+        online_val=$(cat "$d/online" 2>/dev/null || echo "0")
+        if [ "$online_val" = "1" ]; then
+          AC_CONNECTED=1
+        fi
+      fi
+    elif [ "$psy_type" = "USB" ]; then
+      if [[ ! "$dev_name" =~ ucsi-source ]]; then
+        if [ -f "$d/online" ]; then
+          online_val=$(cat "$d/online" 2>/dev/null || echo "0")
+          if [ "$online_val" = "1" ]; then
+            AC_CONNECTED=1
+            has_ac_adapter=1
+          fi
+        fi
+      fi
+    elif [ "$psy_type" = "Battery" ] || [ "$psy_type" = "UPS" ] || [[ "$dev_name" =~ ^BAT ]]; then
+      HAS_SYS_BATTERY=1
+      b_status=$(cat "$d/status" 2>/dev/null || echo "")
+      b_cap=$(cat "$d/capacity" 2>/dev/null || echo "")
+      if [ -n "$b_cap" ] && [ -z "$SYS_BAT_CAP" ]; then
+        SYS_BAT_CAP="$b_cap"
+      fi
+      if [ "$b_status" = "Charging" ] || [ "$b_status" = "Full" ] || [ "$b_status" = "Not charging" ]; then
+        AC_CONNECTED=1
+      fi
     fi
   done
-  for path in /sys/class/power_supply/*/capacity; do
-    if [ -f "$path" ]; then
-      BAT_CAP_PATH="$path"
-      break
-    fi
-  done
+
+  # Desktop / server without system battery and without laptop AC adapter
+  if [ "$HAS_SYS_BATTERY" -eq 0 ] && [ "$has_ac_adapter" -eq 0 ]; then
+    AC_CONNECTED=1
+  fi
 elif command -v pmset &>/dev/null; then
   pmset_out=$(pmset -g batt 2>/dev/null || echo "")
-  if echo "$pmset_out" | grep -q "AC Power"; then
-    MACOS_AC_ON="1"
+  if [ -z "$pmset_out" ] || echo "$pmset_out" | grep -q -i "No battery"; then
+    AC_CONNECTED=1
+    HAS_SYS_BATTERY=0
+  elif echo "$pmset_out" | grep -q "AC Power"; then
+    AC_CONNECTED=1
+    HAS_SYS_BATTERY=1
+    SYS_BAT_CAP=$(echo "$pmset_out" | grep -o "[0-9]\{1,3\}%" | tr -d "%" | head -n 1 || echo "")
+  elif echo "$pmset_out" | grep -q "Battery Power"; then
+    AC_CONNECTED=0
+    HAS_SYS_BATTERY=1
+    SYS_BAT_CAP=$(echo "$pmset_out" | grep -o "[0-9]\{1,3\}%" | tr -d "%" | head -n 1 || echo "")
   else
-    MACOS_AC_ON="0"
+    AC_CONNECTED=1
   fi
-  MACOS_BAT_CAP=$(echo "$pmset_out" | grep -o "[0-9]\{1,3\}%" | tr -d "%" | head -n 1 || echo "")
 fi
 
 # ─── Segment powerline formatter ──────────────────────────────────────────────
@@ -645,7 +690,11 @@ make_badge() {
   
   if [ "$USE_CLASSIC_ICONS" = "true" ]; then
     local ansi_c=$(to_ansi_color "$icon_color")
-    echo -n "${ansi_c}${icon} ${NUM_COLOR}${val}${R}"
+    if [ "$icon" = "$val" ]; then
+      echo -n "${ansi_c}${val}${R}"
+    else
+      echo -n "${ansi_c}${icon} ${NUM_COLOR}${val}${R}"
+    fi
     return
   fi
 
@@ -948,32 +997,14 @@ fi
 
 # Power Badge
 POWER_FMT=""
-if [ -n "$AC_ONLINE_PATH" ]; then
-  AC_ON=$(cat "$AC_ONLINE_PATH" 2>/dev/null || echo "1")
-  BAT_CAP=""
-  if [ -n "$BAT_CAP_PATH" ]; then
-    BAT_CAP=$(cat "$BAT_CAP_PATH" 2>/dev/null || echo "")
+if [ "$AC_CONNECTED" = "1" ]; then
+  POWER_FMT=$(make_badge "${ICON_AC}" "AC" "76")
+elif [ "$HAS_SYS_BATTERY" = "1" ]; then
+  label="BAT"
+  if [ -n "$SYS_BAT_CAP" ]; then
+    label="${SYS_BAT_CAP}%"
   fi
-  
-  if [ "$AC_ON" = "0" ]; then
-    label="BAT"
-    if [ -n "$BAT_CAP" ]; then
-      label="${BAT_CAP}%"
-    fi
-    POWER_FMT=$(make_badge "${ICON_BAT}" "$label" "214")
-  else
-    POWER_FMT=$(make_badge "${ICON_AC}" "AC" "76")
-  fi
-elif [ -n "$MACOS_AC_ON" ]; then
-  if [ "$MACOS_AC_ON" = "0" ]; then
-    label="BAT"
-    if [ -n "$MACOS_BAT_CAP" ]; then
-      label="${MACOS_BAT_CAP}%"
-    fi
-    POWER_FMT=$(make_badge "${ICON_BAT}" "$label" "214")
-  else
-    POWER_FMT=$(make_badge "${ICON_AC}" "AC" "76")
-  fi
+  POWER_FMT=$(make_badge "${ICON_BAT}" "$label" "214")
 fi
 
 # Token counters

@@ -382,7 +382,11 @@ function make_badge($icon, $val, $icon_color) {
     $bg_color = "236"
     if ($USE_CLASSIC_ICONS) {
         $ansi_c = to_ansi_color $icon_color
-        return "${ansi_c}${icon} ${NUM_COLOR}${val}${R}"
+        if ($icon -eq $val) {
+            return "${ansi_c}${val}${R}"
+        } else {
+            return "${ansi_c}${icon} ${NUM_COLOR}${val}${R}"
+        }
     } else {
         return "$ESC[38;5;${bg_color}m$ESC[48;5;${bg_color}m$ESC[38;5;${icon_color}m${icon} $ESC[38;5;255m${B}${val}${R}$ESC[38;5;${bg_color}m${R}"
     }
@@ -447,23 +451,81 @@ if ($HOST_NAME -and $COLS -ge 110) {
 # Power Status
 $POWER_FMT = ""
 try {
-    $battery = Get-CimInstance -ClassName Win32_Battery -ErrorAction SilentlyContinue
-    if ($battery) {
-        $status = $battery.BatteryStatus
-        $cap = $battery.EstimatedChargeRemaining
-        if ($status -eq 1) {
-            if ($USE_CLASSIC_ICONS) {
-                $POWER_FMT = "${DOT_L2}${FG_BRIGHT_YELLOW}${ICON_BAT}:${cap}%${R}"
-            } else {
-                $POWER_FMT = "${DOT_L2}${FG_BRIGHT_YELLOW}${ICON_BAT} ${cap}%${R}"
-            }
-        } else {
-            if ($USE_CLASSIC_ICONS) {
-                $POWER_FMT = "${DOT_L2}${FG_GREEN}${ICON_AC}${R}"
-            } else {
-                $POWER_FMT = "${DOT_L2}${FG_GREEN}${ICON_AC} AC${R}"
+    $ac_online = $null
+    $bat_cap = $null
+    $has_battery = $false
+
+    # 1. Primary: .NET SystemInformation PowerStatus (Works in Windows PowerShell 5.1 & Core on Windows)
+    try {
+        if (-not ([System.Management.Automation.PSTypeName]'System.Windows.Forms.SystemInformation').Type) {
+            Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue
+        }
+        if (([System.Management.Automation.PSTypeName]'System.Windows.Forms.SystemInformation').Type) {
+            $pStatus = [System.Windows.Forms.SystemInformation]::PowerStatus
+            if ($pStatus) {
+                $lineStatus = $pStatus.PowerLineStatus.ToString()
+                if ($lineStatus -eq "Online") {
+                    $ac_online = $true
+                } elseif ($lineStatus -eq "Offline") {
+                    $ac_online = $false
+                }
+                $chargeStatus = $pStatus.BatteryChargeStatus
+                if (-not $chargeStatus.HasFlag([System.Windows.Forms.BatteryChargeStatus]::NoSystemBattery)) {
+                    $has_battery = $true
+                    $pct = [int][Math]::Round($pStatus.BatteryLifePercent * 100)
+                    if ($pct -ge 0 -and $pct -le 100) {
+                        $bat_cap = $pct
+                    }
+                }
             }
         }
+    } catch {}
+
+    # 2. Secondary fallback: root/wmi:BatteryStatus (AC line online check)
+    if ($ac_online -eq $null) {
+        try {
+            $wmiBat = Get-CimInstance -Namespace root/wmi -ClassName BatteryStatus -ErrorAction SilentlyContinue
+            if ($wmiBat) {
+                $firstBat = if ($wmiBat -is [array]) { $wmiBat[0] } else { $wmiBat }
+                if ($firstBat.PowerOnline -ne $null) {
+                    $ac_online = [bool]$firstBat.PowerOnline
+                    $has_battery = $true
+                }
+            }
+        } catch {}
+    }
+
+    # 3. Tertiary fallback: Win32_Battery
+    if ($ac_online -eq $null) {
+        try {
+            $win32Bat = Get-CimInstance -ClassName Win32_Battery -ErrorAction SilentlyContinue
+            if ($win32Bat) {
+                $has_battery = $true
+                $bObj = if ($win32Bat -is [array]) { $win32Bat[0] } else { $win32Bat }
+                $st = [int]$bObj.BatteryStatus
+                if ($bObj.EstimatedChargeRemaining -ne $null) {
+                    $bat_cap = [int]$bObj.EstimatedChargeRemaining
+                }
+                # 3=Fully Charged, 6,7,8,9=Charging -> AC Online
+                if ($st -in 3, 6, 7, 8, 9) {
+                    $ac_online = $true
+                } elseif ($st -in 1, 2, 4, 5) {
+                    $ac_online = $false
+                }
+            }
+        } catch {}
+    }
+
+    # Desktop PC without battery
+    if ($ac_online -eq $null -and -not $has_battery) {
+        $ac_online = $true
+    }
+
+    if ($ac_online -eq $true) {
+        $POWER_FMT = (make_badge $ICON_AC "AC" "76")
+    } elseif ($has_battery -or $ac_online -eq $false) {
+        $lbl = if ($bat_cap -ne $null -and $bat_cap -ge 0) { "${bat_cap}%" } else { "BAT" }
+        $POWER_FMT = (make_badge $ICON_BAT $lbl "214")
     }
 } catch {}
 
