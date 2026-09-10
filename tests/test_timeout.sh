@@ -16,10 +16,20 @@ echo "============================================================"
 
 # Test 1: Stdin hang with timeout tool available
 echo "--- Testing Stdin Timeout Protection (Normal Path) ---"
+FIFO=$(mktemp -u)
+mkfifo "$FIFO"
+( sleep 5 > "$FIFO" ) 2>/dev/null &
+WRITER_PID=$!
+
 start_s=$(date +%s)
-out=$(sleep 3 | bash "$STATUSLINE" 2>&1 || true)
+out=$(bash "$STATUSLINE" < "$FIFO" 2>&1 || true)
 end_s=$(date +%s)
 elapsed=$((end_s - start_s))
+
+kill "$WRITER_PID" 2>/dev/null || true
+wait "$WRITER_PID" 2>/dev/null || true
+rm -f "$FIFO"
+
 echo "  Elapsed time on blocked stdin: ${elapsed}s"
 if [ "$elapsed" -lt 2 ]; then
   echo "  [PASS] Blocked stdin terminated within deadline (${elapsed}s < 2s)"
@@ -38,14 +48,22 @@ exit 127
 EOF
 chmod +x "${FAKE_BIN_DIR}/timeout"
 
+FIFO_FB=$(mktemp -u)
+mkfifo "$FIFO_FB"
+( sleep 5 > "$FIFO_FB" ) 2>/dev/null &
+WRITER_PID_FB=$!
+
 start_fb=$(date +%s)
-out_fb=$(PATH="${FAKE_BIN_DIR}:${PATH}" sleep 2 | bash "$STATUSLINE" 2>&1 || true)
+out_fb=$(PATH="${FAKE_BIN_DIR}:${PATH}" bash "$STATUSLINE" < "$FIFO_FB" 2>&1 || true)
 end_fb=$(date +%s)
 elapsed_fb=$((end_fb - start_fb))
-rm -rf "$FAKE_BIN_DIR"
+
+kill "$WRITER_PID_FB" 2>/dev/null || true
+wait "$WRITER_PID_FB" 2>/dev/null || true
+rm -rf "$FAKE_BIN_DIR" "$FIFO_FB"
 
 echo "  Elapsed time without timeout command: ${elapsed_fb}s"
-if [ "$elapsed_fb" -lt 3 ]; then
+if [ "$elapsed_fb" -lt 2 ]; then
   echo "  [PASS] Fallback timeout terminated safely (${elapsed_fb}s)"
   PASSED=$((PASSED + 1))
 else
