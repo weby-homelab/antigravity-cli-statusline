@@ -89,6 +89,16 @@ class TestWindowsPowerShellParity(unittest.TestCase):
         self.assertIn('"type": "command"', sh_text)
         self.assertNotIn('"type": ""', sh_text)
 
+    def test_powershell_power_detection_logic(self):
+        """statusline.ps1 must implement multi-tier power detection (SystemInformation, BatteryStatus, Win32_Battery)."""
+        ps1_text = (REPO_ROOT / "statusline.ps1").read_text(encoding="utf-8")
+        self.assertIn("System.Windows.Forms.SystemInformation", ps1_text)
+        self.assertIn("PowerStatus", ps1_text)
+        self.assertIn("PowerOnline", ps1_text)
+        self.assertIn("Win32_Battery", ps1_text)
+        self.assertIn("ICON_AC", ps1_text)
+        self.assertIn("ICON_BAT", ps1_text)
+
 if __name__ == "__main__":
     unittest.main()
 
