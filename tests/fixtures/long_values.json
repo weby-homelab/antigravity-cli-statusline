@@ -1,0 +1,17 @@
+{
+  "agent_state": "thinking",
+  "terminal_width": 120,
+  "vcs": {
+    "branch": "feature/extremely-long-branch-name-used-for-testing-boundary-line-packing-and-avoiding-overflow-in-statusline-rendering-engine-1234567890",
+    "dirty": true,
+    "type": "git"
+  },
+  "model": {
+    "id": "claude-3-5-sonnet-enterprise-super-extended-v2-preview-092026",
+    "display_name": "Claude 3.5 Sonnet Enterprise Super Extended v2 Preview"
+  },
+  "cwd": "/home/verylongusername/workspace/deeply/nested/directory/structure/that/goes/on/forever/and/ever/to/test/path/truncation/statusline/subproject",
+  "email": "very.long.developer.account.email.address.with.many.subdomains@enterprise.division.organization.corp.example.com",
+  "conversation_id": "01234567-89ab-cdef-0123-456789abcdef01234567",
+  "version": "0.2.4-very-long-semantic-prerelease-build-identifier+sha.abcdef123456"
+}

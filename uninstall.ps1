@@ -1,4 +1,4 @@
-# uninstall.ps1 - Uninstaller for Windows/PowerShell
+﻿# uninstall.ps1 - Uninstaller for Windows/PowerShell
 
 Write-Host "====================================================" -ForegroundColor Blue
 Write-Host "  Uninstalling Antigravity CLI Statusline (Windows)  " -ForegroundColor Yellow
@@ -14,21 +14,79 @@ if (Test-Path $targetScript) {
 }
 
 $settingsFile = "$HOME\.gemini\antigravity-cli\settings.json"
+$settingsDir = Split-Path $settingsFile
+$snapshotFile = Join-Path $settingsDir "statusline_installed_state.json"
+$altSnapshotFile = Join-Path $installDir "statusline_installed_state.json"
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+
+$activeSnapshot = $null
+if (Test-Path $snapshotFile) {
+    $activeSnapshot = $snapshotFile
+} elseif (Test-Path $altSnapshotFile) {
+    $activeSnapshot = $altSnapshotFile
+}
 
 if (Test-Path $settingsFile) {
-    if (Test-Path "${settingsFile}.bak") {
+    if ($null -ne $activeSnapshot) {
+        Write-Host "Restoring statusline configuration from state snapshot..."
+        try {
+            $rawState = Get-Content -Raw -Path $activeSnapshot -Encoding UTF8
+            $state = $rawState | ConvertFrom-Json
+            $rawSettings = Get-Content -Raw -Path $settingsFile -Encoding UTF8
+            $json = $rawSettings | ConvertFrom-Json
+            
+            if ($null -ne $json) {
+                if ($state.statusLine_existed -eq $true) {
+                    Write-Host "Restoring original statusLine configuration..."
+                    if ($null -ne $json.PSObject.Properties['statusLine']) {
+                        $json.statusLine = $state.original_statusLine
+                    } else {
+                        $json | Add-Member -MemberType NoteProperty -Name 'statusLine' -Value $state.original_statusLine -Force
+                    }
+                } else {
+                    Write-Host "Removing statusLine property from settings.json..."
+                    if ($json -is [System.Collections.IDictionary]) {
+                        $json.Remove('statusLine')
+                    } elseif ($null -ne $json.PSObject.Properties['statusLine']) {
+                        $json.PSObject.Properties.Remove('statusLine')
+                    }
+                }
+                $jsonString = $json | ConvertTo-Json -Depth 100
+                [System.IO.File]::WriteAllText($settingsFile, $jsonString, $utf8NoBom)
+            }
+        } catch {
+            Write-Warning "Could not restore from state snapshot: $_"
+        }
+        if (Test-Path $snapshotFile) { Remove-Item -Path $snapshotFile -Force }
+        if (Test-Path $altSnapshotFile) { Remove-Item -Path $altSnapshotFile -Force }
+        if (Test-Path "${settingsFile}.bak") { Remove-Item -Path "${settingsFile}.bak" -Force }
+    } elseif (Test-Path "${settingsFile}.bak") {
         Write-Host "Restoring backup settings from ${settingsFile}.bak..."
-        Get-Content -Raw -Path "${settingsFile}.bak" | Out-File -FilePath $settingsFile -Encoding utf8
+        $bakContent = Get-Content -Raw -Path "${settingsFile}.bak" -Encoding UTF8
+        [System.IO.File]::WriteAllText($settingsFile, $bakContent, $utf8NoBom)
         Remove-Item -Path "${settingsFile}.bak" -Force
     } else {
         Write-Host "Disabling statusLine in settings.json..."
-        $json = Get-Content -Raw -Path $settingsFile | ConvertFrom-Json
-        if ($null -ne $json.statusLine) {
-            $json.statusLine.enabled = $false
-            $json | ConvertTo-Json -Depth 100 | Out-File -FilePath $settingsFile -Encoding utf8
+        try {
+            $json = Get-Content -Raw -Path $settingsFile -Encoding UTF8 | ConvertFrom-Json
+            if ($null -ne $json -and $null -ne $json.PSObject.Properties['statusLine']) {
+                if ($null -ne $json.statusLine.PSObject.Properties['enabled']) {
+                    $json.statusLine.enabled = $false
+                } else {
+                    $json.statusLine | Add-Member -MemberType NoteProperty -Name 'enabled' -Value $false -Force
+                }
+                $jsonString = $json | ConvertTo-Json -Depth 100
+                [System.IO.File]::WriteAllText($settingsFile, $jsonString, $utf8NoBom)
+            }
+        } catch {
+            Write-Warning "Could not disable statusLine: $_"
         }
     }
 }
+
+# Clean up snapshots if settings file was already deleted
+if (Test-Path $snapshotFile) { Remove-Item -Path $snapshotFile -Force }
+if (Test-Path $altSnapshotFile) { Remove-Item -Path $altSnapshotFile -Force }
 
 if (Test-Path $targetUninstall) {
     Write-Host "Removing uninstaller: $targetUninstall..."

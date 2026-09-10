@@ -92,23 +92,54 @@ fi
 # 4. Configure settings.json
 SETTINGS_FILE="$HOME/.gemini/antigravity-cli/settings.json"
 SETTINGS_DIR="$(dirname "$SETTINGS_FILE")"
+STATE_FILE="${SETTINGS_DIR}/statusline_installed_state.json"
 
 echo -e "Configuring settings file: ${SETTINGS_FILE}..."
-if [ -f "$SETTINGS_FILE" ]; then
-  # Make a backup
-  cp "$SETTINGS_FILE" "${SETTINGS_FILE}.bak"
-  echo -e "${YELLOW}Backed up original settings to ${SETTINGS_FILE}.bak${RESET}"
+mkdir -p "$SETTINGS_DIR"
 
-  # Merge using jq safely
-  jq --arg cmd "$COMMAND_STRING" '.statusLine = { "type": "", "command": $cmd, "enabled": true }' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp"
+if [ -f "$SETTINGS_FILE" ]; then
+  # Validate JSON syntax to prevent clobbering malformed configurations
+  if ! jq empty "$SETTINGS_FILE" 2>/dev/null; then
+    echo -e "${RED}Error: ${SETTINGS_FILE} contains invalid or malformed JSON. Aborting installation.${RESET}" >&2
+    exit 1
+  fi
+
+  # Preserve initial state snapshot on first install; never overwrite on upgrade
+  if [ ! -f "$STATE_FILE" ]; then
+    has_statusline=$(jq 'has("statusLine")' "$SETTINGS_FILE")
+    if [ "$has_statusline" = "true" ]; then
+      orig_val=$(jq '.statusLine' "$SETTINGS_FILE")
+      jq -n --argjson orig "$orig_val" '{statusLine_existed: true, original_statusLine: $orig}' > "$STATE_FILE"
+    else
+      jq -n '{statusLine_existed: false, original_statusLine: null}' > "$STATE_FILE"
+    fi
+    echo -e "Saved initial state snapshot to ${STATE_FILE}"
+  fi
+
+  # Backup existing settings conservatively if no backup exists
+  if [ ! -f "${SETTINGS_FILE}.bak" ]; then
+    cp "$SETTINGS_FILE" "${SETTINGS_FILE}.bak"
+    echo -e "${YELLOW}Backed up original settings to ${SETTINGS_FILE}.bak${RESET}"
+  fi
+
+  # Update statusLine while preserving unknown/custom fields (e.g. padding, stack_with_default)
+  jq --arg cmd "$COMMAND_STRING" '
+    if has("statusLine") and (.statusLine | type == "object") then
+      .statusLine += { "type": "command", "command": $cmd, "enabled": true }
+    else
+      .statusLine = { "type": "command", "command": $cmd, "enabled": true }
+    end
+  ' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp"
   cat "${SETTINGS_FILE}.tmp" > "$SETTINGS_FILE"
   rm -f "${SETTINGS_FILE}.tmp"
 else
-  # Create directory if missing
-  mkdir -p "$SETTINGS_DIR"
+  # Record state snapshot for new installation
+  if [ ! -f "$STATE_FILE" ]; then
+    jq -n '{statusLine_existed: false, original_statusLine: null}' > "$STATE_FILE"
+  fi
   # Write new config
   echo -e "Creating a new settings.json configuration..."
-  jq -n --arg cmd "$COMMAND_STRING" '{ statusLine: { type: "", command: $cmd, enabled: true } }' > "$SETTINGS_FILE"
+  jq -n --arg cmd "$COMMAND_STRING" '{ statusLine: { type: "command", command: $cmd, enabled: true } }' > "$SETTINGS_FILE"
 fi
 
 echo -e "${BLUE}====================================================${RESET}"

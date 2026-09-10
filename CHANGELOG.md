@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] - 2026-09-11
+### Added & Improved
+- **Vim Editor Mode Indicator (Issue #62)**: Added dynamic Vim mode badge (`NORMAL`, `INSERT`, `VISUAL`, `VISUAL LINE`, fallback) into LINE1 across styled and classic layouts in `statusline.sh` and `statusline.ps1`. Documented in CLI `--legend` and `-Legend`. Participates in responsive width checks to prevent line wrapping.
+- **Model-Aware Quota Parity**: Synchronized quota selection logic in `statusline.ps1` with Bash: third-party models (Claude, GPT, OpenAI) prioritize 3P quotas, while Gemini models prioritize Gemini quotas. Disappears cleanly when no quota is present.
+- **Cross-Platform Test Suite & CI**: Added maintainable automated test suite (`tests/`) with 16 public JSON fixtures and GitHub Actions CI workflow matrix for Ubuntu, macOS, and Windows (Windows PowerShell 5.1 and PowerShell 7+).
+
+### Fixed & Hardened
+- **Windows Installation & Runtime Hardening (Issue #63)**:
+  - Fixed command generation in `install.ps1` to prevent literal quotation marks in `-File` causing `Illegal characters in path` error. Supports paths with and without spaces. Deliberately uses `powershell.exe`.
+  - Fixed `PSCustomObject` property addition in Windows PowerShell 5.1 using `Add-Member` to prevent `SetValueInvocationException`.
+  - Ensured `statusline.ps1` includes UTF-8 BOM (`\xef\xbb\xbf`) for correct Nerd Font and Unicode rendering under legacy Windows non-UTF8 system locales.
+  - Ensured `install.ps1` writes `settings.json` without UTF-8 BOM adhering to RFC 8259.
+- **Context Token Accounting Fix (Section 5)**: Corrected context window used-token calculation: uses explicit `.context_window.total_tokens` when valid, or falls back to summing `total_input_tokens + total_output_tokens` (e.g., 88,244 + 61,074 = 149,318 tokens, 14.24%). Synchronized across Bash and PowerShell with consistent rounding (`149.3K`, `1.0M`).
+- **Subagent Stale Zero Truth Cache Fix (Section 6)**: Eliminated the stale-zero suppression bug in `/tmp/agy_subagent_truth`. Incoming Antigravity payload is canonical technical truth; newly spawned subagents appear immediately (0 -> 1, 0 -> 3).
+- **Portable Git Timeout Resilience (Section 7)**: Removed duplicate `run_with_timeout` definition in `statusline.sh`. Unified into a single robust helper using GNU `timeout` if available, bounded subshell fallback if absent (macOS friendly), and child process reaping without leaving zombies. Fixed asynchronous stream deadlock in PowerShell `Run-WithTimeout`.
+- **Non-Destructive Installer & State Snapshot (Section 9)**:
+  - Updated `statusLine.type` to official schema `"command"` (was `""`).
+  - Implemented dedicated state snapshot (`statusline_installed_state.json`) preserving pre-installation statusLine state across repeated upgrades.
+  - Uninstallation cleanly restores original `statusLine` or removes only `statusLine` without rolling back unrelated settings added before or after installation. Preserves unknown `statusLine` keys. Preserves symlinks on Linux, macOS, and Windows.
+- **Input Hardening & Version Cleanup (Sections 13, 14)**: Added dynamic string sanitization (stripping newlines, CR, ANSI escapes, control chars). Unified version parsing to `0.2.4`, eliminating stale `v0.2.2`.
+- **Responsive Layout Hardening (Issue #59 / Section 12)**: Hardened LINE1 width gating and truncation across both renderers to guarantee zero uncontrolled line wrapping across terminal widths 60 to 255.
+
 ## [0.2.3] - 2026-09-03
 ### Added & Improved
 - **Context Window & Token Usage Display**: Added token usage and context window limit metrics `(${CTX_USED_FMT}/${CTX_LIMIT_FMT})` directly into the `ctx` badge across both classic ANSI and 256-color pill layouts in `statusline.sh` and `statusline.ps1`.

@@ -1,0 +1,71 @@
+{
+  "agent_state": "working",
+  "terminal_width": 120,
+  "cwd": "/root/gemma/worktrees/qa-fixtures",
+  "conversation_id": "62e3d023-773f-4039-bd31-237cfbb2e671",
+  "product": "antigravity",
+  "version": "0.2.4",
+  "plan_tier": "Pro",
+  "email": "rekvizitor.ua@gmail.com",
+  "artifact_count": 3,
+  "task_count": 2,
+  "subagents": [
+    {
+      "id": "agent-1",
+      "name": "indexer",
+      "status": "running"
+    },
+    {
+      "id": "agent-2",
+      "name": "tester",
+      "status": "running"
+    }
+  ],
+  "model": {
+    "id": "gemini-2.0-flash",
+    "display_name": "Gemini 2.0 Flash"
+  },
+  "vcs": {
+    "branch": "qa/test-fixtures",
+    "dirty": false,
+    "type": "git",
+    "client": "git"
+  },
+  "sandbox": {
+    "enabled": true,
+    "allow_network": true
+  },
+  "context_window": {
+    "total_input_tokens": 88244,
+    "total_output_tokens": 61074,
+    "total_tokens": 149318,
+    "context_window_size": 1048576,
+    "used_percentage": 14.24,
+    "remaining_percentage": 85.76,
+    "current_usage": {
+      "input_tokens": 1200,
+      "output_tokens": 350
+    }
+  },
+  "quota": {
+    "gemini-5h": {
+      "remaining_fraction": 0.85,
+      "reset_in_seconds": 3600
+    },
+    "gemini-weekly": {
+      "remaining_fraction": 0.92,
+      "reset_in_seconds": 86400
+    },
+    "3p-5h": {
+      "remaining_fraction": 0.7,
+      "reset_in_seconds": 1800
+    },
+    "3p-weekly": {
+      "remaining_fraction": 0.65,
+      "reset_in_seconds": 172800
+    }
+  },
+  "vim": {
+    "mode": "NORMAL"
+  }
+}
