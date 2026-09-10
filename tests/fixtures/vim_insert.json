@@ -1,0 +1,7 @@
+{
+  "agent_state": "idle",
+  "terminal_width": 100,
+  "vim": {
+    "mode": "INSERT"
+  }
+}

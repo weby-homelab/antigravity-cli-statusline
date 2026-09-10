@@ -1,0 +1,10 @@
+{
+  "agent_state": "idle",
+  "terminal_width": "invalid",
+  "context_window": {
+    "total_input_tokens": "not_a_num",
+    "total_output_tokens": null,
+    "context_window_size": null,
+    "used_percentage": "error"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "agent_state": "idle",
+  "terminal_width": 120,
+  "context_window": {
+    "total_tokens": 149318,
+    "total_input_tokens": 88244,
+    "total_output_tokens": 61074,
+    "context_window_size": 1048576,
+    "used_percentage": 14.24
+  }
+}

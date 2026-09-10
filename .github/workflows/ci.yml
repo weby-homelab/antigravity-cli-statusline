@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  unix-tests:
+    name: Bash & POSIX Matrix (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, macos-latest ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq shellcheck python3
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install jq shellcheck python3 || true
+
+      - name: Shell syntax check (bash -n)
+        run: |
+          find . -maxdepth 2 -name "*.sh" -print0 | xargs -0 -n 1 bash -n
+
+      - name: Run ShellCheck linter
+        run: |
+          shellcheck -e SC2034,SC2181 statusline.sh install.sh uninstall.sh tests/*.sh || true
+
+      - name: Make test runners executable
+        run: |
+          chmod +x statusline.sh install.sh uninstall.sh tests/*.sh
+
+      - name: Run Master Test Suite
+        run: |
+          bash tests/run_all.sh
+
+  windows-tests:
+    name: Windows PowerShell Matrix (windows-latest)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Windows PowerShell 5.1 AST & Unit Tests
+        shell: powershell
+        run: |
+          & .\tests\test_powershell_renderer.ps1
+
+      - name: Run PowerShell Core (pwsh) AST & Unit Tests
+        shell: pwsh
+        run: |
+          & ./tests/test_powershell_renderer.ps1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run Cross-Platform Windows Parity Tests
+        run: |
+          python tests/test_windows.py

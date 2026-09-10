@@ -1,0 +1,26 @@
+{
+  "agent_state": "idle",
+  "terminal_width": 140,
+  "model": {
+    "id": "gemini-1.5-pro",
+    "display_name": "Gemini 1.5 Pro"
+  },
+  "quota": {
+    "gemini-5h": {
+      "remaining_fraction": 0.85,
+      "reset_in_seconds": 3600
+    },
+    "gemini-weekly": {
+      "remaining_fraction": 0.92,
+      "reset_in_seconds": 86400
+    },
+    "3p-5h": {
+      "remaining_fraction": 0.4,
+      "reset_in_seconds": 1800
+    },
+    "3p-weekly": {
+      "remaining_fraction": 0.35,
+      "reset_in_seconds": 172800
+    }
+  }
+}
