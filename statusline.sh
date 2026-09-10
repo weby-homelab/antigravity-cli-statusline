@@ -10,11 +10,11 @@ CLI_COLS_OVERRIDE=""
 for arg in "$@"; do
   case "$arg" in
     --version|-v)
-      echo "Antigravity CLI Statusline v0.2.4"
+      echo "Antigravity CLI Statusline v0.2.5"
       exit 0
       ;;
     --legend|-l|legend)
-      echo -e "\033[92m\033[1m🚀 Antigravity CLI Maximized Statusline Legend (v0.2.4)\033[0m"
+      echo -e "\033[92m\033[1m🚀 Antigravity CLI Maximized Statusline Legend (v0.2.5)\033[0m"
       echo -e "This statusline adapts dynamically to terminal width and displays high-density system & agent telemetry."
       echo -e ""
       echo -e "\033[1mLAYOUTS & AUTO-PACKING:\033[0m"
