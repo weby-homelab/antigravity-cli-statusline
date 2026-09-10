@@ -5,7 +5,7 @@
 
 Add an adaptive telemetry statusline to [Antigravity CLI](https://github.com/weby-homelab/antigravity-cli). It shows session, model, Git, context, quota, sandbox, task, host, and power data, then packs available fields across rows as terminal width changes.
 
-![Antigravity CLI Statusline in a wide terminal](screenshots/Antigravity-cli-statusline-ULTRA-2.png)
+![Antigravity CLI Statusline in a medium terminal](screenshots/Antigravity-cli-statusline-MEDIUM-2.png)
 
 > [!NOTE]
 > The Weby Homelab community fork of Antigravity CLI installs this statusline by default. Follow this README to install it with another Antigravity CLI build, reinstall it, or change its display mode.
