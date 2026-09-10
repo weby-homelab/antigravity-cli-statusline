@@ -315,7 +315,11 @@ Use these checks when the statusline does not render as expected:
 - **A narrow terminal adds more rows**: increase the terminal width or use a layout override (`--compact`, `--medium`) to test a fixed width
 - **Host fields are missing**: the renderer omits diagnostics that the operating system or local tools do not expose
 
-If the issue persists, open a [GitHub issue](https://github.com/weby-homelab/antigravity-cli-statusline/issues) with your operating system, terminal, Antigravity CLI version, statusline version, and a screenshot. Remove account email, hostnames, IP addresses, conversation IDs, and repository details before posting.
+## Telemetry legend reference
+
+Complete visual map of all Nerd Font icons, classic Unicode fallbacks, state badges, and dynamic layouts supported by the statusline (accessible anytime via `statusline.sh --legend` or `statusline.ps1 -Legend`):
+
+![Antigravity CLI Statusline Telemetry Legend](screenshots/Gemini_AGY-CLI-Statusline-LEGEND.png)
 
 ## Release history
 
