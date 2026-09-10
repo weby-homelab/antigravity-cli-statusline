@@ -23,11 +23,32 @@ if [ -f "$SCRIPT_TARGET" ]; then
 fi
 
 SETTINGS_FILE="$HOME/.gemini/antigravity-cli/settings.json"
+SETTINGS_DIR="$(dirname "$SETTINGS_FILE")"
+STATE_FILE="${SETTINGS_DIR}/statusline_installed_state.json"
 
 if [ -f "$SETTINGS_FILE" ]; then
-  echo -e "Disabling statusline in configuration..."
-  # If a backup exists, restore it
-  if [ -f "${SETTINGS_FILE}.bak" ]; then
+  if [ -f "$STATE_FILE" ]; then
+    echo -e "Restoring statusline configuration from state snapshot..."
+    if command -v jq &> /dev/null; then
+      existed=$(jq -r '.statusLine_existed // false' "$STATE_FILE" 2>/dev/null || echo "false")
+      if [ "$existed" = "true" ]; then
+        orig_val=$(jq '.original_statusLine' "$STATE_FILE")
+        jq --argjson orig "$orig_val" '.statusLine = $orig' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp"
+        cat "${SETTINGS_FILE}.tmp" > "$SETTINGS_FILE"
+        rm -f "${SETTINGS_FILE}.tmp"
+        echo -e "Restored original statusLine configuration."
+      else
+        jq 'del(.statusLine)' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp"
+        cat "${SETTINGS_FILE}.tmp" > "$SETTINGS_FILE"
+        rm -f "${SETTINGS_FILE}.tmp"
+        echo -e "Removed statusLine configuration from settings.json."
+      fi
+    else
+      echo -e "${YELLOW}Warning: 'jq' not found. Cannot safely modify ${SETTINGS_FILE}${RESET}"
+    fi
+    rm -f "$STATE_FILE"
+    rm -f "${SETTINGS_FILE}.bak"
+  elif [ -f "${SETTINGS_FILE}.bak" ]; then
     echo -e "Restoring backup settings from ${SETTINGS_FILE}.bak..."
     cat "${SETTINGS_FILE}.bak" > "$SETTINGS_FILE"
     rm -f "${SETTINGS_FILE}.bak"
@@ -43,6 +64,9 @@ if [ -f "$SETTINGS_FILE" ]; then
     fi
   fi
 fi
+
+# Ensure state snapshot is removed even if settings.json was deleted externally
+rm -f "$STATE_FILE" 2>/dev/null || true
 
 # Finally, clean up itself and the directory if empty
 if [ -f "$UNINSTALL_TARGET" ]; then

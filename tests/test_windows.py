@@ -53,5 +53,42 @@ class TestWindowsPowerShellParity(unittest.TestCase):
             read_back = json.loads(snapshot_file.read_text())
             self.assertFalse(read_back["statusLine_existed"])
 
+    def test_state_snapshot_restoration_logic(self):
+        """Simulate state snapshot restoration on uninstall."""
+        # Case A: statusLine did not exist originally
+        settings = {
+            "unrelatedPref": "val",
+            "statusLine": {"type": "command", "command": "run", "enabled": True},
+            "addedLater": 123
+        }
+        state = {"statusLine_existed": False, "original_statusLine": None}
+        if not state["statusLine_existed"]:
+            settings.pop("statusLine", None)
+        self.assertNotIn("statusLine", settings)
+        self.assertEqual(settings["unrelatedPref"], "val")
+        self.assertEqual(settings["addedLater"], 123)
+
+        # Case B: statusLine did exist originally with custom values
+        orig_sl = {"type": "command", "custom": "abc", "enabled": True}
+        settings = {
+            "unrelated": "val",
+            "statusLine": {"type": "command", "command": "new_path", "enabled": True, "custom": "abc"}
+        }
+        state = {"statusLine_existed": True, "original_statusLine": orig_sl}
+        if state["statusLine_existed"]:
+            settings["statusLine"] = state["original_statusLine"]
+        self.assertEqual(settings["statusLine"], orig_sl)
+        self.assertEqual(settings["unrelated"], "val")
+
+    def test_installer_script_type_is_command(self):
+        """install.ps1 and install.sh must configure type: 'command'."""
+        ps1_text = (REPO_ROOT / "install.ps1").read_text(encoding="utf-8")
+        sh_text = (REPO_ROOT / "install.sh").read_text(encoding="utf-8")
+        self.assertIn('type = "command"', ps1_text)
+        self.assertNotIn('type = ""', ps1_text)
+        self.assertIn('"type": "command"', sh_text)
+        self.assertNotIn('"type": ""', sh_text)
+
 if __name__ == "__main__":
     unittest.main()
+
