@@ -81,17 +81,19 @@ run_with_timeout() {
   "$@" <&0 &
   local target_pid=$!
   (
-    sleep "$timeout_sec" 2>/dev/null || sleep 1
+    trap 'kill $(jobs -p) 2>/dev/null || true; exit 0' TERM INT HUP EXIT
+    ( sleep "$timeout_sec" 2>/dev/null || sleep 1 ) &
+    wait $! 2>/dev/null || true
     kill -TERM "$target_pid" 2>/dev/null || true
     sleep 0.1 2>/dev/null || true
     kill -KILL "$target_pid" 2>/dev/null || true
-  ) &
+  ) >/dev/null 2>&1 &
   local timer_pid=$!
 
   wait "$target_pid" 2>/dev/null
   local target_res=$?
 
-  kill "$timer_pid" 2>/dev/null || true
+  kill -TERM "$timer_pid" 2>/dev/null || true
   wait "$timer_pid" 2>/dev/null || true
   return $target_res
 }
