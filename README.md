@@ -14,7 +14,7 @@ Add an adaptive telemetry statusline to [Antigravity CLI](https://github.com/web
 
 The renderer combines data from the Antigravity CLI statusline payload with local Git and host diagnostics:
 
-- **Session**: agent state, active model, CLI version, account tier, email, and conversation ID
+- **Session**: agent state, active model, CLI version, account tier, email, conversation ID, and Vim editor mode (`NORMAL`, `INSERT`, `VISUAL`, `VISUAL LINE`)
 - **Workspace**: shortened working directory, Git branch, and dirty state
 - **Usage**: context consumption, session and current-turn tokens, active model quota, and reset countdowns
 - **Execution**: sandbox network mode, artifacts, subagents, and background tasks
@@ -27,12 +27,12 @@ The statusline reads Antigravity CLI data from standard input. The renderer itse
 
 The default preset uses 256-color ANSI styling and [Nerd Fonts 3](https://www.nerdfonts.com/) glyphs. Its line-packing engine measures each telemetry badge and adds rows when the current terminal width cannot contain the next badge.
 
-| Bash terminal width | Representative output | Context and quota bars |
+| Terminal width | Representative output | Context and quota bars |
 | --- | --- | --- |
-| 180 columns or wider | Wide layout | 20 and 15 segments |
-| Below 180 columns | Packed multiline layout | 10 and 8 segments |
+| 235 columns or wider | Wide layout | 20 and 15 segments |
+| Below 235 columns | Packed multiline layout | 10 and 8 segments |
 
-The PowerShell renderer uses 20-segment context and quota bars at every width. On both renderers, the final row count depends on the telemetry available in the current session. These screenshots show common Bash results at four widths.
+Both the Bash and PowerShell renderers share adaptive bar sizing and line packing. The final row count dynamically depends on the telemetry available in the current session. These screenshots show common Bash results at four widths.
 
 <details>
 <summary>View responsive layout examples</summary>
@@ -115,20 +115,20 @@ A Linux configuration has this shape:
 ```json
 {
   "statusLine": {
-    "type": "",
+    "type": "command",
     "command": "/home/your_username/.antigravity/statusline.sh",
     "enabled": true
   }
 }
 ```
 
-On macOS, replace `/home/your_username` with `/Users/your_username`. On Windows, use this command value:
+On macOS, replace `/home/your_username` with `/Users/your_username`. On Windows, use this command value (quoting the path only if it contains spaces):
 
 ```json
 {
   "statusLine": {
-    "type": "",
-    "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"C:/Users/your_username/.antigravity/statusline.ps1\"",
+    "type": "command",
+    "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:/Users/your_username/.antigravity/statusline.ps1",
     "enabled": true
   }
 }
@@ -136,12 +136,12 @@ On macOS, replace `/home/your_username` with `/Users/your_username`. On Windows,
 
 ### Use classic mode
 
-Append `--classic` to the configured command:
+Append `--classic` (or `-Classic` on Windows) to the configured command:
 
 ```json
 {
   "statusLine": {
-    "type": "",
+    "type": "command",
     "command": "/home/your_username/.antigravity/statusline.sh --classic",
     "enabled": true
   }
@@ -150,17 +150,17 @@ Append `--classic` to the configured command:
 
 The Bash and PowerShell renderers also accept `--no-nerdfont` and `--compatibility`.
 
-### Override the Bash layout width
+### Override the layout width
 
-The Bash renderer accepts three flags that replace the width reported by Antigravity CLI:
+The Bash and PowerShell renderers accept flags that override the width reported by Antigravity CLI:
 
 | Flag | Effective width | Intended result |
 | --- | ---: | --- |
-| `--compact` | 89 columns | Compact packed output |
-| `--medium` | 120 columns | Medium packed output |
-| `--medium-wide` | 150 columns | Medium-wide packed output |
+| `--compact` / `-Compact` | 89 columns | Compact packed output |
+| `--medium` / `-Medium` | 120 columns | Medium packed output |
+| `--medium-wide` / `-MediumWide` | 150 columns | Medium-wide packed output |
 
-Append one flag to the `command` value in `settings.json`. The PowerShell renderer does not currently implement these width overrides.
+Append one flag to the `command` value in `settings.json`.
 
 ## Verify the installation
 
@@ -202,16 +202,20 @@ The installation keeps its executable files separate from Antigravity CLI settin
 
 ~/.gemini/antigravity-cli/
 ├── settings.json
-└── settings.json.bak     # Present when the installer backed up existing settings
+├── statusline_installed_state.json  # State snapshot for safe rollback across upgrades
+└── settings.json.bak                # Legacy backup file if present
 ```
 
-Windows uses the same directory names under `%USERPROFILE%` and installs `statusline.ps1` plus `uninstall.ps1`.
-
-The Bash renderer also stores short-lived subagent and quota countdown caches under `/tmp`. It recreates them as needed.
+Windows uses the same directory names under `%USERPROFILE%` and installs `statusline.ps1` plus `uninstall.ps1`. The committed production `statusline.ps1` includes a UTF-8 BOM (`\xef\xbb\xbf`) ensuring compatibility with Windows PowerShell 5.1 across all system locales.
 
 ## Uninstall
 
-The uninstaller removes the renderer and restores `settings.json.bak` when that backup exists. Without a backup, it sets `statusLine.enabled` to `false`.
+The uninstaller uses the dedicated state snapshot (`statusline_installed_state.json`) to perform a clean, non-destructive rollback:
+
+- If `statusLine` did not exist before installation, the uninstaller removes only the `statusLine` key.
+- If `statusLine` existed before installation, the uninstaller restores only its original pre-installation value.
+- Any unrelated settings added before or after installation (such as theme or keybindings) remain completely intact.
+- Symlinks to dotfiles repositories are preserved without breaking link targets.
 
 Run the Linux or macOS uninstaller:
 
@@ -222,7 +226,7 @@ Run the Linux or macOS uninstaller:
 Run the Windows uninstaller:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File "$HOME\.antigravity\uninstall.ps1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$HOME\.antigravity\uninstall.ps1"
 ```
 
 ## Troubleshoot common problems
@@ -233,7 +237,9 @@ Use these checks when the statusline does not render as expected:
 - **No statusline appears**: confirm that `statusLine.enabled` is `true`, check the command path, and restart Antigravity CLI
 - **Linux or macOS renderer exits**: run `jq --version`; the Bash implementation requires `jq`
 - **Git data is missing**: install Git and confirm the current working directory belongs to a Git repository
-- **A narrow terminal adds more rows**: increase the terminal width or use a Bash layout override to test a fixed width
+- **Windows Illegal characters in path**: verify your command in `settings.json` does not contain literal escaped quotes around `-File`. The v0.2.4 installer handles spaces automatically using standard path syntax
+- **Windows PowerShell 5.1 font or encoding errors**: `statusline.ps1` includes a UTF-8 BOM to prevent mojibake on non-UTF-8 Windows locales. Ensure the BOM is preserved
+- **A narrow terminal adds more rows**: increase the terminal width or use a layout override (`--compact`, `--medium`) to test a fixed width
 - **Host fields are missing**: the renderer omits diagnostics that the operating system or local tools do not expose
 
 If the issue persists, open a [GitHub issue](https://github.com/weby-homelab/antigravity-cli-statusline/issues) with your operating system, terminal, Antigravity CLI version, statusline version, and a screenshot. Remove account email, hostnames, IP addresses, conversation IDs, and repository details before posting.
