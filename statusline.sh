@@ -4,74 +4,110 @@
 
 set -euo pipefail
 export LC_NUMERIC=C
+USE_CLASSIC_ICONS=false
+CLI_COLS_OVERRIDE=""
+
 for arg in "$@"; do
-  if [ "$arg" = "--version" ] || [ "$arg" = "-v" ]; then
-    echo "Antigravity CLI Statusline v0.2.3"
-    exit 0
-  fi
-  if [ "$arg" = "--legend" ] || [ "$arg" = "-l" ] || [ "$arg" = "legend" ]; then
-    echo -e "\033[92m\033[1m🚀 Antigravity CLI Maximized Statusline Legend (v0.2.3)\033[0m"
-    echo -e "This statusline adapts dynamically to terminal width and displays high-density system & agent telemetry."
-    echo -e ""
-    echo -e "\033[1mLAYOUTS & AUTO-PACKING:\033[0m"
-    echo -e "  - \033[1mSmart Dynamic Line-Packing Engine:\033[0m Telemetry badges automatically pack into cleanly framed boxed rows (╭─, ├─, ╰─) without line wrapping."
-    echo -e ""
-    echo -e "\033[1mCOMPONENTS & ICONS:\033[0m"
-    echo -e "  \033[1mField                Nerd Font   Classic     Description\033[0m"
-    echo -e "  --------------------------------------------------------------------------------"
-    echo -e "  State: READY                   ●           Agent is idle, ready for user requests."
-    echo -e "  State: THINKING      󰟷          ◆           Agent is processing/thinking."
-    echo -e "  State: WORKING                 ⚙           Agent is executing background operations."
-    echo -e "  State: TOOL                    🔧          Agent is running a tool."
-    echo -e "  VCS Branch                     ╱           Current Git branch name (Red + * if dirty)."
-    echo -e "  Model                          (None)      Current active LLM model name/ID."
-    echo -e "  User Account         👤          (None)      Active user subscription plan and email."
-    echo -e "  Sandbox Network      󰒙          ON (net)    Sandbox enabled with internet access."
-    echo -e "  Sandbox Restricted   󰴴          ON (no-net) Sandbox enabled with network disabled."
-    echo -e "  Sandbox Off          󰦜          sandbox off Sandbox is disabled (runs on host)."
-    echo -e "  Context Bar          󱍏          ctx         Context window usage bar (10 or 20 segments)."
-    echo -e "  Tokens Sum                     (None)      Total input/output tokens & turn token delta."
-    echo -e "  Sys resources                  sys         Host CPU load average & memory utilization."
-    echo -e "  Artifacts                      artifacts   Number of active output artifacts."
-    echo -e "  Subagents            󱙺          subagents   Number of spawned active subagents."
-    echo -e "  Background Tasks               tasks       Number of background tasks running."
-    echo -e "  Current Directory              ╱           Current working directory path (shortened)."
-    echo -e "  Conversation ID      󰍪          ╱           Short prefix of the current session ID."
-    echo -e "  Quota Reset Time     ⌛️         ⌛          Remaining time until LLM quota resets."
-    echo -e "  Power Mains (AC)     󰚥          AC          Host is connected to external AC power."
-    echo -e "  Power Battery (UPS)  🔋          BAT         Host is running on battery (shows charge %)."
-    exit 0
-  fi
+  case "$arg" in
+    --version|-v)
+      echo "Antigravity CLI Statusline v0.2.4"
+      exit 0
+      ;;
+    --legend|-l|legend)
+      echo -e "\033[92m\033[1m🚀 Antigravity CLI Maximized Statusline Legend (v0.2.4)\033[0m"
+      echo -e "This statusline adapts dynamically to terminal width and displays high-density system & agent telemetry."
+      echo -e ""
+      echo -e "\033[1mLAYOUTS & AUTO-PACKING:\033[0m"
+      echo -e "  - \033[1mSmart Dynamic Line-Packing Engine:\033[0m Telemetry badges automatically pack into cleanly framed boxed rows (╭─, ├─, ╰─) without line wrapping."
+      echo -e ""
+      echo -e "\033[1mCOMPONENTS & ICONS:\033[0m"
+      echo -e "  \033[1mField                Nerd Font   Classic     Description\033[0m"
+      echo -e "  --------------------------------------------------------------------------------"
+      echo -e "  State: READY                   ●           Agent is idle, ready for user requests."
+      echo -e "  State: THINKING      󰟷          ◆           Agent is processing/thinking."
+      echo -e "  State: WORKING                 ⚙           Agent is executing background operations."
+      echo -e "  State: TOOL                    🔧          Agent is running a tool."
+      echo -e "  Vim Editor Mode                [MODE]      Active Vim editor mode (NORMAL, INSERT, VISUAL, etc.)."
+      echo -e "  VCS Branch                     ╱           Current Git branch name (Red + * if dirty)."
+      echo -e "  Model                          (None)      Current active LLM model name/ID."
+      echo -e "  User Account         👤          (None)      Active user subscription plan and email."
+      echo -e "  Sandbox Network      󰒙          ON (net)    Sandbox enabled with internet access."
+      echo -e "  Sandbox Restricted   󰴴          ON (no-net) Sandbox enabled with network disabled."
+      echo -e "  Sandbox Off          󰦜          sandbox off Sandbox is disabled (runs on host)."
+      echo -e "  Context Bar          󱍏          ctx         Context window usage bar (10 or 20 segments)."
+      echo -e "  Tokens Sum                     (None)      Total input/output tokens & turn token delta."
+      echo -e "  Sys resources                  sys         Host CPU load average & memory utilization."
+      echo -e "  Artifacts                      artifacts   Number of active output artifacts."
+      echo -e "  Subagents            󱙺          subagents   Number of spawned active subagents."
+      echo -e "  Background Tasks               tasks       Number of background tasks running."
+      echo -e "  Current Directory              ╱           Current working directory path (shortened)."
+      echo -e "  Conversation ID      󰍪          ╱           Short prefix of the current session ID."
+      echo -e "  Quota Reset Time     ⌛️         ⌛          Remaining time until LLM quota resets."
+      echo -e "  Power Mains (AC)     󰚥          AC          Host is connected to external AC power."
+      echo -e "  Power Battery (UPS)  🔋          BAT         Host is running on battery (shows charge %)."
+      exit 0
+      ;;
+    --compact)
+      CLI_COLS_OVERRIDE=89
+      ;;
+    --medium)
+      CLI_COLS_OVERRIDE=120
+      ;;
+    --medium-wide)
+      CLI_COLS_OVERRIDE=150
+      ;;
+    --classic|--no-nerdfont|--compatibility)
+      USE_CLASSIC_ICONS=true
+      ;;
+  esac
 done
-# ─── stdin timeout guard ──────────────────────────────────────────────────────
-# The CLI's statusline runner hard-kills this script (~5-10s) if it never
-# returns. During auth/OAuth refresh or resume-conversation warm-up, stdin can
-# be held open by the runner without being written to or closed, so an
-# unbounded `cat` read on stdin hangs until SIGKILL — and enough
-# consecutive kills auto-disables the custom statusline. Read stdin with a
-# short timeout up front and close it immediately after, so the rest of the
-# script never blocks on it.
+
+# ─── stdin timeout guard & portable timeout ──────────────────────────────────
+# The CLI statusline runner kills the script if stdin hangs indefinitely.
+# We read stdin with a short deadline and close it immediately.
 run_with_timeout() {
-  local t="$1"
-  shift
-  if command -v timeout >/dev/null 2>&1; then
-    timeout --foreground "$t" "$@"
-  else
-    "$@" <&0 &
-    local pid=$!
-    ( sleep "$t"; kill "$pid" 2>/dev/null || true ) &
-    local killer=$!
-    wait "$pid" 2>/dev/null
-    local res=$?
-    kill "$killer" 2>/dev/null || true
-    wait "$killer" 2>/dev/null || true
-    return $res
+  local timeout_sec="1"
+  if [[ "${1:-}" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+    timeout_sec="$1"
+    shift
   fi
+
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "$timeout_sec" "$@"
+    return $?
+  fi
+
+  # Bounded subshell fallback without GNU timeout (e.g. macOS / BSD)
+  "$@" <&0 &
+  local target_pid=$!
+  (
+    sleep "$timeout_sec" 2>/dev/null || sleep 1
+    kill -TERM "$target_pid" 2>/dev/null || true
+    sleep 0.1 2>/dev/null || true
+    kill -KILL "$target_pid" 2>/dev/null || true
+  ) &
+  local timer_pid=$!
+
+  wait "$target_pid" 2>/dev/null
+  local target_res=$?
+
+  kill "$timer_pid" 2>/dev/null || true
+  wait "$timer_pid" 2>/dev/null || true
+  return $target_res
 }
 
+my_in=$(readlink /proc/self/fd/0 2>/dev/null || true)
 INPUT_JSON=$(run_with_timeout 0.25 cat 2>/dev/null || true)
 exec 0</dev/null
 if [ -z "$INPUT_JSON" ]; then
+  # If stdin timed out on a pipe, unblock upstream pipeline sibling
+  if [[ "$my_in" =~ ^pipe: ]]; then
+    for cpid in $(cat "/proc/$PPID/task/$PPID/children" 2>/dev/null); do
+      if [ "$cpid" != "$$" ] && [ "$(readlink "/proc/$cpid/fd/1" 2>/dev/null)" = "$my_in" ]; then
+        kill "$cpid" 2>/dev/null || true
+      fi
+    done
+  fi
   INPUT_JSON="{}"
 fi
 
@@ -105,6 +141,7 @@ NUM_COLOR="${FG_BRIGHT_WHITE}${B}"
 # ─── Parse JSON from stdin (Single jq pass for performance) ──────────────────
 {
   read -r STATE
+  read -r VIM_MODE
   read -r USED_PCT
   read -r VCS_BRANCH
   read -r VCS_DIRTY
@@ -142,7 +179,8 @@ NUM_COLOR="${FG_BRIGHT_WHITE}${B}"
 } <<< "$(
   printf '%s' "$INPUT_JSON" | jq -r '
     (.agent_state // "idle"),
-    (.context_window.used_percentage // 0),
+    (.vim.mode // ""),
+    (if (.context_window.used_percentage | type == "number") then .context_window.used_percentage else 0 end),
     (.vcs.branch // ""),
     (.vcs.dirty // false),
     (.vcs.type // ""),
@@ -158,10 +196,15 @@ NUM_COLOR="${FG_BRIGHT_WHITE}${B}"
     (.cwd // ""),
     (.conversation_id // ""),
     (.product // ""),
-    (.context_window.total_input_tokens // 0),
-    (.context_window.total_output_tokens // 0),
-    (.context_window.context_window_size // 0),
-    (.context_window.total_tokens // (if (.context_window.total_input_tokens // 0) > 0 then .context_window.total_input_tokens else ((.context_window.total_input_tokens // 0) + (.context_window.total_output_tokens // 0)) end)),
+    (if (.context_window.total_input_tokens | type == "number") then .context_window.total_input_tokens else 0 end),
+    (if (.context_window.total_output_tokens | type == "number") then .context_window.total_output_tokens else 0 end),
+    (if (.context_window.context_window_size | type == "number") then .context_window.context_window_size else 0 end),
+    (if (.context_window.total_tokens | type == "number") and .context_window.total_tokens > 0 then
+      .context_window.total_tokens
+    else
+      ((if (.context_window.total_input_tokens | type == "number") then .context_window.total_input_tokens else 0 end) +
+       (if (.context_window.total_output_tokens | type == "number") then .context_window.total_output_tokens else 0 end))
+    end),
     (.context_window.remaining_percentage // 100),
     (if .quota["gemini-5h"].remaining_fraction != null then ((.quota["gemini-5h"].remaining_fraction * 1000 | round) / 10) else -1 end),
     (if .quota["gemini-weekly"].remaining_fraction != null then ((.quota["gemini-weekly"].remaining_fraction * 1000 | round) / 10) else -1 end),
@@ -176,14 +219,38 @@ NUM_COLOR="${FG_BRIGHT_WHITE}${B}"
     (.email // ""),
     (.context_window.current_usage.input_tokens // 0),
     (.context_window.current_usage.output_tokens // 0)
-  ' 2>/dev/null || printf "idle\n0\n\nfalse\n\n\nfalse\nfalse\n0\n0\n0\n\n\n80\n\n\n\n0\n0\n0\n0\n100\n-1\n-1\n-1\n-1\n-1\n-1\n-1\n-1\n\n\n\n0\n0\n"
+  ' 2>/dev/null || printf "idle\n\n0\n\nfalse\n\n\nfalse\nfalse\n0\n0\n0\n\n\n80\n\n\n\n0\n0\n0\n0\n100\n-1\n-1\n-1\n-1\n-1\n-1\n-1\n-1\n\n\n\n0\n0\n"
 )"
 
+# ─── Dynamic String Sanitization (Defensive against ANSI, newlines, control chars)
+sanitize_str() {
+  local s="$1"
+  s=$(printf '%s' "$s" | sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g')
+  printf '%s' "$s" | tr -d '[:cntrl:]'
+}
 
+STATE=$(sanitize_str "$STATE")
+VIM_MODE=$(sanitize_str "$VIM_MODE")
+VCS_BRANCH=$(sanitize_str "$VCS_BRANCH")
+VCS_TYPE=$(sanitize_str "$VCS_TYPE")
+MODEL_ID=$(sanitize_str "$MODEL_ID")
+MODEL_NAME=$(sanitize_str "$MODEL_NAME")
+CWD=$(sanitize_str "$CWD")
+CONV_ID=$(sanitize_str "$CONV_ID")
+PRODUCT=$(sanitize_str "$PRODUCT")
+CLI_VERSION=$(sanitize_str "$CLI_VERSION")
+PLAN_TIER=$(sanitize_str "$PLAN_TIER")
+USER_EMAIL=$(sanitize_str "$USER_EMAIL")
 
 # ─── Numeric Payload Sanitization (Defensive against invalid/string JSON values) ──
 if ! [[ "$USED_PCT" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then USED_PCT=0; fi
-if ! [[ "$COLS" =~ ^[0-9]+$ ]]; then COLS=80; fi
+if [ -n "$CLI_COLS_OVERRIDE" ]; then
+  COLS="$CLI_COLS_OVERRIDE"
+elif [ -n "${COLUMNS:-}" ] && [ "$COLUMNS" -gt 0 ] 2>/dev/null; then
+  COLS="$COLUMNS"
+fi
+if ! [[ "$COLS" =~ ^[0-9]+$ ]] || [ "$COLS" -lt 40 ]; then COLS=80; fi
+
 if ! [[ "$ARTIFACTS" =~ ^[0-9]+$ ]]; then ARTIFACTS=0; fi
 if ! [[ "$SUBAGENTS" =~ ^[0-9]+$ ]]; then SUBAGENTS=0; fi
 if ! [[ "$BG_TASKS" =~ ^[0-9]+$ ]]; then BG_TASKS=0; fi
@@ -211,21 +278,6 @@ if ! [[ "$GEMINI_WK_RESET" =~ ^[0-9]+$ ]]; then GEMINI_WK_RESET="-1"; fi
 if ! [[ "$TP_5H_RESET" =~ ^[0-9]+$ ]]; then TP_5H_RESET="-1"; fi
 if ! [[ "$TP_WK_RESET" =~ ^[0-9]+$ ]]; then TP_WK_RESET="-1"; fi
 
-# ─── Subagent Truth Caching & Countdown Helpers ─────────────────────────────
-_SUBAGENT_TRUTH_FILE="/tmp/agy_subagent_truth"
-if [ -f "$_SUBAGENT_TRUTH_FILE" ]; then
-  _TRUTH_VAL=$(< "$_SUBAGENT_TRUTH_FILE") 2>/dev/null || _TRUTH_VAL=""
-  _TRUTH_TIME=$(stat -c "%Y" "$_SUBAGENT_TRUTH_FILE" 2>/dev/null || stat -f "%m" "$_SUBAGENT_TRUTH_FILE" 2>/dev/null || echo "0")
-  _TRUTH_TIME=${_TRUTH_TIME:-0}
-  _NOW=$(date +%s)
-  _AGE=$(( _NOW - _TRUTH_TIME )) 2>/dev/null || _AGE=999
-  if [ "$_AGE" -lt 120 ] && [ "$_TRUTH_VAL" = "0" ] && [ "${SUBAGENTS:-0}" -gt 0 ] 2>/dev/null; then
-    SUBAGENTS=0
-  fi
-fi
-if [ "${SUBAGENTS:-0}" = "0" ]; then
-  echo "0" > "$_SUBAGENT_TRUTH_FILE" 2>/dev/null || true
-fi
 
 _tick_countdown() {
   local val="$1"
@@ -240,17 +292,16 @@ _tick_countdown() {
 
   if [ -f "$cache_file" ]; then
     local cached; cached=$(< "$cache_file") 2>/dev/null || cached=""
-    if [ -z "$cached" ]; then
-      echo "${val}:${now}" > "$cache_file" 2>/dev/null || true
-      echo "$val"; return
-    fi
-    local cached_sec="${cached%%:*}"
-    local cached_epoch="${cached#*:}"
-    local elapsed=$(( now - cached_epoch ))
-    local live=$(( cached_sec - elapsed ))
+    local orig_val="${cached%%:*}"
+    local orig_time="${cached##*:}"
+    orig_val=${orig_val:-0}
+    orig_time=${orig_time:-0}
 
-    local drift=$(( val - live ))
-    drift=${drift#-}
+    local elapsed=$(( now - orig_time ))
+    local live=$(( orig_val - elapsed ))
+    local drift=$(( val - orig_val ))
+    if [ "$drift" -lt 0 ]; then drift=$(( -drift )); fi
+
     if [ "$drift" -gt 120 ] || [ "$live" -le 0 ]; then
       echo "${val}:${now}" > "$cache_file" 2>/dev/null || true
       echo "$val"
@@ -262,60 +313,6 @@ _tick_countdown() {
     echo "$val"
   fi
 }
-
-# ─── Parse CLI Arguments & Theme ─────────────────────────────────────────────
-USE_CLASSIC_ICONS=false
-for arg in "$@"; do
-  if [ "$arg" = "--version" ] || [ "$arg" = "-v" ]; then
-    echo "Antigravity CLI Statusline v0.2.2"
-    exit 0
-  fi
-  if [ "$arg" = "--compact" ]; then
-    COLS=89
-  elif [ "$arg" = "--medium" ]; then
-    COLS=120
-  elif [ "$arg" = "--medium-wide" ]; then
-    COLS=150
-  elif [ "$arg" = "--classic" ] || [ "$arg" = "--no-nerdfont" ] || [ "$arg" = "--compatibility" ] || [ "$arg" = "-l" ] || [ "$arg" = "--legend" ] || [ "$arg" = "legend" ]; then
-    # We parse argument to see if it is legend command
-    if [ "$arg" = "--legend" ] || [ "$arg" = "-l" ] || [ "$arg" = "legend" ]; then
-      echo -e "${FG_BRIGHT_GREEN}${B}🚀 Antigravity CLI Maximized Statusline Legend${R}"
-      echo -e "This statusline adapts dynamically to terminal width and displays high-density system & agent telemetry."
-      echo -e ""
-      echo -e "${B}LAYOUTS:${R}"
-      echo -e "  - ${B}Wide Layout (>= 180 chars):${R} Single-row powerline segment dashboard."
-      echo -e "  - ${B}Medium-Wide Layout (140-179 chars):${R} Double-line boxed telemetry block."
-      echo -e "  - ${B}Medium Layout (100-139 chars):${R} Triple-line boxed telemetry block."
-      echo -e "  - ${B}Small Layout (< 100 chars):${R} Quad-line stacked telemetry dashboard."
-      echo -e ""
-      echo -e "${B}COMPONENTS & ICONS:${R}"
-      echo -e "  ${B}Field                Nerd Font   Classic     Description${R}"
-      echo -e "  --------------------------------------------------------------------------------"
-      echo -e "  State: READY                   ●           Agent is idle, ready for user requests."
-      echo -e "  State: THINKING      󰟷          ◆           Agent is processing/thinking."
-      echo -e "  State: WORKING                 ⚙           Agent is executing background operations."
-      echo -e "  State: TOOL                    🔧          Agent is running a tool."
-      echo -e "  VCS Branch                     ╱           Current Git branch name (Red + * if dirty)."
-      echo -e "  Model                          (None)      Current active LLM model name/ID."
-      echo -e "  Sandbox Network      󰒙          ON (net)    Sandbox enabled with internet access."
-      echo -e "  Sandbox Restricted   󰴴          ON (no-net) Sandbox enabled with network disabled."
-      echo -e "  Sandbox Off          󰦜          sandbox off Sandbox is disabled (runs on host)."
-      echo -e "  Context Bar          󱍏          ctx         Context window usage bar (10 or 20 segments)."
-      echo -e "  Tokens Sum                     (None)      Total input/output tokens parsed."
-      echo -e "  Sys resources                  sys         Host CPU load average & memory utilization."
-      echo -e "  Artifacts                      artifacts   Number of active output artifacts."
-      echo -e "  Subagents            󱙺          subagents   Number of spawned active subagents."
-      echo -e "  Background Tasks               tasks       Number of background tasks running."
-      echo -e "  Current Directory              ╱           Current working directory path (shortened)."
-      echo -e "  Conversation ID      󰍪          ╱           Short prefix of the current session ID."
-      echo -e "  Quota Reset Time     ⌛️         ⌛          Remaining time until LLM quota resets."
-      echo -e "  Power Mains (AC)     󰚥          AC          Host is connected to external AC power."
-      echo -e "  Power Battery (UPS)  🔋          BAT         Host is running on battery (shows charge %)."
-      exit 0
-    fi
-    USE_CLASSIC_ICONS=true
-  fi
-done
 
 # Set dynamic width boundaries
 # Wide bars (20/15 segments) require >= 235 columns to fit alongside full telemetry without split
@@ -378,6 +375,22 @@ if [ "$USE_CLASSIC_ICONS" = "true" ]; then
 
   BG_META="${FG_GRAY}"
   FG_META_TEXT=""
+
+  # Vim editor mode colors (Classic)
+  case "$VIM_MODE" in
+    NORMAL)
+      BG_VIM="${FG_BLUE}${B}"
+      ;;
+    INSERT)
+      BG_VIM="${FG_GREEN}${B}"
+      ;;
+    VISUAL|VISUAL\ LINE)
+      BG_VIM="${FG_MAGENTA}${B}"
+      ;;
+    *)
+      BG_VIM="${FG_CYAN}${B}"
+      ;;
+  esac
 else
   DOT_L1="${FG_GRAY} | ${R}"
   DOT_L2="${FG_GRAY} | ${R}"
@@ -433,29 +446,45 @@ else
   
   BG_META="\033[48;5;236m"
   FG_META_TEXT="\033[38;5;250m"
+
+  # Vim editor mode colors (Styled)
+  case "$VIM_MODE" in
+    NORMAL)
+      BG_VIM="\033[48;5;33m"
+      FG_VIM="\033[38;5;255m\033[1m"
+      ;;
+    INSERT)
+      BG_VIM="\033[48;5;76m"
+      FG_VIM="\033[38;5;232m\033[1m"
+      ;;
+    VISUAL|VISUAL\ LINE)
+      BG_VIM="\033[48;5;135m"
+      FG_VIM="\033[38;5;255m\033[1m"
+      ;;
+    *)
+      BG_VIM="\033[48;5;37m"
+      FG_VIM="\033[38;5;232m\033[1m"
+      ;;
+  esac
 fi
 
-# ─── Git Timeout Resilience Wrapper ──────────────────────────────────────────
-run_with_timeout() {
-  if command -v timeout &>/dev/null; then
-    timeout 1 "$@"
-  else
-    "$@"
-  fi
-}
-
 GIT_DIR="${CWD:-.}"
-VCS_BRANCH=$(run_with_timeout git -C "$GIT_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
-if [ -n "$VCS_BRANCH" ]; then
+git_branch=$(run_with_timeout 1 git -C "$GIT_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+if [ -n "$git_branch" ]; then
+  VCS_BRANCH="$git_branch"
   VCS_TYPE="git"
-  if run_with_timeout git -C "$GIT_DIR" status --porcelain 2>/dev/null | grep -q .; then
+  if run_with_timeout 1 git -C "$GIT_DIR" status --porcelain 2>/dev/null | grep -q .; then
     VCS_DIRTY="true"
   else
     VCS_DIRTY="false"
   fi
 else
-  VCS_TYPE=""
-  VCS_DIRTY="false"
+  if [ -n "$VCS_BRANCH" ]; then
+    VCS_TYPE="${VCS_TYPE:-git}"
+  else
+    VCS_TYPE=""
+    VCS_DIRTY="false"
+  fi
 fi
 
 # ─── Dynamic CPU load & RAM diagnostics (Pure Bash, instant) ────────────────
@@ -882,7 +911,11 @@ fi
 
 # ─── Statistics & Telemetry Badges ──────────────────────────────────────────
 ART_FMT=$(make_badge "${ICON_ARTIFACTS}" "${ARTIFACTS}" "75")
-SUB_FMT=$(make_badge "${ICON_SUBAGENTS}" "${SUBAGENTS}" "37")
+if [ "${SUBAGENTS:-0}" -gt 0 ] 2>/dev/null; then
+  SUB_FMT=$(make_badge "${ICON_SUBAGENTS}" "${SUBAGENTS}" "37")
+else
+  SUB_FMT=""
+fi
 BG_FMT=$(make_badge "${ICON_TASKS}" "${BG_TASKS}" "135")
 
 # System Resources (RAM & Load average)
@@ -961,6 +994,35 @@ fi
 MODEL_DISP="${MODEL_NAME:-$MODEL_ID}"
 
 # ─── Dynamic LINE1 Assembly (Powerline segments) ────────────────────────────
+truncate_str() {
+  local str="$1"
+  local max_l="$2"
+  if [ "${#str}" -gt "$max_l" ] && [ "$max_l" -gt 3 ]; then
+    echo "${str:0:$((max_l - 3))}..."
+  else
+    echo "$str"
+  fi
+}
+
+calc_line1_len() {
+  local is_classic="$1"
+  shift
+  local total=0
+  if [ "$is_classic" = "true" ]; then
+    for s in "$@"; do
+      local l; l=$(visible_len "$s")
+      total=$(( total + l + 1 ))
+    done
+  else
+    total=2
+    for s in "$@"; do
+      local l; l=$(visible_len "$s")
+      total=$(( total + l + 3 ))
+    done
+  fi
+  echo "$total"
+}
+
 ACTIVE_SEGS=()
 ACTIVE_BGS=()
 ACTIVE_FGS=()
@@ -968,66 +1030,145 @@ ACTIVE_FGS=()
 # 1. State
 case "$STATE" in
   idle)     
-    ACTIVE_SEGS+=("${ICON_READY} READY")
-    ACTIVE_BGS+=("$BG_READY")
-    ACTIVE_FGS+=("$FG_READY_TEXT")
-    S="${FG_BRIGHT_GREEN}${B} ${ICON_READY} READY${R}"
+    STATE_SEG="${ICON_READY} READY"
+    STATE_BG="$BG_READY"
+    STATE_FG="$FG_READY_TEXT"
     ;;
   thinking) 
-    ACTIVE_SEGS+=("${ICON_THINKING} THINKING")
-    ACTIVE_BGS+=("$BG_THINKING")
-    ACTIVE_FGS+=("$FG_THINKING_TEXT")
-    S="${FG_BRIGHT_YELLOW}${B} ${ICON_THINKING} THINKING${R}"
+    STATE_SEG="${ICON_THINKING} THINKING"
+    STATE_BG="$BG_THINKING"
+    STATE_FG="$FG_THINKING_TEXT"
     ;;
   working)  
-    ACTIVE_SEGS+=("${ICON_WORKING} WORKING")
-    ACTIVE_BGS+=("$BG_WORKING")
-    ACTIVE_FGS+=("$FG_WORKING_TEXT")
-    S="${FG_BRIGHT_CYAN}${B} ${ICON_WORKING} WORKING${R}"
+    STATE_SEG="${ICON_WORKING} WORKING"
+    STATE_BG="$BG_WORKING"
+    STATE_FG="$FG_WORKING_TEXT"
     ;;
   tool_use) 
-    ACTIVE_SEGS+=("${ICON_TOOL} TOOL")
-    ACTIVE_BGS+=("$BG_TOOL")
-    ACTIVE_FGS+=("$FG_TOOL_TEXT")
-    S="${FG_BRIGHT_MAGENTA}${B} ${ICON_TOOL} TOOL${R}"
+    STATE_SEG="${ICON_TOOL} TOOL"
+    STATE_BG="$BG_TOOL"
+    STATE_FG="$FG_TOOL_TEXT"
     ;;
   *)        
-    ACTIVE_SEGS+=("${ICON_STATE_UNKNOWN} $(echo "$STATE" | tr '[:lower:]' '[:upper:]')")
-    ACTIVE_BGS+=("$BG_UNKNOWN")
-    ACTIVE_FGS+=("$FG_UNKNOWN_TEXT")
-    S="${FG_WHITE}${B} ${ICON_STATE_UNKNOWN} $(echo "$STATE" | tr '[:lower:]' '[:upper:]')${R}"
+    STATE_SEG="${ICON_STATE_UNKNOWN} $(echo "$STATE" | tr '[:lower:]' '[:upper:]')"
+    STATE_BG="$BG_UNKNOWN"
+    STATE_FG="$FG_UNKNOWN_TEXT"
     ;;
 esac
+ACTIVE_SEGS+=("$STATE_SEG")
+ACTIVE_BGS+=("$STATE_BG")
+ACTIVE_FGS+=("$STATE_FG")
 
-# 2. VCS Branch
+# 2. Vim Editor Mode (Issue #62)
+if [ -n "$VIM_MODE" ]; then
+  if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+    VIM_SEG="[${VIM_MODE}]"
+    VIM_BG="$BG_VIM"
+    VIM_FG=""
+  else
+    VIM_SEG="${VIM_MODE}"
+    VIM_BG="$BG_VIM"
+    VIM_FG="$FG_VIM"
+  fi
+  ACTIVE_SEGS+=("$VIM_SEG")
+  ACTIVE_BGS+=("$VIM_BG")
+  ACTIVE_FGS+=("$VIM_FG")
+fi
+
+# Determine responsive length limits based on COLS
+if [ "$COLS" -lt 70 ]; then
+  max_m=12; max_b=12; max_d=10
+elif [ "$COLS" -lt 85 ]; then
+  max_m=16; max_b=14; max_d=12
+elif [ "$COLS" -lt 100 ]; then
+  max_m=20; max_b=18; max_d=14
+elif [ "$COLS" -lt 130 ]; then
+  max_m=26; max_b=22; max_d=16
+elif [ "$COLS" -lt 180 ]; then
+  max_m=34; max_b=28; max_d=20
+elif [ "$COLS" -lt 235 ]; then
+  max_m=46; max_b=36; max_d=24
+else
+  max_m=70; max_b=50; max_d=30
+fi
+
+# 3. VCS Branch
 if [ -n "$VCS_BRANCH" ]; then
+  b_disp=$(truncate_str "$VCS_BRANCH" "$max_b")
+  [ "$VCS_DIRTY" = "true" ] && b_disp="${b_disp}*"
+  ACTIVE_SEGS+=("${ICON_VCS} ${b_disp}")
   if [ "$VCS_DIRTY" = "true" ]; then
-    ACTIVE_SEGS+=("${ICON_VCS} ${VCS_BRANCH}*")
     ACTIVE_BGS+=("$BG_GIT_DIRTY")
     ACTIVE_FGS+=("$FG_GIT_DIRTY_TEXT")
   else
-    ACTIVE_SEGS+=("${ICON_VCS} ${VCS_BRANCH}")
     ACTIVE_BGS+=("$BG_GIT_CLEAN")
     ACTIVE_FGS+=("$FG_GIT_CLEAN_TEXT")
   fi
 fi
 
-# 3. Model
+# 4. Model
 if [ -n "$MODEL_DISP" ]; then
-  ACTIVE_SEGS+=("${ICON_MODEL} ${MODEL_DISP}")
+  m_disp=$(truncate_str "$MODEL_DISP" "$max_m")
+  if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+    ACTIVE_SEGS+=("${m_disp}")
+  else
+    ACTIVE_SEGS+=("${ICON_MODEL} ${m_disp}")
+  fi
   ACTIVE_BGS+=("$BG_MODEL")
   ACTIVE_FGS+=("$FG_MODEL_TEXT")
 fi
 
-# 4. Directory
+# Clamp essential segments if they exceed COLS
+while [ "$(calc_line1_len "$USE_CLASSIC_ICONS" "${ACTIVE_SEGS[@]}")" -gt "$COLS" ]; do
+  if [ "$max_m" -gt 8 ] && [ -n "$MODEL_DISP" ]; then
+    max_m=$(( max_m - 3 ))
+    m_disp=$(truncate_str "$MODEL_DISP" "$max_m")
+    if [ "$USE_CLASSIC_ICONS" = "true" ]; then m_seg="${m_disp}"; else m_seg="${ICON_MODEL} ${m_disp}"; fi
+    for ((idx=0; idx<${#ACTIVE_SEGS[@]}; idx++)); do
+      if [[ "${ACTIVE_SEGS[idx]}" =~ ${m_disp:0:4} ]]; then
+        ACTIVE_SEGS[idx]="$m_seg"
+        break
+      fi
+    done
+  elif [ "$max_b" -gt 8 ] && [ -n "$VCS_BRANCH" ]; then
+    max_b=$(( max_b - 3 ))
+    b_disp=$(truncate_str "$VCS_BRANCH" "$max_b")
+    [ "$VCS_DIRTY" = "true" ] && b_disp="${b_disp}*"
+    vcs_seg="${ICON_VCS} ${b_disp}"
+    for ((idx=0; idx<${#ACTIVE_SEGS[@]}; idx++)); do
+      if [[ "${ACTIVE_SEGS[idx]}" =~ ${ICON_VCS} ]]; then
+        ACTIVE_SEGS[idx]="$vcs_seg"
+        break
+      fi
+    done
+  else
+    break
+  fi
+done
+
+# 5. Directory
 if [ -n "$CWD_SHORT" ]; then
-  ACTIVE_SEGS+=("${ICON_DIR} ${CWD_SHORT}")
-  ACTIVE_BGS+=("$BG_DIR")
-  ACTIVE_FGS+=("$FG_DIR_TEXT")
+  d_disp=$(truncate_str "$CWD_SHORT" "$max_d")
+  d_seg="${ICON_DIR} ${d_disp}"
+  if [ "$(calc_line1_len "$USE_CLASSIC_ICONS" "${ACTIVE_SEGS[@]}" "$d_seg")" -le "$COLS" ]; then
+    ACTIVE_SEGS+=("$d_seg")
+    ACTIVE_BGS+=("$BG_DIR")
+    ACTIVE_FGS+=("$FG_DIR_TEXT")
+  fi
 fi
 
-# 5. User Plan & Account
-if [ -n "$PLAN_TIER" ] || [ -n "$USER_EMAIL" ]; then
+# 6. Conversation
+if [ -n "$CONV_ID" ] && [ "$COLS" -ge 80 ]; then
+  conv_seg="${ICON_CONV} ${CONV_ID:0:8}"
+  if [ "$(calc_line1_len "$USE_CLASSIC_ICONS" "${ACTIVE_SEGS[@]}" "$conv_seg")" -le "$COLS" ]; then
+    ACTIVE_SEGS+=("$conv_seg")
+    ACTIVE_BGS+=("$BG_META")
+    ACTIVE_FGS+=("$FG_META_TEXT")
+  fi
+fi
+
+# 7. User Plan & Account
+if { [ -n "$PLAN_TIER" ] || [ -n "$USER_EMAIL" ]; } && [ "$COLS" -ge 130 ]; then
   u_label="${PLAN_TIER}"
   if [ -n "$USER_EMAIL" ]; then
     if [ -n "$u_label" ]; then
@@ -1036,41 +1177,54 @@ if [ -n "$PLAN_TIER" ] || [ -n "$USER_EMAIL" ]; then
       u_label="${USER_EMAIL}"
     fi
   fi
-  if [ "$COLS" -ge 130 ]; then
-    if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-      ACTIVE_SEGS+=("${u_label}")
-    else
-      ACTIVE_SEGS+=("👤 ${u_label}")
-    fi
+  u_label=$(truncate_str "$u_label" 25)
+  if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+    u_seg="${u_label}"
+  else
+    u_seg="👤 ${u_label}"
+  fi
+  if [ "$(calc_line1_len "$USE_CLASSIC_ICONS" "${ACTIVE_SEGS[@]}" "$u_seg")" -le "$COLS" ]; then
+    ACTIVE_SEGS+=("$u_seg")
     ACTIVE_BGS+=("$BG_META")
     ACTIVE_FGS+=("$FG_META_TEXT")
   fi
 fi
 
-# 6. Conversation
-if [ -n "$CONV_ID" ] && [ "$COLS" -ge 80 ]; then
-  ACTIVE_SEGS+=("${ICON_CONV} ${CONV_ID:0:8}")
-  ACTIVE_BGS+=("$BG_META")
-  ACTIVE_FGS+=("$FG_META_TEXT")
-fi
-
-# 6. Host IP
+# 8. Host IP
 if [ -n "$HOST_INFO" ] && [ "$COLS" -ge 110 ]; then
+  host_label=$(truncate_str "$HOST_INFO" 20)
   if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-    ACTIVE_SEGS+=("${HOST_INFO}")
+    host_seg="${host_label}"
   else
-    ACTIVE_SEGS+=("󰒋 ${HOST_INFO}")
+    host_seg="󰒋 ${host_label}"
   fi
-  ACTIVE_BGS+=("$BG_META")
-  ACTIVE_FGS+=("$FG_META_TEXT")
+  if [ "$(calc_line1_len "$USE_CLASSIC_ICONS" "${ACTIVE_SEGS[@]}" "$host_seg")" -le "$COLS" ]; then
+    ACTIVE_SEGS+=("$host_seg")
+    ACTIVE_BGS+=("$BG_META")
+    ACTIVE_FGS+=("$FG_META_TEXT")
+  fi
 fi
 
-# 7. Version
+# 9. Version
 if [ -n "$CLI_VERSION" ] && [ "$COLS" -ge 120 ]; then
-  ACTIVE_SEGS+=("v${CLI_VERSION}")
-  ACTIVE_BGS+=("$BG_META")
-  ACTIVE_FGS+=("$FG_META_TEXT")
+  ver_label=$(truncate_str "v${CLI_VERSION}" 10)
+  if [ "$(calc_line1_len "$USE_CLASSIC_ICONS" "${ACTIVE_SEGS[@]}" "$ver_label")" -le "$COLS" ]; then
+    ACTIVE_SEGS+=("$ver_label")
+    ACTIVE_BGS+=("$BG_META")
+    ACTIVE_FGS+=("$FG_META_TEXT")
+  fi
 fi
+
+# Safeguard: pop from end if still exceeds
+while [ "${#ACTIVE_SEGS[@]}" -gt 1 ] && [ "$(calc_line1_len "$USE_CLASSIC_ICONS" "${ACTIVE_SEGS[@]}")" -gt "$COLS" ]; do
+  last_idx=$(( ${#ACTIVE_SEGS[@]} - 1 ))
+  unset "ACTIVE_SEGS[last_idx]"
+  unset "ACTIVE_BGS[last_idx]"
+  unset "ACTIVE_FGS[last_idx]"
+  ACTIVE_SEGS=("${ACTIVE_SEGS[@]}")
+  ACTIVE_BGS=("${ACTIVE_BGS[@]}")
+  ACTIVE_FGS=("${ACTIVE_FGS[@]}")
+done
 
 # Assemble LINE1 with powerline transitions
 LINE1=""
