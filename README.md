@@ -310,7 +310,7 @@ Use these checks when the statusline does not render as expected:
 - **No statusline appears**: confirm that `statusLine.enabled` is `true`, check the command path, and restart Antigravity CLI
 - **Linux or macOS renderer exits**: run `jq --version`; the Bash implementation requires `jq`
 - **Git data is missing**: install Git and confirm the current working directory belongs to a Git repository
-- **Windows Illegal characters in path**: verify your command in `settings.json` does not contain literal escaped quotes around `-File`. The v0.2.4 installer handles spaces automatically using standard path syntax
+- **Windows Illegal characters in path**: verify your command in `settings.json` does not contain literal escaped quotes around `-File`. The v0.2.4+ installer handles spaces automatically using standard path syntax
 - **Windows PowerShell 5.1 font or encoding errors**: `statusline.ps1` includes a UTF-8 BOM to prevent mojibake on non-UTF-8 Windows locales. Ensure the BOM is preserved
 - **A narrow terminal adds more rows**: increase the terminal width or use a layout override (`--compact`, `--medium`) to test a fixed width
 - **Host fields are missing**: the renderer omits diagnostics that the operating system or local tools do not expose

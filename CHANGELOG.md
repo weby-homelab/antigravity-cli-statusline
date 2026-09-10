@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.5] - 2026-09-11
+### Fixed & Improved
+- **Power & AC Supply Detection Hardening (Issue #70)**:
+  - Resolved bug where the power badge remained stuck on `🔋 BAT` even when connected to external AC mains power or on desktop workstations.
+  - Excluded peripheral devices (`scope: Device`, `hidpp_*`, mice, keyboards) from overriding host AC status and causing early scanner termination.
+  - Inspected `type: Mains` and incoming USB-PD chargers (`online: 1`).
+  - Evaluated battery charging status (`Charging`, `Full`, `Not charging` vs `Discharging`).
+  - Recognized desktop workstations and servers without laptop batteries as running on AC power (`󰚥 AC`).
+  - Integrated robust multi-tier power detection in PowerShell (`SystemInformation.PowerStatus` -> `root/wmi:BatteryStatus` -> `Win32_Battery`).
+  - Normalized classic mode rendering in `make_badge` to prevent duplicate `AC AC`.
+  - Added comprehensive automated test suite covering all power supply scenarios with `STATUSLINE_POWER_SUPPLY_DIR` mock harness.
+
 ## [0.2.4] - 2026-09-11
 ### Added & Improved
 - **Vim Editor Mode Indicator (Issue #62)**: Added dynamic Vim mode badge (`NORMAL`, `INSERT`, `VISUAL`, `VISUAL LINE`, fallback) into LINE1 across styled and classic layouts in `statusline.sh` and `statusline.ps1`. Documented in CLI `--legend` and `-Legend`. Participates in responsive width checks to prevent line wrapping.
@@ -26,7 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Uninstallation cleanly restores original `statusLine` or removes only `statusLine` without rolling back unrelated settings added before or after installation. Preserves unknown `statusLine` keys. Preserves symlinks on Linux, macOS, and Windows.
 - **Input Hardening & Version Cleanup (Sections 13, 14)**: Added dynamic string sanitization (stripping newlines, CR, ANSI escapes, control chars). Unified version parsing to `0.2.4`, eliminating stale `v0.2.2`.
 - **Responsive Layout Hardening (Issue #59 / Section 12)**: Hardened LINE1 width gating and truncation across both renderers to guarantee zero uncontrolled line wrapping across terminal widths 60 to 255.
-- **Power & AC Supply Detection Fix (Issue #70)**: Fixed bug where power indicator remained stuck on `🔋 BAT` even when connected to AC power or running on desktop workstations. Excluded peripheral devices (`scope: Device`, `hidpp_*`, mice/keyboards) from overriding host AC status; inspected `type: Mains` and incoming USB chargers; evaluated battery charging status (`Charging`, `Full`, `Not charging` vs `Discharging`); recognized desktop hosts without batteries as AC mains; integrated multi-tier power detection in PowerShell (.NET `PowerStatus` -> `root/wmi:BatteryStatus` -> `Win32_Battery`); normalized classic mode rendering to prevent duplicate `AC AC`.
 
 ## [0.2.3] - 2026-09-03
 ### Added & Improved

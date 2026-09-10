@@ -69,7 +69,8 @@ assert_exit_code "$res" 0 "Empty stdin does not crash"
 # Test 2: CLI Flags
 echo "--- Testing CLI Flags ---"
 ver_out=$(bash "$STATUSLINE" --version 2>&1)
-assert_contains "$ver_out" "0.2.4" "Version flag reports 0.2.4"
+assert_contains "$ver_out" "0.2.5" "Version flag reports 0.2.5"
+assert_not_contains "$ver_out" "0.2.4" "Version flag does not contain stale 0.2.4"
 assert_not_contains "$ver_out" "0.2.2" "Version flag does not contain stale 0.2.2"
 legend_out=$(bash "$STATUSLINE" --legend 2>&1)
 assert_contains "$legend_out" "Legend" "Legend flag works"

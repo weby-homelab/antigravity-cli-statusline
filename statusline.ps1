@@ -8,11 +8,11 @@ $ProgressPreference = 'SilentlyContinue'
 foreach ($arg in $args) {
     $a = if ($arg) { $arg.ToString().ToLower() } else { "" }
     if ($a -in @("--version", "-version", "-v", "version")) {
-        Write-Host "Antigravity CLI Statusline v0.2.4" -ForegroundColor Green
+        Write-Host "Antigravity CLI Statusline v0.2.5" -ForegroundColor Green
         exit
     }
     if ($a -in @("--legend", "-legend", "-l", "legend")) {
-        Write-Host "🚀 Antigravity CLI Statusline Legend (v0.2.4)" -ForegroundColor Green
+        Write-Host "🚀 Antigravity CLI Statusline Legend (v0.2.5)" -ForegroundColor Green
         Write-Host "This statusline adapts dynamically to your terminal width and theme settings.`n"
         
         Write-Host "LAYOUTS:" -ForegroundColor White
