@@ -1,4 +1,4 @@
-# install.ps1 - PowerShell installer for Windows
+﻿# install.ps1 - PowerShell installer for Windows
 
 Write-Host "====================================================" -ForegroundColor Blue
 Write-Host "  Installing Antigravity CLI Statusline (Windows)  " -ForegroundColor Green

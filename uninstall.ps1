@@ -1,4 +1,4 @@
-# uninstall.ps1 - Uninstaller for Windows/PowerShell
+﻿# uninstall.ps1 - Uninstaller for Windows/PowerShell
 
 Write-Host "====================================================" -ForegroundColor Blue
 Write-Host "  Uninstalling Antigravity CLI Statusline (Windows)  " -ForegroundColor Yellow

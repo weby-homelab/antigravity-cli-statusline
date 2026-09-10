@@ -30,6 +30,11 @@ foreach ($script in @($Ps1Statusline, $Ps1Install, $Ps1Uninstall)) {
     $tokens = $null
     $errors = $null
     [System.Management.Automation.Language.Parser]::ParseFile($script, [ref]$tokens, [ref]$errors) | Out-Null
+    if ($errors.Count -gt 0) {
+        foreach ($err in $errors) {
+            Write-Host "    [SYNTAX ERROR in $fileName]: Line $($err.Extent.StartLineNumber): $($err.Message)" -ForegroundColor Red
+        }
+    }
     Assert-Condition ($errors.Count -eq 0) "Script parses cleanly without syntax errors: $fileName"
 }
 
@@ -42,7 +47,7 @@ Assert-Condition $hasBom "statusline.ps1 starts with UTF-8 BOM bytes for Windows
 # Test 3: Path with Spaces Quoting
 Write-Host "--- Test 3: Path Quoting Generation ---"
 $mockTarget = "C:\Program Files\Antigravity CLI\statusline.ps1"
-$escaped = $mockTarget.Replace('', '/')
+$escaped = $mockTarget.Replace('\', '/')
 $commandString = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$escaped`""
 Assert-Condition ($commandString -match '^powershell\.exe -NoProfile -ExecutionPolicy Bypass -File "C:/Program Files/Antigravity CLI/statusline.ps1"') "Command string quotes path with spaces safely"
 
