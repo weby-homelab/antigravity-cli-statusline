@@ -52,22 +52,10 @@ foreach ($arg in $args) {
     }
 }
 
-# Read JSON input from stdin with timeout protection (prevents hanging on blocked pipe)
-$inputJson = ""
-try {
-    if ([Console]::IsInputRedirected) {
-        $task = [System.Threading.Tasks.Task]::Run([System.Func[string]]{ [Console]::In.ReadToEnd() })
-        if ($task.Wait(250)) {
-            $inputJson = $task.Result
-        }
-    } else {
-        $inputJson = $input | Out-String
-    }
-} catch {
-    $inputJson = ""
-}
+# Read JSON input from stdin
+$inputJson = $input | Out-String
+
 if (-not $inputJson -or $inputJson.Trim().Length -eq 0) {
-    # If no stdin or read timed out, output nothing and exit
     exit
 }
 
