@@ -172,6 +172,58 @@ else
 fi
 cleanup_sandbox
 
+# Test 6: Custom AGY_STATUSLINE_INSTALL_DIR
+echo "--- Test 6: Custom AGY_STATUSLINE_INSTALL_DIR ---"
+setup_sandbox
+CUSTOM_DIR="$TEST_HOME/custom_statusline_dir"
+export AGY_STATUSLINE_INSTALL_DIR="$CUSTOM_DIR"
+
+bash "$INSTALL_SH" >/dev/null 2>&1
+
+settings="$HOME/.gemini/antigravity-cli/settings.json"
+cmd=$(jq -r '.statusLine.command // ""' "$settings")
+
+if [ -f "$CUSTOM_DIR/statusline.sh" ] && [ -f "$CUSTOM_DIR/uninstall.sh" ]; then
+  echo "  [PASS] statusline.sh and uninstall.sh installed in custom directory"
+  PASSED=$((PASSED + 1))
+else
+  echo "  [FAIL] Custom directory does not contain installed scripts"
+  FAILED=$((FAILED + 1))
+fi
+
+if [[ "$cmd" == *"$CUSTOM_DIR/statusline.sh"* ]]; then
+  echo "  [PASS] settings.json configured with custom installation path"
+  PASSED=$((PASSED + 1))
+else
+  echo "  [FAIL] settings.json command does not contain custom installation path (got: '$cmd')"
+  FAILED=$((FAILED + 1))
+fi
+
+state_file="$HOME/.gemini/antigravity-cli/statusline_installed_state.json"
+saved_install_dir=$(jq -r '.AGY_STATUSLINE_INSTALL_DIR // ""' "$state_file" 2>/dev/null || echo "")
+if [ "$saved_install_dir" = "$CUSTOM_DIR" ]; then
+  echo "  [PASS] statusline_installed_state.json recorded AGY_STATUSLINE_INSTALL_DIR"
+  PASSED=$((PASSED + 1))
+else
+  echo "  [FAIL] statusline_installed_state.json missing AGY_STATUSLINE_INSTALL_DIR (got: '$saved_install_dir')"
+  FAILED=$((FAILED + 1))
+fi
+
+# Unset environment variable so uninstaller relies on statusline_installed_state.json
+unset AGY_STATUSLINE_INSTALL_DIR
+
+# Test uninstall using the state snapshot
+bash "$CUSTOM_DIR/uninstall.sh" >/dev/null 2>&1
+if [ ! -f "$CUSTOM_DIR/statusline.sh" ] && [ ! -d "$CUSTOM_DIR" ]; then
+  echo "  [PASS] Uninstaller cleaned up custom installation directory via state snapshot"
+  PASSED=$((PASSED + 1))
+else
+  echo "  [FAIL] Custom directory was not cleaned up on uninstall"
+  FAILED=$((FAILED + 1))
+fi
+
+cleanup_sandbox
+
 echo "============================================================"
 echo " Installer Tests: ${PASSED} passed, ${FAILED} failed"
 echo "============================================================"

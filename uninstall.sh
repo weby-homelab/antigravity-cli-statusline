@@ -13,7 +13,25 @@ echo -e "${BLUE}====================================================${RESET}"
 echo -e "${YELLOW}  Uninstalling Antigravity CLI Statusline (Linux/Mac) ${RESET}"
 echo -e "${BLUE}====================================================${RESET}"
 
-INSTALL_DIR="$HOME/.antigravity"
+SETTINGS_FILE="$HOME/.gemini/antigravity-cli/settings.json"
+SETTINGS_DIR="$(dirname "$SETTINGS_FILE")"
+STATE_FILE="${SETTINGS_DIR}/statusline_installed_state.json"
+
+# Resolve INSTALL_DIR: env var -> state snapshot -> default
+INSTALL_DIR=""
+if [ -n "${AGY_STATUSLINE_INSTALL_DIR:-}" ]; then
+  INSTALL_DIR="$AGY_STATUSLINE_INSTALL_DIR"
+elif [ -f "$STATE_FILE" ] && command -v jq &> /dev/null; then
+  saved_dir=$(jq -r '.AGY_STATUSLINE_INSTALL_DIR // .install_dir // empty' "$STATE_FILE" 2>/dev/null || true)
+  if [ -n "$saved_dir" ] && [ "$saved_dir" != "null" ]; then
+    INSTALL_DIR="$saved_dir"
+  fi
+fi
+
+if [ -z "$INSTALL_DIR" ]; then
+  INSTALL_DIR="$HOME/.antigravity"
+fi
+INSTALL_DIR="${INSTALL_DIR/#\~/$HOME}"
 SCRIPT_TARGET="${INSTALL_DIR}/statusline.sh"
 UNINSTALL_TARGET="${INSTALL_DIR}/uninstall.sh"
 
@@ -21,10 +39,6 @@ if [ -f "$SCRIPT_TARGET" ]; then
   echo -e "Removing statusline script: ${SCRIPT_TARGET}..."
   rm -f "$SCRIPT_TARGET"
 fi
-
-SETTINGS_FILE="$HOME/.gemini/antigravity-cli/settings.json"
-SETTINGS_DIR="$(dirname "$SETTINGS_FILE")"
-STATE_FILE="${SETTINGS_DIR}/statusline_installed_state.json"
 
 if [ -f "$SETTINGS_FILE" ]; then
   if [ -f "$STATE_FILE" ]; then

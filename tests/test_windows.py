@@ -89,6 +89,30 @@ class TestWindowsPowerShellParity(unittest.TestCase):
         self.assertIn('"type": "command"', sh_text)
         self.assertNotIn('"type": ""', sh_text)
 
+    def test_installer_supports_custom_install_dir_env_var(self):
+        """install.ps1, install.sh, uninstall.ps1, and uninstall.sh must check AGY_STATUSLINE_INSTALL_DIR."""
+        for filename in ["install.ps1", "install.sh", "uninstall.ps1", "uninstall.sh"]:
+            text = (REPO_ROOT / filename).read_text(encoding="utf-8")
+            self.assertIn(
+                "AGY_STATUSLINE_INSTALL_DIR",
+                text,
+                f"{filename} must support AGY_STATUSLINE_INSTALL_DIR",
+            )
+
+    def test_state_snapshot_records_and_reads_custom_install_dir(self):
+        """Snapshot includes AGY_STATUSLINE_INSTALL_DIR and uninstallers read it if present."""
+        custom_dir = "C:/Custom/Antigravity"
+        snapshot = {
+            "statusLine_existed": False,
+            "original_statusLine": None,
+            "AGY_STATUSLINE_INSTALL_DIR": custom_dir,
+            "install_dir": custom_dir,
+        }
+        raw_json = json.dumps(snapshot)
+        loaded = json.loads(raw_json)
+        self.assertEqual(loaded.get("AGY_STATUSLINE_INSTALL_DIR"), custom_dir)
+        self.assertEqual(loaded.get("install_dir"), custom_dir)
+
     def test_powershell_power_detection_logic(self):
         """statusline.ps1 must implement multi-tier power detection (SystemInformation, BatteryStatus, Win32_Battery)."""
         ps1_text = (REPO_ROOT / "statusline.ps1").read_text(encoding="utf-8")

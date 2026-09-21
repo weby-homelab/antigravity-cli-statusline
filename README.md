@@ -120,7 +120,7 @@ Git is optional. Without it, the statusline omits live branch and dirty-state da
 
 ## Install or upgrade
 
-The installers copy the renderer and uninstaller to `~/.antigravity` (or `%USERPROFILE%\.antigravity` on Windows), configure `statusLine.type = "command"` in Antigravity CLI settings, stage files atomically using temporary files to avoid race conditions during background runner polling, and maintain a dedicated state snapshot (`statusline_installed_state.json`) for safe, non-destructive upgrades and uninstalls.
+The installers copy the renderer and uninstaller to `~/.antigravity` (or `%USERPROFILE%\.antigravity` on Windows), configure `statusLine.type = "command"` in Antigravity CLI settings, stage files atomically using temporary files to avoid race conditions during background runner polling, and maintain a dedicated state snapshot (`statusline_installed_state.json`) for safe, non-destructive upgrades and uninstalls. To customize the installation directory, set the `AGY_STATUSLINE_INSTALL_DIR` environment variable before running the installer.
 
 > [!WARNING]
 > Run the installer as your normal account. Do not use `sudo`: the installer writes to your home directory.

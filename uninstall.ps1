@@ -4,20 +4,41 @@ Write-Host "====================================================" -ForegroundCol
 Write-Host "  Uninstalling Antigravity CLI Statusline (Windows)  " -ForegroundColor Yellow
 Write-Host "====================================================" -ForegroundColor Blue
 
-$installDir = Join-Path $HOME ".antigravity"
+$settingsFile = "$HOME\.gemini\antigravity-cli\settings.json"
+$settingsDir = Split-Path $settingsFile
+$snapshotFile = Join-Path $settingsDir "statusline_installed_state.json"
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+
+# Resolve install directory: env var -> state snapshot -> default
+$installDir = $null
+if ($env:AGY_STATUSLINE_INSTALL_DIR) {
+    $installDir = $env:AGY_STATUSLINE_INSTALL_DIR
+} elseif (Test-Path $snapshotFile) {
+    try {
+        $rawState = Get-Content -Raw -Path $snapshotFile -Encoding UTF8
+        $state = $rawState | ConvertFrom-Json
+        if ($state) {
+            if ($null -ne $state.PSObject.Properties['AGY_STATUSLINE_INSTALL_DIR'] -and $state.AGY_STATUSLINE_INSTALL_DIR) {
+                $installDir = $state.AGY_STATUSLINE_INSTALL_DIR
+            } elseif ($null -ne $state.PSObject.Properties['install_dir'] -and $state.install_dir) {
+                $installDir = $state.install_dir
+            }
+        }
+    } catch {}
+}
+
+if (-not $installDir) {
+    $installDir = Join-Path $HOME ".antigravity"
+}
+
 $targetScript = Join-Path $installDir "statusline.ps1"
 $targetUninstall = Join-Path $installDir "uninstall.ps1"
+$altSnapshotFile = Join-Path $installDir "statusline_installed_state.json"
 
 if (Test-Path $targetScript) {
     Write-Host "Removing statusline script: $targetScript..."
     Remove-Item -Path $targetScript -Force
 }
-
-$settingsFile = "$HOME\.gemini\antigravity-cli\settings.json"
-$settingsDir = Split-Path $settingsFile
-$snapshotFile = Join-Path $settingsDir "statusline_installed_state.json"
-$altSnapshotFile = Join-Path $installDir "statusline_installed_state.json"
-$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
 $activeSnapshot = $null
 if (Test-Path $snapshotFile) {

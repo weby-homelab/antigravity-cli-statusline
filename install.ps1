@@ -4,7 +4,7 @@ Write-Host "====================================================" -ForegroundCol
 Write-Host "  Installing Antigravity CLI Statusline (Windows)  " -ForegroundColor Green
 Write-Host "====================================================" -ForegroundColor Blue
 
-$installDir = Join-Path $HOME ".antigravity"
+$installDir = if ($env:AGY_STATUSLINE_INSTALL_DIR) { $env:AGY_STATUSLINE_INSTALL_DIR } else { Join-Path $HOME ".antigravity" }
 if (-not (Test-Path $installDir)) {
     Write-Host "Creating installation directory: $installDir"
     New-Item -ItemType Directory -Path $installDir | Out-Null
@@ -124,12 +124,36 @@ if (Test-Path $settingsFile) {
             statusLine_existed = $hasStatusLine
             original_statusLine = $origStatusLine
         }
+        if ($env:AGY_STATUSLINE_INSTALL_DIR) {
+            $snapshotObj | Add-Member -MemberType NoteProperty -Name 'AGY_STATUSLINE_INSTALL_DIR' -Value $installDir -Force
+            $snapshotObj | Add-Member -MemberType NoteProperty -Name 'install_dir' -Value $installDir -Force
+        }
         $snapshotJson = $snapshotObj | ConvertTo-Json -Depth 100
         [System.IO.File]::WriteAllText($snapshotFile, $snapshotJson, $utf8NoBom)
         if (Test-Path $installDir) {
             [System.IO.File]::WriteAllText($altSnapshotFile, $snapshotJson, $utf8NoBom)
         }
         Write-Host "Saved initial state snapshot to $snapshotFile"
+    } elseif ($env:AGY_STATUSLINE_INSTALL_DIR) {
+        $activeSnapshot = if (Test-Path $snapshotFile) { $snapshotFile } else { $altSnapshotFile }
+        try {
+            $existing = Get-Content -Raw -Path $activeSnapshot -Encoding UTF8 | ConvertFrom-Json
+            if ($existing) {
+                if ($null -eq $existing.PSObject.Properties['AGY_STATUSLINE_INSTALL_DIR']) {
+                    $existing | Add-Member -MemberType NoteProperty -Name 'AGY_STATUSLINE_INSTALL_DIR' -Value $installDir -Force
+                } else {
+                    $existing.AGY_STATUSLINE_INSTALL_DIR = $installDir
+                }
+                if ($null -eq $existing.PSObject.Properties['install_dir']) {
+                    $existing | Add-Member -MemberType NoteProperty -Name 'install_dir' -Value $installDir -Force
+                } else {
+                    $existing.install_dir = $installDir
+                }
+                $snapshotJson = $existing | ConvertTo-Json -Depth 100
+                if (Test-Path $snapshotFile) { [System.IO.File]::WriteAllText($snapshotFile, $snapshotJson, $utf8NoBom) }
+                if (Test-Path $altSnapshotFile) { [System.IO.File]::WriteAllText($altSnapshotFile, $snapshotJson, $utf8NoBom) }
+            }
+        } catch {}
     }
 
     # Backup existing settings conservatively if no backup exists
@@ -180,11 +204,35 @@ if (Test-Path $settingsFile) {
             statusLine_existed = $false
             original_statusLine = $null
         }
+        if ($env:AGY_STATUSLINE_INSTALL_DIR) {
+            $snapshotObj | Add-Member -MemberType NoteProperty -Name 'AGY_STATUSLINE_INSTALL_DIR' -Value $installDir -Force
+            $snapshotObj | Add-Member -MemberType NoteProperty -Name 'install_dir' -Value $installDir -Force
+        }
         $snapshotJson = $snapshotObj | ConvertTo-Json -Depth 100
         [System.IO.File]::WriteAllText($snapshotFile, $snapshotJson, $utf8NoBom)
         if (Test-Path $installDir) {
             [System.IO.File]::WriteAllText($altSnapshotFile, $snapshotJson, $utf8NoBom)
         }
+    } elseif ($env:AGY_STATUSLINE_INSTALL_DIR) {
+        $activeSnapshot = if (Test-Path $snapshotFile) { $snapshotFile } else { $altSnapshotFile }
+        try {
+            $existing = Get-Content -Raw -Path $activeSnapshot -Encoding UTF8 | ConvertFrom-Json
+            if ($existing) {
+                if ($null -eq $existing.PSObject.Properties['AGY_STATUSLINE_INSTALL_DIR']) {
+                    $existing | Add-Member -MemberType NoteProperty -Name 'AGY_STATUSLINE_INSTALL_DIR' -Value $installDir -Force
+                } else {
+                    $existing.AGY_STATUSLINE_INSTALL_DIR = $installDir
+                }
+                if ($null -eq $existing.PSObject.Properties['install_dir']) {
+                    $existing | Add-Member -MemberType NoteProperty -Name 'install_dir' -Value $installDir -Force
+                } else {
+                    $existing.install_dir = $installDir
+                }
+                $snapshotJson = $existing | ConvertTo-Json -Depth 100
+                if (Test-Path $snapshotFile) { [System.IO.File]::WriteAllText($snapshotFile, $snapshotJson, $utf8NoBom) }
+                if (Test-Path $altSnapshotFile) { [System.IO.File]::WriteAllText($altSnapshotFile, $snapshotJson, $utf8NoBom) }
+            }
+        } catch {}
     }
 
     $config = [PSCustomObject]@{

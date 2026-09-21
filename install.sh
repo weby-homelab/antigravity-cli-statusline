@@ -36,7 +36,8 @@ fi
 echo -e "${GREEN}✓ Dependencies checked.${RESET}"
 
 # 2. Setup directory
-INSTALL_DIR="$HOME/.antigravity"
+INSTALL_DIR="${AGY_STATUSLINE_INSTALL_DIR:-$HOME/.antigravity}"
+INSTALL_DIR="${INSTALL_DIR/#\~/$HOME}"
 echo -e "Creating directory ${INSTALL_DIR}..."
 mkdir -p "$INSTALL_DIR"
 
@@ -109,11 +110,24 @@ if [ -f "$SETTINGS_FILE" ]; then
     has_statusline=$(jq 'has("statusLine")' "$SETTINGS_FILE")
     if [ "$has_statusline" = "true" ]; then
       orig_val=$(jq '.statusLine' "$SETTINGS_FILE")
-      jq -n --argjson orig "$orig_val" '{statusLine_existed: true, original_statusLine: $orig}' > "$STATE_FILE"
+      if [ -n "${AGY_STATUSLINE_INSTALL_DIR:-}" ]; then
+        jq -n --argjson orig "$orig_val" --arg dir "$INSTALL_DIR" \
+          '{statusLine_existed: true, original_statusLine: $orig, AGY_STATUSLINE_INSTALL_DIR: $dir, install_dir: $dir}' > "$STATE_FILE"
+      else
+        jq -n --argjson orig "$orig_val" '{statusLine_existed: true, original_statusLine: $orig}' > "$STATE_FILE"
+      fi
     else
-      jq -n '{statusLine_existed: false, original_statusLine: null}' > "$STATE_FILE"
+      if [ -n "${AGY_STATUSLINE_INSTALL_DIR:-}" ]; then
+        jq -n --arg dir "$INSTALL_DIR" \
+          '{statusLine_existed: false, original_statusLine: null, AGY_STATUSLINE_INSTALL_DIR: $dir, install_dir: $dir}' > "$STATE_FILE"
+      else
+        jq -n '{statusLine_existed: false, original_statusLine: null}' > "$STATE_FILE"
+      fi
     fi
     echo -e "Saved initial state snapshot to ${STATE_FILE}"
+  elif [ -n "${AGY_STATUSLINE_INSTALL_DIR:-}" ]; then
+    jq --arg dir "$INSTALL_DIR" '. + {AGY_STATUSLINE_INSTALL_DIR: $dir, install_dir: $dir}' "$STATE_FILE" > "${STATE_FILE}.tmp"
+    mv -f "${STATE_FILE}.tmp" "$STATE_FILE"
   fi
 
   # Backup existing settings conservatively if no backup exists
@@ -135,7 +149,15 @@ if [ -f "$SETTINGS_FILE" ]; then
 else
   # Record state snapshot for new installation
   if [ ! -f "$STATE_FILE" ]; then
-    jq -n '{statusLine_existed: false, original_statusLine: null}' > "$STATE_FILE"
+    if [ -n "${AGY_STATUSLINE_INSTALL_DIR:-}" ]; then
+      jq -n --arg dir "$INSTALL_DIR" \
+        '{statusLine_existed: false, original_statusLine: null, AGY_STATUSLINE_INSTALL_DIR: $dir, install_dir: $dir}' > "$STATE_FILE"
+    else
+      jq -n '{statusLine_existed: false, original_statusLine: null}' > "$STATE_FILE"
+    fi
+  elif [ -n "${AGY_STATUSLINE_INSTALL_DIR:-}" ]; then
+    jq --arg dir "$INSTALL_DIR" '. + {AGY_STATUSLINE_INSTALL_DIR: $dir, install_dir: $dir}' "$STATE_FILE" > "${STATE_FILE}.tmp"
+    mv -f "${STATE_FILE}.tmp" "$STATE_FILE"
   fi
   # Write new config
   echo -e "Creating a new settings.json configuration..."
