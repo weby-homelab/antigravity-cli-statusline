@@ -182,13 +182,14 @@ CUSTOM_INSTALL_DIR="$WORK_DIR/custom 'statusline"
   cd "$WORK_DIR" || exit 1
   AGY_STATUSLINE_INSTALL_DIR="custom 'statusline" bash "$INSTALL_SH" >/dev/null 2>&1
 )
+AGY_STATUSLINE_INSTALL_DIR="$CUSTOM_INSTALL_DIR" bash "$INSTALL_SH" >/dev/null 2>&1
+CUSTOM_INSTALL_DIR="$(cd -P -- "$CUSTOM_INSTALL_DIR" && pwd -P)"
 settings="$HOME/.gemini/antigravity-cli/settings.json"
 state="$HOME/.gemini/antigravity-cli/statusline_installed_state.json"
 configured_cmd=$(jq -r '.statusLine.command // ""' "$settings")
 stored_install_dir=$(jq -r '.install_dir // ""' "$state")
 expected_script_path="$CUSTOM_INSTALL_DIR/statusline.sh"
-escaped_script_path="${expected_script_path//\'/\'\\\'\'}"
-expected_cmd="'${escaped_script_path}'"
+printf -v expected_cmd '%q' "$expected_script_path"
 custom_files_were_installed=false
 if [ -f "$CUSTOM_INSTALL_DIR/statusline.sh" ] && [ -f "$CUSTOM_INSTALL_DIR/uninstall.sh" ]; then
   custom_files_were_installed=true
@@ -248,11 +249,12 @@ AGY_STATUSLINE_INSTALL_DIR="$CUSTOM_INSTALL_DIR" bash "$INSTALL_SH" >/dev/null 2
 bash "$INSTALL_SH" >/dev/null 2>&1
 settings="$HOME/.gemini/antigravity-cli/settings.json"
 state="$HOME/.gemini/antigravity-cli/statusline_installed_state.json"
-DEFAULT_INSTALL_DIR="$HOME/.antigravity"
+DEFAULT_INSTALL_DIR="$(cd -P -- "$HOME/.antigravity" && pwd -P)"
 configured_cmd=$(jq -r '.statusLine.command // ""' "$settings")
 stored_install_dir=$(jq -r '.install_dir // ""' "$state")
+printf -v expected_default_command '%q' "$DEFAULT_INSTALL_DIR/statusline.sh"
 
-if [ "$configured_cmd" = "'$DEFAULT_INSTALL_DIR/statusline.sh'" ] && [ "$stored_install_dir" = "$DEFAULT_INSTALL_DIR" ]; then
+if [ "$configured_cmd" = "$expected_default_command" ] && [ "$stored_install_dir" = "$DEFAULT_INSTALL_DIR" ]; then
   echo "  [PASS] Reinstall updates both the configured command and snapshot to the default directory"
   PASSED=$((PASSED + 1))
 else

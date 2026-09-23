@@ -99,8 +99,8 @@ if [ ! -f "$SETTINGS_FILE" ] || ! command -v jq &> /dev/null; then
   exit 1
 fi
 CURRENT_COMMAND="$(jq -r '.statusLine.command // empty' "$SETTINGS_FILE" 2>/dev/null || true)"
-QUOTED_SCRIPT_TARGET="${SCRIPT_TARGET//\'/\'\\\'\'}"
-EXPECTED_COMMAND="'${QUOTED_SCRIPT_TARGET}'"
+printf -v QUOTED_SCRIPT_TARGET '%q' "$SCRIPT_TARGET"
+EXPECTED_COMMAND="$QUOTED_SCRIPT_TARGET"
 if [[ "$CURRENT_COMMAND" != "$EXPECTED_COMMAND" && "$CURRENT_COMMAND" != "$EXPECTED_COMMAND "* && \
       "$CURRENT_COMMAND" != "$SCRIPT_TARGET" && "$CURRENT_COMMAND" != "$SCRIPT_TARGET "* ]]; then
   echo -e "${RED}Error: settings.json does not point to this installation. No files were removed.${RESET}" >&2

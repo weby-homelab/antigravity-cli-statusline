@@ -111,8 +111,8 @@ EXTRA_ARGS=""
 if [ "$#" -gt 0 ]; then
   EXTRA_ARGS=" $*"
 fi
-QUOTED_SCRIPT_TARGET="${SCRIPT_TARGET//\'/\'\\\'\'}"
-COMMAND_STRING="'${QUOTED_SCRIPT_TARGET}'${EXTRA_ARGS}"
+printf -v QUOTED_SCRIPT_TARGET '%q' "$SCRIPT_TARGET"
+COMMAND_STRING="${QUOTED_SCRIPT_TARGET}${EXTRA_ARGS}"
 
 UNINSTALL_TARGET="${INSTALL_DIR}/uninstall.sh"
 SETTINGS_FILE="$HOME/.gemini/antigravity-cli/settings.json"
@@ -128,8 +128,8 @@ if [ -e "$SCRIPT_TARGET" ] || [ -L "$SCRIPT_TARGET" ] || [ -e "$UNINSTALL_TARGET
   if [ -f "$SETTINGS_FILE" ] && jq empty "$SETTINGS_FILE" 2>/dev/null; then
     CURRENT_COMMAND="$(jq -r '.statusLine.command // empty' "$SETTINGS_FILE" 2>/dev/null || true)"
   fi
-  if [[ "$CURRENT_COMMAND" != "'${QUOTED_SCRIPT_TARGET}'" && \
-        "$CURRENT_COMMAND" != "'${QUOTED_SCRIPT_TARGET}' "* && \
+  if [[ "$CURRENT_COMMAND" != "$QUOTED_SCRIPT_TARGET" && \
+        "$CURRENT_COMMAND" != "$QUOTED_SCRIPT_TARGET "* && \
         "$CURRENT_COMMAND" != "$SCRIPT_TARGET" && "$CURRENT_COMMAND" != "$SCRIPT_TARGET "* ]]; then
     echo -e "${RED}Error: Refusing to overwrite files not referenced by the active statusline settings.${RESET}" >&2
     exit 1
