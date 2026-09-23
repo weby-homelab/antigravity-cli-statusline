@@ -168,17 +168,7 @@ A Linux configuration has this shape:
 }
 ```
 
-On macOS, replace `/home/your_username` with `/Users/your_username`. The installer quotes Windows script paths when they contain spaces. If you edit the setting manually, quote the `-File` path and escape those quotes in JSON.
-
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "powershell.exe -File C:/u/.antigravity/statusline.ps1",
-    "enabled": true
-  }
-}
-```
+On macOS, replace `/home/your_username` with `/Users/your_username`. The Windows installer writes a command like `powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:/u/.antigravity/statusline.ps1`. Replace this example path with the installed script path. If you edit the setting manually, quote the `-File` path when it contains spaces and escape those quotes in JSON.
 
 ### Use classic mode
 
