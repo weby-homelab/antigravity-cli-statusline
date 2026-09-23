@@ -8,11 +8,11 @@ $ProgressPreference = 'SilentlyContinue'
 foreach ($arg in $args) {
     $a = if ($arg) { $arg.ToString().ToLower() } else { "" }
     if ($a -in @("--version", "-version", "-v", "version")) {
-        Write-Host "Antigravity CLI Statusline v0.2.5" -ForegroundColor Green
+        Write-Host "Antigravity CLI Statusline v0.2.6" -ForegroundColor Green
         exit
     }
     if ($a -in @("--legend", "-legend", "-l", "legend")) {
-        Write-Host "🚀 Antigravity CLI Statusline Legend (v0.2.5)" -ForegroundColor Green
+        Write-Host "🚀 Antigravity CLI Statusline Legend (v0.2.6)" -ForegroundColor Green
         Write-Host "This statusline adapts dynamically to your terminal width and theme settings.`n"
         
         Write-Host "LAYOUTS:" -ForegroundColor White
@@ -52,23 +52,46 @@ foreach ($arg in $args) {
     }
 }
 
-# Read JSON input from stdin with timeout protection (prevents hanging on blocked pipe)
-$inputJson = ""
-try {
-    if ([Console]::IsInputRedirected) {
-        $task = [System.Threading.Tasks.Task]::Run([System.Func[string]]{ [Console]::In.ReadToEnd() })
-        if ($task.Wait(250)) {
-            $inputJson = $task.Result
+# TextReader.ReadToEnd reads through EOF; Task.Wait(milliseconds) bounds the caller's wait.
+# Microsoft Learn: https://learn.microsoft.com/dotnet/api/system.io.textreader.readtoend
+# https://learn.microsoft.com/dotnet/api/system.threading.tasks.task.wait
+function Read-StatuslineInput {
+    param(
+        [System.IO.TextReader]$Reader = [Console]::In,
+        [int]$TimeoutMilliseconds = 1000
+    )
+
+    try {
+        $readerInput = $Reader
+        $readTask = [System.Threading.Tasks.Task]::Run([System.Func[string]]{ $readerInput.ReadToEnd() })
+        if ($readTask.Wait($TimeoutMilliseconds)) {
+            $result = $readTask.Result
+            if (-not [string]::IsNullOrWhiteSpace($result)) {
+                return $result
+            }
         }
-    } else {
-        $inputJson = $input | Out-String
+    } catch {
+        # A missing, closed, or unreadable stdin should not suppress the whole statusline.
     }
-} catch {
-    $inputJson = ""
+
+    # Render a minimal idle statusline if the host is warming up or keeps stdin open.
+    return "{}"
 }
-if (-not $inputJson -or $inputJson.Trim().Length -eq 0) {
-    # If no stdin or read timed out, output nothing and exit
-    exit
+
+# Read JSON input with a bounded wait. A short delay can happen during CLI startup,
+# while an open-but-empty pipe must never block the statusline indefinitely.
+$inputJson = ""
+if ([Console]::IsInputRedirected) {
+    $inputJson = Read-StatuslineInput
+} else {
+    try {
+        $inputJson = $input | Out-String
+    } catch {
+        $inputJson = ""
+    }
+    if ([string]::IsNullOrWhiteSpace($inputJson)) {
+        $inputJson = "{}"
+    }
 }
 
 # Parse JSON safely

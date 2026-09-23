@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.6] - 2026-09-23
+### Fixed & Improved
+- **Stdin Startup Resilience (PR #74)**: Increased the bounded read windows in PowerShell and Bash to accommodate delayed startup payloads; PowerShell now renders a minimal idle statusline when stdin is empty or remains open, instead of exiting silently or hanging.
+- **Configurable Install Directory (PR #76)**: Added `AGY_STATUSLINE_INSTALL_DIR` support to Bash and PowerShell installers. Relative and home-relative paths are normalized, the active location is kept current in the install-state snapshot, and uninstallers verify the saved location and active settings command before removing files.
+- Install/uninstall path safeguards reject stale locations, symbolic-link targets, unrelated files, Git working trees, and filesystem roots.
+- Added regression coverage for delayed and blocked PowerShell stdin, custom install paths, custom-to-default reinstalls, and uninstalling from the recorded location.
+
 ## [0.2.5] - 2026-09-11
 ### Fixed & Improved
 - **Power & AC Supply Detection Hardening (Issue #70)**:

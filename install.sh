@@ -36,9 +36,74 @@ fi
 echo -e "${GREEN}✓ Dependencies checked.${RESET}"
 
 # 2. Setup directory
-INSTALL_DIR="$HOME/.antigravity"
+INSTALL_DIR="${AGY_STATUSLINE_INSTALL_DIR:-$HOME/.antigravity}"
+case "$INSTALL_DIR" in
+  "~")
+    INSTALL_DIR="$HOME"
+    ;;
+  "~/"*)
+    INSTALL_DIR="$HOME${INSTALL_DIR:1}"
+    ;;
+  "~"*)
+    echo -e "${RED}Error: Only '~' and '~/...' home-directory shortcuts are supported.${RESET}" >&2
+    exit 1
+    ;;
+esac
+
+resolve_install_directory() {
+  local requested="$1"
+  local remaining component candidate resolved="/"
+
+  case "$requested" in
+    /*) remaining="${requested#/}" ;;
+    *) remaining="${PWD}/${requested}"; remaining="${remaining#/}" ;;
+  esac
+
+  while [ -n "$remaining" ]; do
+    if [[ "$remaining" == */* ]]; then
+      component="${remaining%%/*}"
+      remaining="${remaining#*/}"
+    else
+      component="$remaining"
+      remaining=""
+    fi
+
+    case "$component" in
+      ""|.) continue ;;
+      ..) resolved="$(dirname "$resolved")" ;;
+      *)
+        candidate="${resolved%/}/${component}"
+        if [ -d "$candidate" ]; then
+          resolved="$(cd -P -- "$candidate" && pwd -P)" || return 1
+        else
+          resolved="$candidate"
+        fi
+        ;;
+    esac
+  done
+
+  printf '%s\n' "$resolved"
+}
+
+INSTALL_DIR="$(resolve_install_directory "$INSTALL_DIR")" || {
+  echo -e "${RED}Error: Could not resolve the install directory.${RESET}" >&2
+  exit 1
+}
+if [ "$INSTALL_DIR" = "/" ]; then
+  echo -e "${RED}Error: The filesystem root cannot be used as an install directory.${RESET}" >&2
+  exit 1
+fi
+PARENT_CHECK_DIR="$INSTALL_DIR"
+while [ "$PARENT_CHECK_DIR" != "/" ]; do
+  if [ -e "$PARENT_CHECK_DIR/.git" ]; then
+    echo -e "${RED}Error: Refusing to install inside a Git working tree.${RESET}" >&2
+    exit 1
+  fi
+  PARENT_CHECK_DIR="$(dirname "$PARENT_CHECK_DIR")"
+done
 echo -e "Creating directory ${INSTALL_DIR}..."
 mkdir -p "$INSTALL_DIR"
+INSTALL_DIR="$(cd -- "$INSTALL_DIR" && pwd -P)"
 
 # 3. Copy/Download files
 SCRIPT_TARGET="${INSTALL_DIR}/statusline.sh"
@@ -46,54 +111,83 @@ EXTRA_ARGS=""
 if [ "$#" -gt 0 ]; then
   EXTRA_ARGS=" $*"
 fi
-COMMAND_STRING="${SCRIPT_TARGET}${EXTRA_ARGS}"
+QUOTED_SCRIPT_TARGET="${SCRIPT_TARGET//\'/\'\\\'\'}"
+COMMAND_STRING="'${QUOTED_SCRIPT_TARGET}'${EXTRA_ARGS}"
 
 UNINSTALL_TARGET="${INSTALL_DIR}/uninstall.sh"
+SETTINGS_FILE="$HOME/.gemini/antigravity-cli/settings.json"
+SETTINGS_DIR="$(dirname "$SETTINGS_FILE")"
+STATE_FILE="${SETTINGS_DIR}/statusline_installed_state.json"
+
+if [ -e "$SCRIPT_TARGET" ] || [ -L "$SCRIPT_TARGET" ] || [ -e "$UNINSTALL_TARGET" ] || [ -L "$UNINSTALL_TARGET" ]; then
+  if [ -L "$SCRIPT_TARGET" ] || [ -L "$UNINSTALL_TARGET" ]; then
+    echo -e "${RED}Error: Refusing to replace an installation target that is a symbolic link.${RESET}" >&2
+    exit 1
+  fi
+  CURRENT_COMMAND=""
+  if [ -f "$SETTINGS_FILE" ] && jq empty "$SETTINGS_FILE" 2>/dev/null; then
+    CURRENT_COMMAND="$(jq -r '.statusLine.command // empty' "$SETTINGS_FILE" 2>/dev/null || true)"
+  fi
+  if [[ "$CURRENT_COMMAND" != "'${QUOTED_SCRIPT_TARGET}'" && \
+        "$CURRENT_COMMAND" != "'${QUOTED_SCRIPT_TARGET}' "* && \
+        "$CURRENT_COMMAND" != "$SCRIPT_TARGET" && "$CURRENT_COMMAND" != "$SCRIPT_TARGET "* ]]; then
+    echo -e "${RED}Error: Refusing to overwrite files not referenced by the active statusline settings.${RESET}" >&2
+    exit 1
+  fi
+fi
 
 LOCAL_DIR=""
 if [ -f "$0" ] && [ -f "$(dirname "$0")/statusline.sh" ]; then
-  LOCAL_DIR="$(dirname "$0")"
+  LOCAL_DIR="$(cd -P -- "$(dirname "$0")" && pwd -P)"
 fi
+
+SCRIPT_TEMP="$(mktemp "${SCRIPT_TARGET}.tmp.XXXXXX")"
+if ! UNINSTALL_TEMP="$(mktemp "${UNINSTALL_TARGET}.tmp.XXXXXX")"; then
+  rm -f "$SCRIPT_TEMP"
+  echo -e "${RED}Error: Could not create a temporary file in ${INSTALL_DIR}.${RESET}" >&2
+  exit 1
+fi
+trap 'rm -f "$SCRIPT_TEMP" "$UNINSTALL_TEMP"' EXIT
 
 RAW_URL="https://raw.githubusercontent.com/weby-homelab/antigravity-cli-statusline/main"
 
 if [ -n "$LOCAL_DIR" ]; then
+  if [ "$LOCAL_DIR" = "$INSTALL_DIR" ]; then
+    echo -e "${RED}Error: The install directory cannot be the source repository.${RESET}" >&2
+    exit 1
+  fi
   echo -e "Installing from local files..."
-  cp "${LOCAL_DIR}/statusline.sh" "${SCRIPT_TARGET}.tmp"
-  chmod +x "${SCRIPT_TARGET}.tmp"
-  mv -f "${SCRIPT_TARGET}.tmp" "$SCRIPT_TARGET"
+  cp "${LOCAL_DIR}/statusline.sh" "$SCRIPT_TEMP"
+  chmod +x "$SCRIPT_TEMP"
+  mv -f "$SCRIPT_TEMP" "$SCRIPT_TARGET"
   if [ -f "${LOCAL_DIR}/uninstall.sh" ]; then
-    cp "${LOCAL_DIR}/uninstall.sh" "${UNINSTALL_TARGET}.tmp"
-    chmod +x "${UNINSTALL_TARGET}.tmp"
-    mv -f "${UNINSTALL_TARGET}.tmp" "$UNINSTALL_TARGET"
+    cp "${LOCAL_DIR}/uninstall.sh" "$UNINSTALL_TEMP"
+    chmod +x "$UNINSTALL_TEMP"
+    mv -f "$UNINSTALL_TEMP" "$UNINSTALL_TARGET"
   fi
 else
   echo -e "Installing from remote repository..."
   if command -v curl &> /dev/null; then
     echo -e "Downloading statusline.sh using curl..."
-    curl -fsSL "${RAW_URL}/statusline.sh" -o "${SCRIPT_TARGET}.tmp"
+    curl -fsSL "${RAW_URL}/statusline.sh" -o "$SCRIPT_TEMP"
     echo -e "Downloading uninstall.sh using curl..."
-    curl -fsSL "${RAW_URL}/uninstall.sh" -o "${UNINSTALL_TARGET}.tmp"
+    curl -fsSL "${RAW_URL}/uninstall.sh" -o "$UNINSTALL_TEMP"
   elif command -v wget &> /dev/null; then
     echo -e "Downloading statusline.sh using wget..."
-    wget -qO "${SCRIPT_TARGET}.tmp" "${RAW_URL}/statusline.sh"
+    wget -qO "$SCRIPT_TEMP" "${RAW_URL}/statusline.sh"
     echo -e "Downloading uninstall.sh using wget..."
-    wget -qO "${UNINSTALL_TARGET}.tmp" "${RAW_URL}/uninstall.sh"
+    wget -qO "$UNINSTALL_TEMP" "${RAW_URL}/uninstall.sh"
   else
     echo -e "${RED}Error: Neither curl nor wget is installed. Cannot download files.${RESET}"
     exit 1
   fi
-  chmod +x "${SCRIPT_TARGET}.tmp"
-  chmod +x "${UNINSTALL_TARGET}.tmp"
-  mv -f "${SCRIPT_TARGET}.tmp" "$SCRIPT_TARGET"
-  mv -f "${UNINSTALL_TARGET}.tmp" "$UNINSTALL_TARGET"
+  chmod +x "$SCRIPT_TEMP"
+  chmod +x "$UNINSTALL_TEMP"
+  mv -f "$SCRIPT_TEMP" "$SCRIPT_TARGET"
+  mv -f "$UNINSTALL_TEMP" "$UNINSTALL_TARGET"
 fi
 
 # 4. Configure settings.json
-SETTINGS_FILE="$HOME/.gemini/antigravity-cli/settings.json"
-SETTINGS_DIR="$(dirname "$SETTINGS_FILE")"
-STATE_FILE="${SETTINGS_DIR}/statusline_installed_state.json"
-
 echo -e "Configuring settings file: ${SETTINGS_FILE}..."
 mkdir -p "$SETTINGS_DIR"
 
@@ -141,6 +235,13 @@ else
   echo -e "Creating a new settings.json configuration..."
   jq -n --arg cmd "$COMMAND_STRING" '{ statusLine: { type: "command", command: $cmd, enabled: true } }' > "$SETTINGS_FILE"
 fi
+
+# Keep the active install location current without replacing the original statusLine snapshot.
+jq --arg install_dir "$INSTALL_DIR" \
+  '. + {install_dir: $install_dir, AGY_STATUSLINE_INSTALL_DIR: $install_dir}' \
+  "$STATE_FILE" > "${STATE_FILE}.tmp"
+cat "${STATE_FILE}.tmp" > "$STATE_FILE"
+rm -f "${STATE_FILE}.tmp"
 
 echo -e "${BLUE}====================================================${RESET}"
 echo -e "${GREEN}🎉 Installation completed successfully!${RESET}"

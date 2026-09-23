@@ -21,21 +21,21 @@ mkfifo "$FIFO"
 ( sleep 5 > "$FIFO" ) 2>/dev/null &
 WRITER_PID=$!
 
-start_s=$(date +%s)
+start_ns=$(python3 -c 'import time; print(time.monotonic_ns())')
 out=$(bash "$STATUSLINE" < "$FIFO" 2>&1 || true)
-end_s=$(date +%s)
-elapsed=$((end_s - start_s))
+end_ns=$(python3 -c 'import time; print(time.monotonic_ns())')
+elapsed_ms=$(((end_ns - start_ns) / 1000000))
 
 kill "$WRITER_PID" 2>/dev/null || true
 wait "$WRITER_PID" 2>/dev/null || true
 rm -f "$FIFO"
 
-echo "  Elapsed time on blocked stdin: ${elapsed}s"
-if [ "$elapsed" -lt 2 ]; then
-  echo "  [PASS] Blocked stdin terminated within deadline (${elapsed}s < 2s)"
+echo "  Elapsed time on blocked stdin: ${elapsed_ms}ms"
+if [ "$elapsed_ms" -lt 2000 ]; then
+  echo "  [PASS] Blocked stdin terminated within deadline (${elapsed_ms}ms < 2000ms)"
   PASSED=$((PASSED + 1))
 else
-  echo "  [FAIL] Blocked stdin took too long: ${elapsed}s"
+  echo "  [FAIL] Blocked stdin took too long: ${elapsed_ms}ms"
   FAILED=$((FAILED + 1))
 fi
 
@@ -53,21 +53,21 @@ mkfifo "$FIFO_FB"
 ( sleep 5 > "$FIFO_FB" ) 2>/dev/null &
 WRITER_PID_FB=$!
 
-start_fb=$(date +%s)
+start_fb_ns=$(python3 -c 'import time; print(time.monotonic_ns())')
 out_fb=$(PATH="${FAKE_BIN_DIR}:${PATH}" bash "$STATUSLINE" < "$FIFO_FB" 2>&1 || true)
-end_fb=$(date +%s)
-elapsed_fb=$((end_fb - start_fb))
+end_fb_ns=$(python3 -c 'import time; print(time.monotonic_ns())')
+elapsed_fb_ms=$(((end_fb_ns - start_fb_ns) / 1000000))
 
 kill "$WRITER_PID_FB" 2>/dev/null || true
 wait "$WRITER_PID_FB" 2>/dev/null || true
 rm -rf "$FAKE_BIN_DIR" "$FIFO_FB"
 
-echo "  Elapsed time without timeout command: ${elapsed_fb}s"
-if [ "$elapsed_fb" -lt 2 ]; then
-  echo "  [PASS] Fallback timeout terminated safely (${elapsed_fb}s)"
+echo "  Elapsed time without timeout command: ${elapsed_fb_ms}ms"
+if [ "$elapsed_fb_ms" -lt 2000 ]; then
+  echo "  [PASS] Fallback timeout terminated safely (${elapsed_fb_ms}ms)"
   PASSED=$((PASSED + 1))
 else
-  echo "  [FAIL] Fallback timeout hung (${elapsed_fb}s)"
+  echo "  [FAIL] Fallback timeout hung (${elapsed_fb_ms}ms)"
   FAILED=$((FAILED + 1))
 fi
 

@@ -7,6 +7,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 STATUSLINE="${REPO_ROOT}/statusline.sh"
 FIXTURES="${SCRIPT_DIR}/fixtures"
+# Keep live Git branch data out of fixtures so it cannot change layout assertions.
+TEST_WORKDIR="$(mktemp -d)"
+cd "$TEST_WORKDIR" || exit 1
 
 PASSED=0
 FAILED=0
@@ -66,10 +69,17 @@ out=$(printf "" | bash "$STATUSLINE" 2>&1)
 res=$?
 assert_exit_code "$res" 0 "Empty stdin does not crash"
 
+# A CLI may start the statusline before its payload is ready. Keep the reader
+# bounded, but allow normal process scheduling and pipe startup to complete.
+delayed_out=$({ sleep 0.4; cat "${FIXTURES}/context_window_calc.json"; } | bash "$STATUSLINE" --classic 2>&1 || true)
+delayed_plain=$(echo "$delayed_out" | strip_ansi)
+assert_contains "$delayed_plain" "14.2%" "Payload arriving after 400ms is still rendered"
+
 # Test 2: CLI Flags
 echo "--- Testing CLI Flags ---"
 ver_out=$(bash "$STATUSLINE" --version 2>&1)
-assert_contains "$ver_out" "0.2.5" "Version flag reports 0.2.5"
+assert_contains "$ver_out" "0.2.6" "Version flag reports 0.2.6"
+assert_not_contains "$ver_out" "0.2.5" "Version flag does not contain stale 0.2.5"
 assert_not_contains "$ver_out" "0.2.4" "Version flag does not contain stale 0.2.4"
 assert_not_contains "$ver_out" "0.2.2" "Version flag does not contain stale 0.2.2"
 legend_out=$(bash "$STATUSLINE" --legend 2>&1)
@@ -197,6 +207,7 @@ assert_contains "$c_plain" "AC" "Classic mode renders AC"
 assert_not_contains "$c_plain" "AC AC" "Classic mode does not duplicate AC AC"
 
 rm -rf "$MOCK_PSY"
+rm -rf "$TEST_WORKDIR"
 
 echo "============================================================"
 echo " Statusline Tests Completed: ${PASSED} passed, ${FAILED} failed"

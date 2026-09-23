@@ -120,7 +120,7 @@ Git is optional. Without it, the statusline omits live branch and dirty-state da
 
 ## Install or upgrade
 
-The installers copy the renderer and uninstaller to `~/.antigravity` (or `%USERPROFILE%\.antigravity` on Windows), configure `statusLine.type = "command"` in Antigravity CLI settings, stage files atomically using temporary files to avoid race conditions during background runner polling, and maintain a dedicated state snapshot (`statusline_installed_state.json`) for safe, non-destructive upgrades and uninstalls.
+The installers copy the renderer and uninstaller to `~/.antigravity` (or `%USERPROFILE%\.antigravity` on Windows) by default, configure `statusLine.type = "command"` in Antigravity CLI settings, stage files atomically using temporary files to avoid race conditions during background runner polling, and maintain a dedicated state snapshot (`statusline_installed_state.json`) for safe, non-destructive upgrades and uninstalls. Set `AGY_STATUSLINE_INSTALL_DIR` to choose another directory; the installer records the normalized active path so uninstall can verify it later. Installers refuse to overwrite unrelated existing targets, and will not install inside a Git working tree or filesystem root.
 
 > [!WARNING]
 > Run the installer as your normal account. Do not use `sudo`: the installer writes to your home directory.
@@ -132,7 +132,10 @@ The installers copy the renderer and uninstaller to `~/.antigravity` (or `%USERP
 
 Install `jq`, then run the installer with either `curl` or `wget`.
 
+To choose a custom install directory, set the environment variable before running either command. Relative paths are resolved from the current directory; `~` and `~/...` are expanded under your home directory.
+
 ```bash
+export AGY_STATUSLINE_INSTALL_DIR="$HOME/.local/share/antigravity-statusline"
 curl -fsSL https://raw.githubusercontent.com/weby-homelab/antigravity-cli-statusline/main/install.sh | bash
 ```
 
@@ -147,10 +150,11 @@ wget -qO- https://raw.githubusercontent.com/weby-homelab/antigravity-cli-statusl
 Run the installer from PowerShell:
 
 ```powershell
+$env:AGY_STATUSLINE_INSTALL_DIR = Join-Path $HOME "Apps\Antigravity Statusline"
 powershell -NoProfile -ExecutionPolicy Bypass -Command "iex (irm https://raw.githubusercontent.com/weby-homelab/antigravity-cli-statusline/main/install.ps1)"
 ```
 
-Restart Antigravity CLI after installation. Rerun the same installer to upgrade the statusline.
+Restart Antigravity CLI after installation. Rerun the same installer to upgrade the statusline. Run the uninstaller from the selected install directory. It checks that its own location matches both the saved install path and the active `settings.json` command before removing files; if `AGY_STATUSLINE_INSTALL_DIR` is set, it must resolve to that same directory.
 
 ## Configure the statusline
 

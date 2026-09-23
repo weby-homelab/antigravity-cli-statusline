@@ -10,11 +10,11 @@ CLI_COLS_OVERRIDE=""
 for arg in "$@"; do
   case "$arg" in
     --version|-v)
-      echo "Antigravity CLI Statusline v0.2.5"
+      echo "Antigravity CLI Statusline v0.2.6"
       exit 0
       ;;
     --legend|-l|legend)
-      echo -e "\033[92m\033[1m🚀 Antigravity CLI Maximized Statusline Legend (v0.2.5)\033[0m"
+      echo -e "\033[92m\033[1m🚀 Antigravity CLI Maximized Statusline Legend (v0.2.6)\033[0m"
       echo -e "This statusline adapts dynamically to terminal width and displays high-density system & agent telemetry."
       echo -e ""
       echo -e "\033[1mLAYOUTS & AUTO-PACKING:\033[0m"
@@ -74,16 +74,20 @@ run_with_timeout() {
 
   if command -v timeout >/dev/null 2>&1; then
     timeout "$timeout_sec" "$@"
-    return $?
+    local timeout_status=$?
+    if [ "$timeout_status" -ne 127 ]; then
+      return "$timeout_status"
+    fi
   fi
 
   # Bounded subshell fallback without GNU timeout (e.g. macOS / BSD)
   "$@" <&0 &
   local target_pid=$!
   (
-    trap 'kill $(jobs -p) 2>/dev/null || true; exit 0' TERM INT HUP EXIT
-    ( sleep "$timeout_sec" 2>/dev/null || sleep 1 ) &
-    wait $! 2>/dev/null || true
+    sleep "$timeout_sec" 2>/dev/null &
+    local sleep_pid=$!
+    trap 'kill "$sleep_pid" 2>/dev/null || true; exit 0' TERM INT HUP
+    wait "$sleep_pid" 2>/dev/null || exit 0
     kill -TERM "$target_pid" 2>/dev/null || true
     sleep 0.1 2>/dev/null || true
     kill -KILL "$target_pid" 2>/dev/null || true
@@ -99,7 +103,9 @@ run_with_timeout() {
 }
 
 my_in=$(readlink /proc/self/fd/0 2>/dev/null || true)
-INPUT_JSON=$(run_with_timeout 0.25 cat 2>/dev/null || true)
+# Allow the CLI process and its JSON producer time to get scheduled without
+# letting a stalled stdin keep the statusline alive indefinitely.
+INPUT_JSON=$(run_with_timeout 1 cat 2>/dev/null || true)
 exec 0</dev/null
 if [ -z "$INPUT_JSON" ]; then
   # If stdin timed out on a pipe, unblock upstream pipeline sibling

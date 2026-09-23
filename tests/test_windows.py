@@ -89,6 +89,27 @@ class TestWindowsPowerShellParity(unittest.TestCase):
         self.assertIn('"type": "command"', sh_text)
         self.assertNotIn('"type": ""', sh_text)
 
+    def test_custom_install_directory_is_shared_by_install_and_uninstall(self):
+        """Custom install locations are normalized, persisted, and reused by uninstallers."""
+        install_ps1 = (REPO_ROOT / "install.ps1").read_text(encoding="utf-8")
+        uninstall_ps1 = (REPO_ROOT / "uninstall.ps1").read_text(encoding="utf-8")
+        install_sh = (REPO_ROOT / "install.sh").read_text(encoding="utf-8")
+        uninstall_sh = (REPO_ROOT / "uninstall.sh").read_text(encoding="utf-8")
+
+        self.assertIn("$env:AGY_STATUSLINE_INSTALL_DIR", install_ps1)
+        self.assertIn("Update-StatuslineInstallSnapshot", install_ps1)
+        self.assertIn("Refusing to overwrite files not referenced", install_ps1)
+        self.assertIn("$savedState.install_dir", uninstall_ps1)
+        self.assertIn("$PSScriptRoot", uninstall_ps1)
+        self.assertIn("settings.json does not point to this installation", uninstall_ps1)
+        self.assertIn("Resolve-InstallDirectory", uninstall_ps1)
+        self.assertIn("AGY_STATUSLINE_INSTALL_DIR", install_sh)
+        self.assertIn("QUOTED_SCRIPT_TARGET", install_sh)
+        self.assertIn("install_dir", install_sh)
+        self.assertIn("SNAPSHOT_INSTALL_DIR", uninstall_sh)
+        self.assertIn("BASH_SOURCE[0]", uninstall_sh)
+        self.assertIn("settings.json does not point to this installation", uninstall_sh)
+
     def test_powershell_power_detection_logic(self):
         """statusline.ps1 must implement multi-tier power detection (SystemInformation, BatteryStatus, Win32_Battery)."""
         ps1_text = (REPO_ROOT / "statusline.ps1").read_text(encoding="utf-8")
@@ -101,4 +122,3 @@ class TestWindowsPowerShellParity(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
