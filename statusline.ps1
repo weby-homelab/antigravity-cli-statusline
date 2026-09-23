@@ -63,7 +63,8 @@ function Read-StatuslineInput {
 
     try {
         $readerInput = $Reader
-        $readTask = [System.Threading.Tasks.Task]::Run([System.Func[string]]{ $readerInput.ReadToEnd() })
+        $readBlock = { $readerInput.ReadToEnd() }.GetNewClosure()
+        $readTask = [System.Threading.Tasks.Task]::Run([System.Func[string]]$readBlock)
         if ($readTask.Wait($TimeoutMilliseconds)) {
             $result = $readTask.Result
             if (-not [string]::IsNullOrWhiteSpace($result)) {

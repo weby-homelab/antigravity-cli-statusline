@@ -94,7 +94,7 @@ public sealed class StatuslineTestTextReader : System.IO.TextReader {
     $delayedPayload = '{"agent_state":"thinking","terminal_width":80}'
     $delayedReader = New-Object -TypeName StatuslineTestTextReader -ArgumentList $delayedPayload, 400
     $delayedResult = Read-StatuslineInput -Reader $delayedReader -TimeoutMilliseconds 1500
-    Assert-Condition ($delayedResult -eq $delayedPayload) "stdin payload arriving after 400 ms is read instead of discarded"
+    Assert-Condition ($delayedResult -eq $delayedPayload) "stdin payload arriving after 400 ms is read instead of discarded (got '$delayedResult')"
 
     $blockedReader = New-Object -TypeName StatuslineTestTextReader -ArgumentList "", 1500
     $timer = [System.Diagnostics.Stopwatch]::StartNew()
