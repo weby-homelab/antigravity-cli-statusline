@@ -1,4 +1,4 @@
-# tests/test_powershell_renderer.ps1 - PowerShell test suite for Windows CI
+﻿# tests/test_powershell_renderer.ps1 - PowerShell test suite for Windows CI
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot = Split-Path -Parent $ScriptDir
@@ -80,13 +80,34 @@ using System.Threading;
 public sealed class StatuslineTestTextReader : System.IO.TextReader {
     private readonly string content;
     private readonly int delayMilliseconds;
+    private int position = 0;
     public StatuslineTestTextReader(string content, int delayMilliseconds) {
         this.content = content;
         this.delayMilliseconds = delayMilliseconds;
     }
+    public override int Read(char[] buffer, int index, int count) {
+        if (delayMilliseconds > 0 && position == 0) {
+            Thread.Sleep(delayMilliseconds);
+        }
+        if (content == null || position >= content.Length) {
+            return 0;
+        }
+        int available = content.Length - position;
+        int toRead = count < available ? count : available;
+        content.CopyTo(position, buffer, index, toRead);
+        position += toRead;
+        return toRead;
+    }
     public override string ReadToEnd() {
-        Thread.Sleep(delayMilliseconds);
-        return content;
+        if (delayMilliseconds > 0 && position == 0) {
+            Thread.Sleep(delayMilliseconds);
+        }
+        if (content == null || position >= content.Length) {
+            return "";
+        }
+        string result = content.Substring(position);
+        position = content.Length;
+        return result;
     }
 }
 "@
@@ -242,8 +263,10 @@ $hcOut = Invoke-StatuslineProcess -Payload $testPayload -Arguments $allL1
 $hcLines = @($hcOut -split "`r?`n" | Where-Object { $_ -match '\S' })
 Assert-Condition ($hcOut -notmatch "WORKING") "Header Collapse omits agent state"
 Assert-Condition ($hcOut -notmatch "NORMAL") "Header Collapse omits vim mode"
-Assert-Condition ($hcLines.Count -gt 0 -and $hcLines[0] -match "╭─") "Header Collapse first row starts with ╭─"
-Assert-Condition ($hcLines.Count -gt 0 -and $hcLines[0] -notmatch "├─") "Header Collapse first row does not start with divider ├─"
+$cornerBox = "$([char]0x256d)$([char]0x2500)"
+$dividerBox = "$([char]0x251c)$([char]0x2500)"
+Assert-Condition ($hcLines.Count -gt 0 -and $hcLines[0] -match [regex]::Escape($cornerBox)) "Header Collapse first row starts with ╭─"
+Assert-Condition ($hcLines.Count -gt 0 -and $hcLines[0] -notmatch [regex]::Escape($dividerBox)) "Header Collapse first row does not start with divider ├─"
 Assert-Condition ($hcLines.Count -gt 0 -and $hcLines[0] -match "ctx") "Header Collapse first row contains context badge"
 
 # 9b: Single row collapsed badge
@@ -251,7 +274,7 @@ $singleBadgeArgs = $allL1 + @("--no-tokens", "--no-sys", "--no-artifacts", "--no
 $singleOut = Invoke-StatuslineProcess -Payload $testPayload -Arguments $singleBadgeArgs
 $singleLines = @($singleOut -split "`r?`n" | Where-Object { $_ -match '\S' })
 Assert-Condition ($singleLines.Count -eq 1) "Single-row collapsed badge renders exactly 1 row (got $($singleLines.Count))"
-Assert-Condition ($singleLines.Count -eq 1 -and $singleLines[0] -match "╭─") "Single-row collapsed badge starts with ╭─"
+Assert-Condition ($singleLines.Count -eq 1 -and $singleLines[0] -match [regex]::Escape($cornerBox)) "Single-row collapsed badge starts with ╭─"
 
 # 9c: Classic Header Collapse
 $classicHcOut = Invoke-StatuslineProcess -Payload $testPayload -Arguments (@("--classic") + $allL1)

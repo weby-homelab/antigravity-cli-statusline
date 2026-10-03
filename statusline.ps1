@@ -31,11 +31,11 @@ $SHOW_POWER = $true
 foreach ($arg in $args) {
     $a = if ($arg) { $arg.ToString().ToLower() } else { "" }
     if ($a -in @("--version", "-version", "-v", "version")) {
-        Write-Host "Antigravity CLI Statusline v0.2.6" -ForegroundColor Green
+        Write-Host "Antigravity CLI Statusline v0.3.0" -ForegroundColor Green
         exit
     }
     if ($a -in @("--legend", "-legend", "-l", "legend")) {
-        Write-Host "🚀 Antigravity CLI Statusline Legend (v0.2.6)" -ForegroundColor Green
+        Write-Host "🚀 Antigravity CLI Statusline Legend (v0.3.0)" -ForegroundColor Green
         Write-Host "This statusline adapts dynamically to your terminal width and theme settings.`n"
         
         Write-Host "LAYOUTS:" -ForegroundColor White
@@ -148,6 +148,24 @@ function Read-StatuslineInput {
             $Reader = [System.IO.StreamReader]::new(
                 [Console]::OpenStandardInput(), [System.Text.Encoding]::UTF8, $true
             )
+        } else {
+            $readerType = $Reader.GetType()
+            $readMethod = $readerType.GetMethod("Read", [type[]]@([char[]], [int], [int]))
+            $overridesReadToEndOnly = ($readerType.GetMethod("ReadToEnd").DeclaringType -eq $readerType -and `
+                ($null -eq $readMethod -or $readMethod.DeclaringType -ne $readerType))
+
+            if ($overridesReadToEndOnly) {
+                $readerMethod = $readerType.GetMethod("ReadToEnd")
+                $readDelegate = [System.Delegate]::CreateDelegate([System.Func[string]], $Reader, $readerMethod)
+                $readTask = [System.Threading.Tasks.Task]::Run([System.Func[string]]$readDelegate)
+                if ($readTask.Wait($TimeoutMilliseconds)) {
+                    $result = $readTask.Result
+                    if (-not [string]::IsNullOrWhiteSpace($result)) {
+                        return $result
+                    }
+                }
+                return "{}"
+            }
         }
 
         $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
