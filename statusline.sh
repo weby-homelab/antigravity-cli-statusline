@@ -648,11 +648,14 @@ shorten_path() {
 CWD_SHORT=$(shorten_path "$CWD")
 
 visible_len() {
-  local str="$1"
-  local esc=$'\e'
-  local re="$esc\[[0-9;]*m"
+  local str
+  printf -v str '%b' "$1"
+  local esc
+  esc=$(printf '\033')
+  local re="$esc"'\['"[0-9;]*[a-zA-Z]"
   while [[ "$str" =~ $re ]]; do
-    str="${str//${BASH_REMATCH[0]}/}"
+    local m="${BASH_REMATCH[0]}"
+    str="${str//"$m"/}"
   done
   echo "${#str}"
 }
