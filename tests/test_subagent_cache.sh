@@ -10,6 +10,10 @@ STATUSLINE="${REPO_ROOT}/statusline.sh"
 PASSED=0
 FAILED=0
 
+# Keep live Git branch data out of fixtures so it cannot change layout assertions.
+TEST_WORKDIR="$(mktemp -d)"
+cd "$TEST_WORKDIR" || exit 1
+
 strip_ansi() {
   sed -E 's/\[[0-9;]*[a-zA-Z]//g' | tr -d ''
 }
@@ -68,6 +72,8 @@ else
   echo "  [FAIL] 0 -> 3 failed to show 3 subagents (got: $plain_3)"
   FAILED=$((FAILED + 1))
 fi
+
+rm -rf "$TEST_WORKDIR"
 
 echo "============================================================"
 echo " Subagent Tests Completed: ${PASSED} passed, ${FAILED} failed"

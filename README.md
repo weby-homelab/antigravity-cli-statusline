@@ -198,6 +198,68 @@ These width overrides are available in Bash only. The PowerShell renderer uses `
 
 Append one Bash flag to the `command` value in `settings.json` to test a fixed width.
 
+### Customize telemetry segments
+
+All telemetry segments and badges are enabled by default whenever the corresponding data is present. Customization uses exclusion-only **Suppression Flags** (`--no-*` in Bash, `--no-*` or `-No*` in PowerShell) to disable specific components without affecting other indicators.
+
+#### Visual structure & terminology
+
+The statusline is organized into two primary telemetry layers:
+
+- **Header Segments** (Line 1): Positioned in the top Powerline header row with directional dividers (``), indicating core session context.
+- **Pill Badges** (Lines 2+): Self-contained metrics packed into secondary boxed rows beneath the header by the dynamic **Packer**.
+- **Header Collapse**: If all Header Segments are suppressed or empty, the primary header line collapses completely, and the Packer adjusts outer box borders (`╭─` on the first badge row) to frame the remaining Pill Badges without rendering an empty top frame.
+
+#### Flag reference
+
+##### Header Segments (Line 1)
+
+| Telemetry component | Bash flag | PowerShell switch | Description |
+| :--- | :--- | :--- | :--- |
+| **Agent State** | `--no-state` | `-NoState` | Suppresses `READY`, `THINKING`, `WORKING`, `TOOL`. |
+| **Vim Mode** | `--no-vim` (`--no-vim-mode`) | `-NoVim` (`-NoVimMode`) | Suppresses Vim mode (`NORMAL`, `INSERT`, `VISUAL`). |
+| **Git / VCS Branch** | `--no-branch` (`--no-git`) | `-NoBranch` (`-NoGit`) | Suppresses branch name and dirty tree mark (`*`). |
+| **Model** | `--no-model` | `-NoModel` | Suppresses active LLM model display name or ID. |
+| **Working Directory** | `--no-dir` (`--no-cwd`) | `-NoDir` (`-NoCwd`) | Suppresses shortened working directory path. |
+| **Conversation ID** | `--no-conv` (`--no-conversation`) | `-NoConv` (`-NoConversation`) | Suppresses the 8-character conversation prefix. |
+| **Account & Plan** | `--no-account` (`--no-user`, `--no-plan`) | `-NoAccount` (`-NoUser`, `-NoPlan`) | Suppresses subscription plan tier and user email. |
+| **Host Diagnostics** | `--no-host` | `-NoHost` | Suppresses hostname and Tailscale IP address. |
+| **CLI Version** | `--no-version` | `-NoVersion` | Suppresses CLI version badge (`vX.Y.Z`). |
+
+##### Pill Badges (Lines 2+)
+
+| Telemetry indicator | Bash flag | PowerShell switch | Description |
+| :--- | :--- | :--- | :--- |
+| **Context Usage Bar** | `--no-context-usage` (`--no-context`) | `-NoContextUsage` (`-NoContext`) | Suppresses context progress bar, percentage, and token counts. |
+| **Token Totals** | `--no-tokens-usage` (`--no-tokens`) | `-NoTokensUsage` (`-NoTokens`) | Suppresses total session input/output and turn token deltas. |
+| **Cost** | `--no-cost` | `-NoCost` | Ensures cost indicators are omitted. |
+| **System Resources** | `--no-sys` (`--no-system`, `--no-resources`) | `-NoSys` (`-NoSystem`, `-NoResources`) | Suppresses CPU load average and RAM utilization (Linux). |
+| **Artifacts** | `--no-artifacts` | `-NoArtifacts` | Suppresses generated artifacts counter. |
+| **Subagents** | `--no-subagents` | `-NoSubagents` | Suppresses spawned subagents counter. |
+| **Background Tasks** | `--no-tasks` | `-NoTasks` | Suppresses running background tasks counter. |
+| **Sandbox State** | `--no-sandbox` | `-NoSandbox` | Suppresses sandbox mode and network state (`net-on`, `net-off`, `host`). |
+| **Quota Bars** | `--no-quota` | `-NoQuota` | Suppresses 5-hour and 7-day model quota remaining bars and reset timers. |
+| **Power / Battery** | `--no-power` | `-NoPower` | Suppresses AC mains and battery charge percentage. |
+
+#### Configuration examples
+
+Suppression flags can be specified directly in `settings.json` or passed as arguments to `install.sh` / `install.ps1`:
+
+- **Minimalist Statusline**:
+  ```text
+  --no-host --no-conv --no-account --no-version --no-sys --no-power --no-tokens-usage
+  ```
+- **Privacy & Screen-Sharing Mode** (hides sensitive directory paths, accounts, and network IPs):
+  ```text
+  --no-account --no-host --no-dir --no-conv
+  ```
+- **Badges-Only Layout (Header Collapse)** (suppresses all Line 1 segments to render only secondary Pill Badges):
+  ```text
+  --no-state --no-vim --no-branch --no-model --no-dir --no-conv --no-account --no-host --no-version
+  ```
+
+For detailed architectural rationale and full configuration options, see the [Statusline Customization Guide](docs/customization.md) and architectural decisions in [docs/adr/](docs/adr/).
+
 ## Verify the installation
 
 Check the installed version and print the icon legend. Replace the default path if you chose a custom install directory.

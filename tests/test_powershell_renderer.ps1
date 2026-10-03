@@ -152,6 +152,124 @@ if ($null -ne $snapshotFunctionAst) {
     }
 }
 
+# Helper to execute statusline.ps1 in an isolated PowerShell child process
+function Invoke-StatuslineProcess($payload, [string[]]$arguments) {
+    $pInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $pInfo.FileName = (Get-Process -Id $PID).Path
+    $statuslineArg = if ($Ps1Statusline.Contains(' ')) { "`"$Ps1Statusline`"" } else { $Ps1Statusline }
+    $argList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $statuslineArg)
+    if ($arguments) { $argList += $arguments }
+    $pInfo.Arguments = $argList -join " "
+    $pInfo.RedirectStandardInput = $true
+    $pInfo.RedirectStandardOutput = $true
+    $pInfo.RedirectStandardError = $true
+    $pInfo.UseShellExecute = $false
+    $pInfo.CreateNoWindow = $true
+    $proc = [System.Diagnostics.Process]::Start($pInfo)
+    $proc.StandardInput.Write($payload)
+    $proc.StandardInput.Close()
+    $stdoutTask = $proc.StandardOutput.ReadToEndAsync()
+    $stderrTask = $proc.StandardError.ReadToEndAsync()
+    if (-not $proc.WaitForExit(15000)) {
+        try { $proc.Kill() } catch {}
+        throw "statusline.ps1 execution timed out"
+    }
+    $stdout = $stdoutTask.Result
+    $stderr = $stderrTask.Result
+    if ($proc.ExitCode -ne 0) {
+        throw "statusline.ps1 exited with code $($proc.ExitCode): $stderr"
+    }
+    return $stdout
+}
+
+$testPayload = '{"agent_state":"working","terminal_width":150,"vcs":{"branch":"main","dirty":false},"model":{"id":"gemini-2.0-flash","display_name":"Gemini 2.0 Flash"},"context_window":{"used_percentage":14.2,"total_input_tokens":88244,"total_output_tokens":61074,"context_window_size":1048576},"vim":{"mode":"NORMAL"},"conversation_id":"c40d17f851f8","plan_tier":"Pro","email":"test@example.com"}'
+
+# Test 8: Telemetry Suppression Flags & POSIX/PowerShell Switch Parity
+Write-Host "--- Test 8: Telemetry Suppression Flags & Switch Parity ---"
+$baseOut = Invoke-StatuslineProcess -Payload $testPayload -Arguments @()
+Assert-Condition ($baseOut -match "WORKING") "Baseline output contains agent state"
+Assert-Condition ($baseOut -match "NORMAL") "Baseline output contains vim mode"
+Assert-Condition ($baseOut -match '(main| main)') "Baseline output contains VCS branch"
+Assert-Condition ($baseOut -match "Gemini 2\.0 Flash") "Baseline output contains active model"
+Assert-Condition ($baseOut -match "ctx") "Baseline output contains context bar"
+
+# Agent state suppression parity
+$noStatePosix = Invoke-StatuslineProcess -Payload $testPayload -Arguments @("--no-state")
+$noStatePs = Invoke-StatuslineProcess -Payload $testPayload -Arguments @("-NoState")
+Assert-Condition ($noStatePosix -notmatch "WORKING") "--no-state suppresses agent state"
+Assert-Condition ($noStatePs -notmatch "WORKING") "-NoState suppresses agent state"
+
+# Vim mode suppression parity
+$noVimPosix = Invoke-StatuslineProcess -Payload $testPayload -Arguments @("--no-vim")
+$noVimPs = Invoke-StatuslineProcess -Payload $testPayload -Arguments @("-NoVim")
+Assert-Condition ($noVimPosix -notmatch "NORMAL") "--no-vim suppresses vim mode"
+Assert-Condition ($noVimPs -notmatch "NORMAL") "-NoVim suppresses vim mode"
+
+# VCS Branch suppression parity
+$noBranchPosix = Invoke-StatuslineProcess -Payload $testPayload -Arguments @("--no-branch")
+$noBranchPs = Invoke-StatuslineProcess -Payload $testPayload -Arguments @("-NoBranch")
+Assert-Condition ($noBranchPosix -notmatch "main") "--no-branch suppresses git branch"
+Assert-Condition ($noBranchPs -notmatch "main") "-NoBranch suppresses git branch"
+
+# Model suppression parity
+$noModelPosix = Invoke-StatuslineProcess -Payload $testPayload -Arguments @("--no-model")
+$noModelPs = Invoke-StatuslineProcess -Payload $testPayload -Arguments @("-NoModel")
+Assert-Condition ($noModelPosix -notmatch "Gemini 2\.0 Flash") "--no-model suppresses active model"
+Assert-Condition ($noModelPs -notmatch "Gemini 2\.0 Flash") "-NoModel suppresses active model"
+
+# Working directory suppression parity
+$noDirPosix = Invoke-StatuslineProcess -Payload $testPayload -Arguments @("--no-dir")
+$noDirPs = Invoke-StatuslineProcess -Payload $testPayload -Arguments @("-NoDir")
+Assert-Condition ($noDirPosix -match "WORKING") "--no-dir runs cleanly"
+Assert-Condition ($noDirPs -match "WORKING") "-NoDir runs cleanly"
+
+# Context bar suppression parity
+$noCtxPosix = Invoke-StatuslineProcess -Payload $testPayload -Arguments @("--no-context")
+$noCtxPs = Invoke-StatuslineProcess -Payload $testPayload -Arguments @("-NoContext")
+Assert-Condition ($noCtxPosix -notmatch "ctx") "--no-context suppresses context bar"
+Assert-Condition ($noCtxPs -notmatch "ctx") "-NoContext suppresses context bar"
+
+# Token summary suppression parity
+$noTokPosix = Invoke-StatuslineProcess -Payload $testPayload -Arguments @("--no-tokens")
+$noTokPs = Invoke-StatuslineProcess -Payload $testPayload -Arguments @("-NoTokens")
+Assert-Condition ($noTokPosix -notmatch "total:") "--no-tokens suppresses token summary"
+Assert-Condition ($noTokPs -notmatch "total:") "-NoTokens suppresses token summary"
+
+# Test 9: Header Collapse Logic
+Write-Host "--- Test 9: Header Collapse Logic ---"
+$allL1 = @("--no-state", "--no-vim", "--no-branch", "--no-model", "--no-dir", "--no-conv", "--no-account", "--no-host", "--no-version")
+$hcOut = Invoke-StatuslineProcess -Payload $testPayload -Arguments $allL1
+$hcLines = @($hcOut -split "`r?`n" | Where-Object { $_ -match '\S' })
+Assert-Condition ($hcOut -notmatch "WORKING") "Header Collapse omits agent state"
+Assert-Condition ($hcOut -notmatch "NORMAL") "Header Collapse omits vim mode"
+Assert-Condition ($hcLines.Count -gt 0 -and $hcLines[0] -match "╭─") "Header Collapse first row starts with ╭─"
+Assert-Condition ($hcLines.Count -gt 0 -and $hcLines[0] -notmatch "├─") "Header Collapse first row does not start with divider ├─"
+Assert-Condition ($hcLines.Count -gt 0 -and $hcLines[0] -match "ctx") "Header Collapse first row contains context badge"
+
+# 9b: Single row collapsed badge
+$singleBadgeArgs = $allL1 + @("--no-tokens", "--no-sys", "--no-artifacts", "--no-subagents", "--no-tasks", "--no-sandbox", "--no-quota", "--no-power")
+$singleOut = Invoke-StatuslineProcess -Payload $testPayload -Arguments $singleBadgeArgs
+$singleLines = @($singleOut -split "`r?`n" | Where-Object { $_ -match '\S' })
+Assert-Condition ($singleLines.Count -eq 1) "Single-row collapsed badge renders exactly 1 row (got $($singleLines.Count))"
+Assert-Condition ($singleLines.Count -eq 1 -and $singleLines[0] -match "╭─") "Single-row collapsed badge starts with ╭─"
+
+# 9c: Classic Header Collapse
+$classicHcOut = Invoke-StatuslineProcess -Payload $testPayload -Arguments (@("--classic") + $allL1)
+$classicHcLines = @($classicHcOut -split "`r?`n" | Where-Object { $_ -match '\S' })
+Assert-Condition ($classicHcOut -notmatch "WORKING") "Classic Header Collapse omits Line 1"
+Assert-Condition ($classicHcLines.Count -gt 0 -and $classicHcLines[0] -match "ctx") "Classic Header Collapse first line begins with badges"
+
+# Test 10: Full Suppression Logic
+Write-Host "--- Test 10: Full Suppression Logic ---"
+$allSuppArgs = $allL1 + @("--no-context", "--no-tokens", "--no-cost", "--no-sys", "--no-artifacts", "--no-subagents", "--no-tasks", "--no-sandbox", "--no-quota", "--no-power")
+$fullSuppOut = Invoke-StatuslineProcess -Payload $testPayload -Arguments $allSuppArgs
+$fullSuppClean = $fullSuppOut.Trim()
+Assert-Condition ([string]::IsNullOrEmpty($fullSuppClean)) "Full suppression produces clean empty output (0 bytes)"
+
+$fullSuppClassicOut = Invoke-StatuslineProcess -Payload $testPayload -Arguments (@("--classic") + $allSuppArgs)
+$fullSuppClassicClean = $fullSuppClassicOut.Trim()
+Assert-Condition ([string]::IsNullOrEmpty($fullSuppClassicClean)) "Full suppression in classic mode produces clean empty output"
+
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host " PowerShell Tests: $Passed passed, $Failed failed" -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan

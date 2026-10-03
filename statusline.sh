@@ -7,6 +7,27 @@ export LC_NUMERIC=C
 USE_CLASSIC_ICONS=false
 CLI_COLS_OVERRIDE=""
 
+SHOW_STATE=true
+SHOW_VIM=true
+SHOW_BRANCH=true
+SHOW_MODEL=true
+SHOW_DIR=true
+SHOW_CONV=true
+SHOW_ACCOUNT=true
+SHOW_HOST=true
+SHOW_VERSION=true
+
+SHOW_CONTEXT_USAGE=true
+SHOW_TOKENS_USAGE=true
+SHOW_COST=true
+SHOW_SYS=true
+SHOW_ARTIFACTS=true
+SHOW_SUBAGENTS=true
+SHOW_TASKS=true
+SHOW_SANDBOX=true
+SHOW_QUOTA=true
+SHOW_POWER=true
+
 for arg in "$@"; do
   case "$arg" in
     --version|-v)
@@ -58,6 +79,63 @@ for arg in "$@"; do
       ;;
     --classic|--no-nerdfont|--compatibility)
       USE_CLASSIC_ICONS=true
+      ;;
+    --no-state)
+      SHOW_STATE=false
+      ;;
+    --no-vim|--no-vim-mode)
+      SHOW_VIM=false
+      ;;
+    --no-branch|--no-git)
+      SHOW_BRANCH=false
+      ;;
+    --no-model)
+      SHOW_MODEL=false
+      ;;
+    --no-dir|--no-cwd)
+      SHOW_DIR=false
+      ;;
+    --no-conv|--no-conversation)
+      SHOW_CONV=false
+      ;;
+    --no-account|--no-user|--no-plan)
+      SHOW_ACCOUNT=false
+      ;;
+    --no-host)
+      SHOW_HOST=false
+      ;;
+    --no-version)
+      SHOW_VERSION=false
+      ;;
+    --no-context-usage|--no-context)
+      SHOW_CONTEXT_USAGE=false
+      ;;
+    --no-tokens-usage|--no-tokens)
+      SHOW_TOKENS_USAGE=false
+      ;;
+    --no-cost)
+      SHOW_COST=false
+      ;;
+    --no-sys|--no-system|--no-resources)
+      SHOW_SYS=false
+      ;;
+    --no-artifacts)
+      SHOW_ARTIFACTS=false
+      ;;
+    --no-subagents)
+      SHOW_SUBAGENTS=false
+      ;;
+    --no-tasks)
+      SHOW_TASKS=false
+      ;;
+    --no-sandbox)
+      SHOW_SANDBOX=false
+      ;;
+    --no-quota)
+      SHOW_QUOTA=false
+      ;;
+    --no-power)
+      SHOW_POWER=false
       ;;
   esac
 done
@@ -476,46 +554,50 @@ else
   esac
 fi
 
-GIT_DIR="${CWD:-.}"
-git_branch=$(run_with_timeout 1 git -C "$GIT_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
-if [ -n "$git_branch" ]; then
-  VCS_BRANCH="$git_branch"
-  VCS_TYPE="git"
-  if run_with_timeout 1 git -C "$GIT_DIR" status --porcelain 2>/dev/null | grep -q .; then
-    VCS_DIRTY="true"
+if [ "$SHOW_BRANCH" = "true" ]; then
+  GIT_DIR="${CWD:-.}"
+  git_branch=$(run_with_timeout 1 git -C "$GIT_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+  if [ -n "$git_branch" ]; then
+    VCS_BRANCH="$git_branch"
+    VCS_TYPE="git"
+    if run_with_timeout 1 git -C "$GIT_DIR" status --porcelain 2>/dev/null | grep -q .; then
+      VCS_DIRTY="true"
+    else
+      VCS_DIRTY="false"
+    fi
   else
-    VCS_DIRTY="false"
-  fi
-else
-  if [ -n "$VCS_BRANCH" ]; then
-    VCS_TYPE="${VCS_TYPE:-git}"
-  else
-    VCS_TYPE=""
-    VCS_DIRTY="false"
+    if [ -n "$VCS_BRANCH" ]; then
+      VCS_TYPE="${VCS_TYPE:-git}"
+    else
+      VCS_TYPE=""
+      VCS_DIRTY="false"
+    fi
   fi
 fi
 
 # ─── Dynamic CPU load & RAM diagnostics (Pure Bash, instant) ────────────────
 MEM_PCT=""
 LOAD_1M=""
-if [ -f /proc/meminfo ]; then
-  mem_total=0
-  mem_avail=0
-  while read -r name value unit; do
-    if [ "$name" = "MemTotal:" ]; then
-      mem_total=$value
-    elif [ "$name" = "MemAvailable:" ]; then
-      mem_avail=$value
-      break
+if [ "$SHOW_SYS" = "true" ]; then
+  if [ -f /proc/meminfo ]; then
+    mem_total=0
+    mem_avail=0
+    while read -r name value unit; do
+      if [ "$name" = "MemTotal:" ]; then
+        mem_total=$value
+      elif [ "$name" = "MemAvailable:" ]; then
+        mem_avail=$value
+        break
+      fi
+    done < /proc/meminfo
+    if [ "$mem_total" -gt 0 ]; then
+      MEM_PCT=$(( (mem_total - mem_avail) * 100 / mem_total ))
     fi
-  done < /proc/meminfo
-  if [ "$mem_total" -gt 0 ]; then
-    MEM_PCT=$(( (mem_total - mem_avail) * 100 / mem_total ))
   fi
-fi
-if [ -f /proc/loadavg ]; then
-  read -r load_1m rest < /proc/loadavg
-  LOAD_1M=$load_1m
+  if [ -f /proc/loadavg ]; then
+    read -r load_1m rest < /proc/loadavg
+    LOAD_1M=$load_1m
+  fi
 fi
 
 # ─── Helpers for values ──────────────────────────────────────────────────────
@@ -564,14 +646,16 @@ visible_len() {
 }
 
 # Get Tailscale and Host Info
-HOST_NAME=$(hostname 2>/dev/null || echo "")
-TS_IP=$(ip -4 addr show dev tailscale0 2>/dev/null | grep -o 'inet [0-9.]*' | cut -d' ' -f2 || echo "")
 HOST_INFO=""
-if [ -n "$HOST_NAME" ]; then
-  if [ -n "$TS_IP" ]; then
-    HOST_INFO="${HOST_NAME} (${TS_IP})"
-  else
-    HOST_INFO="${HOST_NAME}"
+if [ "$SHOW_HOST" = "true" ]; then
+  HOST_NAME=$(hostname 2>/dev/null || echo "")
+  TS_IP=$(ip -4 addr show dev tailscale0 2>/dev/null | grep -o 'inet [0-9.]*' | cut -d' ' -f2 || echo "")
+  if [ -n "$HOST_NAME" ]; then
+    if [ -n "$TS_IP" ]; then
+      HOST_INFO="${HOST_NAME} (${TS_IP})"
+    else
+      HOST_INFO="${HOST_NAME}"
+    fi
   fi
 fi
 
@@ -580,73 +664,76 @@ POWER_FMT=""
 AC_CONNECTED=0
 HAS_SYS_BATTERY=0
 SYS_BAT_CAP=""
-POWER_DIR="${STATUSLINE_POWER_SUPPLY_DIR:-/sys/class/power_supply}"
 
-if [ -d "$POWER_DIR" ]; then
-  has_ac_adapter=0
-  for d in "$POWER_DIR"/*; do
-    [ -d "$d" ] || continue
-    dev_name=$(basename "$d")
+if [ "$SHOW_POWER" = "true" ]; then
+  POWER_DIR="${STATUSLINE_POWER_SUPPLY_DIR:-/sys/class/power_supply}"
 
-    # Skip peripheral devices (mice, keyboards, controllers)
-    scope=$(cat "$d/scope" 2>/dev/null || echo "")
-    if [ "$scope" = "Device" ] || [[ "$dev_name" =~ ^hidpp_ ]] || [[ "$dev_name" =~ mouse ]] || [[ "$dev_name" =~ keyboard ]]; then
-      continue
-    fi
+  if [ -d "$POWER_DIR" ]; then
+    has_ac_adapter=0
+    for d in "$POWER_DIR"/*; do
+      [ -d "$d" ] || continue
+      dev_name=$(basename "$d")
 
-    psy_type=$(cat "$d/type" 2>/dev/null || echo "")
-
-    # Check for AC / Mains / USB chargers
-    if [ "$psy_type" = "Mains" ] || [[ "$dev_name" =~ ^(AC|ACAD|ADP|Mains) ]]; then
-      has_ac_adapter=1
-      if [ -f "$d/online" ]; then
-        online_val=$(cat "$d/online" 2>/dev/null || echo "0")
-        if [ "$online_val" = "1" ]; then
-          AC_CONNECTED=1
-        fi
+      # Skip peripheral devices (mice, keyboards, controllers)
+      scope=$(cat "$d/scope" 2>/dev/null || echo "")
+      if [ "$scope" = "Device" ] || [[ "$dev_name" =~ ^hidpp_ ]] || [[ "$dev_name" =~ mouse ]] || [[ "$dev_name" =~ keyboard ]]; then
+        continue
       fi
-    elif [ "$psy_type" = "USB" ]; then
-      if [[ ! "$dev_name" =~ ucsi-source ]]; then
+
+      psy_type=$(cat "$d/type" 2>/dev/null || echo "")
+
+      # Check for AC / Mains / USB chargers
+      if [ "$psy_type" = "Mains" ] || [[ "$dev_name" =~ ^(AC|ACAD|ADP|Mains) ]]; then
+        has_ac_adapter=1
         if [ -f "$d/online" ]; then
           online_val=$(cat "$d/online" 2>/dev/null || echo "0")
           if [ "$online_val" = "1" ]; then
             AC_CONNECTED=1
-            has_ac_adapter=1
           fi
         fi
+      elif [ "$psy_type" = "USB" ]; then
+        if [[ ! "$dev_name" =~ ucsi-source ]]; then
+          if [ -f "$d/online" ]; then
+            online_val=$(cat "$d/online" 2>/dev/null || echo "0")
+            if [ "$online_val" = "1" ]; then
+              AC_CONNECTED=1
+              has_ac_adapter=1
+            fi
+          fi
+        fi
+      elif [ "$psy_type" = "Battery" ] || [ "$psy_type" = "UPS" ] || [[ "$dev_name" =~ ^BAT ]]; then
+        HAS_SYS_BATTERY=1
+        b_status=$(cat "$d/status" 2>/dev/null || echo "")
+        b_cap=$(cat "$d/capacity" 2>/dev/null || echo "")
+        if [ -n "$b_cap" ] && [ -z "$SYS_BAT_CAP" ]; then
+          SYS_BAT_CAP="$b_cap"
+        fi
+        if [ "$b_status" = "Charging" ] || [ "$b_status" = "Full" ] || [ "$b_status" = "Not charging" ]; then
+          AC_CONNECTED=1
+        fi
       fi
-    elif [ "$psy_type" = "Battery" ] || [ "$psy_type" = "UPS" ] || [[ "$dev_name" =~ ^BAT ]]; then
-      HAS_SYS_BATTERY=1
-      b_status=$(cat "$d/status" 2>/dev/null || echo "")
-      b_cap=$(cat "$d/capacity" 2>/dev/null || echo "")
-      if [ -n "$b_cap" ] && [ -z "$SYS_BAT_CAP" ]; then
-        SYS_BAT_CAP="$b_cap"
-      fi
-      if [ "$b_status" = "Charging" ] || [ "$b_status" = "Full" ] || [ "$b_status" = "Not charging" ]; then
-        AC_CONNECTED=1
-      fi
-    fi
-  done
+    done
 
-  # Desktop / server without system battery and without laptop AC adapter
-  if [ "$HAS_SYS_BATTERY" -eq 0 ] && [ "$has_ac_adapter" -eq 0 ]; then
-    AC_CONNECTED=1
-  fi
-elif command -v pmset &>/dev/null; then
-  pmset_out=$(pmset -g batt 2>/dev/null || echo "")
-  if [ -z "$pmset_out" ] || echo "$pmset_out" | grep -q -i "No battery"; then
-    AC_CONNECTED=1
-    HAS_SYS_BATTERY=0
-  elif echo "$pmset_out" | grep -q "AC Power"; then
-    AC_CONNECTED=1
-    HAS_SYS_BATTERY=1
-    SYS_BAT_CAP=$(echo "$pmset_out" | grep -o "[0-9]\{1,3\}%" | tr -d "%" | head -n 1 || echo "")
-  elif echo "$pmset_out" | grep -q "Battery Power"; then
-    AC_CONNECTED=0
-    HAS_SYS_BATTERY=1
-    SYS_BAT_CAP=$(echo "$pmset_out" | grep -o "[0-9]\{1,3\}%" | tr -d "%" | head -n 1 || echo "")
-  else
-    AC_CONNECTED=1
+    # Desktop / server without system battery and without laptop AC adapter
+    if [ "$HAS_SYS_BATTERY" -eq 0 ] && [ "$has_ac_adapter" -eq 0 ]; then
+      AC_CONNECTED=1
+    fi
+  elif command -v pmset &>/dev/null; then
+    pmset_out=$(pmset -g batt 2>/dev/null || echo "")
+    if [ -z "$pmset_out" ] || echo "$pmset_out" | grep -q -i "No battery"; then
+      AC_CONNECTED=1
+      HAS_SYS_BATTERY=0
+    elif echo "$pmset_out" | grep -q "AC Power"; then
+      AC_CONNECTED=1
+      HAS_SYS_BATTERY=1
+      SYS_BAT_CAP=$(echo "$pmset_out" | grep -o "[0-9]\{1,3\}%" | tr -d "%" | head -n 1 || echo "")
+    elif echo "$pmset_out" | grep -q "Battery Power"; then
+      AC_CONNECTED=0
+      HAS_SYS_BATTERY=1
+      SYS_BAT_CAP=$(echo "$pmset_out" | grep -o "[0-9]\{1,3\}%" | tr -d "%" | head -n 1 || echo "")
+    else
+      AC_CONNECTED=1
+    fi
   fi
 fi
 
@@ -832,60 +919,62 @@ make_quota_bar() {
 }
 
 # Determine active quota based on actual availability
-IS_3P=false
-case "$MODEL_ID" in
-  *[Cc][Ll][Aa][Uu][Dd][Ee]*|*[Gg][Pp][Tt]*|*[Aa][Nn][Tt][Hh][Rr][Oo][Pp][Ii][Cc]*|*[Oo][Pp][Ee][Nn][Aa][Ii]*|*[Oo]1*|*[Oo]3*|*3[Pp]*)
-    IS_3P=true
-    ;;
-esac
-
-if [ "$IS_3P" = true ]; then
-  if { [ -n "$TP_5H" ] && [ "$TP_5H" != "-1" ]; } || { [ -n "$TP_WK" ] && [ "$TP_WK" != "-1" ]; }; then
-    Q_5H="$TP_5H"
-    Q_WK="$TP_WK"
-    Q_5H_R="$TP_5H_RESET"
-    Q_WK_R="$TP_WK_RESET"
-  elif { [ -n "$GEMINI_5H" ] && [ "$GEMINI_5H" != "-1" ]; } || { [ -n "$GEMINI_WK" ] && [ "$GEMINI_WK" != "-1" ]; }; then
-    Q_5H="$GEMINI_5H"
-    Q_WK="$GEMINI_WK"
-    Q_5H_R="$GEMINI_5H_RESET"
-    Q_WK_R="$GEMINI_WK_RESET"
-  else
-    Q_5H="-1"
-    Q_WK="-1"
-    Q_5H_R="-1"
-    Q_WK_R="-1"
-  fi
-else
-  if { [ -n "$GEMINI_5H" ] && [ "$GEMINI_5H" != "-1" ]; } || { [ -n "$GEMINI_WK" ] && [ "$GEMINI_WK" != "-1" ]; }; then
-    Q_5H="$GEMINI_5H"
-    Q_WK="$GEMINI_WK"
-    Q_5H_R="$GEMINI_5H_RESET"
-    Q_WK_R="$GEMINI_WK_RESET"
-  elif { [ -n "$TP_5H" ] && [ "$TP_5H" != "-1" ]; } || { [ -n "$TP_WK" ] && [ "$TP_WK" != "-1" ]; }; then
-    Q_5H="$TP_5H"
-    Q_WK="$TP_WK"
-    Q_5H_R="$TP_5H_RESET"
-    Q_WK_R="$TP_WK_RESET"
-  else
-    Q_5H="-1"
-    Q_WK="-1"
-    Q_5H_R="-1"
-    Q_WK_R="-1"
-  fi
-fi
-
-
-if [ "${Q_5H_R:- -1}" -gt 0 ] 2>/dev/null; then
-  Q_5H_R=$(_tick_countdown "$Q_5H_R" "/tmp/agy_quota_5h_reset")
-fi
-if [ "${Q_WK_R:- -1}" -gt 0 ] 2>/dev/null; then
-  Q_WK_R=$(_tick_countdown "$Q_WK_R" "/tmp/agy_quota_wk_reset")
-fi
-
 QUOTA_FMT=""
-if { [ -n "$Q_5H" ] && [ "$Q_5H" != "-1" ]; } || { [ -n "$Q_WK" ] && [ "$Q_WK" != "-1" ]; }; then
-  QUOTA_FMT="$(make_quota_bar "$Q_5H" "5H" "37" "$Q_5H_R") $(make_quota_bar "$Q_WK" "7D" "135" "$Q_WK_R")"
+if [ "$SHOW_QUOTA" = "true" ]; then
+  IS_3P=false
+  case "$MODEL_ID" in
+    *[Cc][Ll][Aa][Uu][Dd][Ee]*|*[Gg][Pp][Tt]*|*[Aa][Nn][Tt][Hh][Rr][Oo][Pp][Ii][Cc]*|*[Oo][Pp][Ee][Nn][Aa][Ii]*|*[Oo]1*|*[Oo]3*|*3[Pp]*)
+      IS_3P=true
+      ;;
+  esac
+
+  if [ "$IS_3P" = true ]; then
+    if { [ -n "$TP_5H" ] && [ "$TP_5H" != "-1" ]; } || { [ -n "$TP_WK" ] && [ "$TP_WK" != "-1" ]; }; then
+      Q_5H="$TP_5H"
+      Q_WK="$TP_WK"
+      Q_5H_R="$TP_5H_RESET"
+      Q_WK_R="$TP_WK_RESET"
+    elif { [ -n "$GEMINI_5H" ] && [ "$GEMINI_5H" != "-1" ]; } || { [ -n "$GEMINI_WK" ] && [ "$GEMINI_WK" != "-1" ]; }; then
+      Q_5H="$GEMINI_5H"
+      Q_WK="$GEMINI_WK"
+      Q_5H_R="$GEMINI_5H_RESET"
+      Q_WK_R="$GEMINI_WK_RESET"
+    else
+      Q_5H="-1"
+      Q_WK="-1"
+      Q_5H_R="-1"
+      Q_WK_R="-1"
+    fi
+  else
+    if { [ -n "$GEMINI_5H" ] && [ "$GEMINI_5H" != "-1" ]; } || { [ -n "$GEMINI_WK" ] && [ "$GEMINI_WK" != "-1" ]; }; then
+      Q_5H="$GEMINI_5H"
+      Q_WK="$GEMINI_WK"
+      Q_5H_R="$GEMINI_5H_RESET"
+      Q_WK_R="$GEMINI_WK_RESET"
+    elif { [ -n "$TP_5H" ] && [ "$TP_5H" != "-1" ]; } || { [ -n "$TP_WK" ] && [ "$TP_WK" != "-1" ]; }; then
+      Q_5H="$TP_5H"
+      Q_WK="$TP_WK"
+      Q_5H_R="$TP_5H_RESET"
+      Q_WK_R="$TP_WK_RESET"
+    else
+      Q_5H="-1"
+      Q_WK="-1"
+      Q_5H_R="-1"
+      Q_WK_R="-1"
+    fi
+  fi
+
+
+  if [ "${Q_5H_R:- -1}" -gt 0 ] 2>/dev/null; then
+    Q_5H_R=$(_tick_countdown "$Q_5H_R" "/tmp/agy_quota_5h_reset")
+  fi
+  if [ "${Q_WK_R:- -1}" -gt 0 ] 2>/dev/null; then
+    Q_WK_R=$(_tick_countdown "$Q_WK_R" "/tmp/agy_quota_wk_reset")
+  fi
+
+  if { [ -n "$Q_5H" ] && [ "$Q_5H" != "-1" ]; } || { [ -n "$Q_WK" ] && [ "$Q_WK" != "-1" ]; }; then
+    QUOTA_FMT="$(make_quota_bar "$Q_5H" "5H" "37" "$Q_5H_R") $(make_quota_bar "$Q_WK" "7D" "135" "$Q_WK_R")"
+  fi
 fi
 
 # Right-align printing helper
@@ -1046,6 +1135,10 @@ truncate_str() {
 calc_line1_len() {
   local is_classic="$1"
   shift
+  if [ "$#" -eq 0 ]; then
+    echo "0"
+    return
+  fi
   local total=0
   if [ "$is_classic" = "true" ]; then
     for s in "$@"; do
@@ -1067,39 +1160,41 @@ ACTIVE_BGS=()
 ACTIVE_FGS=()
 
 # 1. State
-case "$STATE" in
-  idle)     
-    STATE_SEG="${ICON_READY} READY"
-    STATE_BG="$BG_READY"
-    STATE_FG="$FG_READY_TEXT"
-    ;;
-  thinking) 
-    STATE_SEG="${ICON_THINKING} THINKING"
-    STATE_BG="$BG_THINKING"
-    STATE_FG="$FG_THINKING_TEXT"
-    ;;
-  working)  
-    STATE_SEG="${ICON_WORKING} WORKING"
-    STATE_BG="$BG_WORKING"
-    STATE_FG="$FG_WORKING_TEXT"
-    ;;
-  tool_use) 
-    STATE_SEG="${ICON_TOOL} TOOL"
-    STATE_BG="$BG_TOOL"
-    STATE_FG="$FG_TOOL_TEXT"
-    ;;
-  *)        
-    STATE_SEG="${ICON_STATE_UNKNOWN} $(echo "$STATE" | tr '[:lower:]' '[:upper:]')"
-    STATE_BG="$BG_UNKNOWN"
-    STATE_FG="$FG_UNKNOWN_TEXT"
-    ;;
-esac
-ACTIVE_SEGS+=("$STATE_SEG")
-ACTIVE_BGS+=("$STATE_BG")
-ACTIVE_FGS+=("$STATE_FG")
+if [ "$SHOW_STATE" = "true" ]; then
+  case "$STATE" in
+    idle)     
+      STATE_SEG="${ICON_READY} READY"
+      STATE_BG="$BG_READY"
+      STATE_FG="$FG_READY_TEXT"
+      ;;
+    thinking) 
+      STATE_SEG="${ICON_THINKING} THINKING"
+      STATE_BG="$BG_THINKING"
+      STATE_FG="$FG_THINKING_TEXT"
+      ;;
+    working)  
+      STATE_SEG="${ICON_WORKING} WORKING"
+      STATE_BG="$BG_WORKING"
+      STATE_FG="$FG_WORKING_TEXT"
+      ;;
+    tool_use) 
+      STATE_SEG="${ICON_TOOL} TOOL"
+      STATE_BG="$BG_TOOL"
+      STATE_FG="$FG_TOOL_TEXT"
+      ;;
+    *)        
+      STATE_SEG="${ICON_STATE_UNKNOWN} $(echo "$STATE" | tr '[:lower:]' '[:upper:]')"
+      STATE_BG="$BG_UNKNOWN"
+      STATE_FG="$FG_UNKNOWN_TEXT"
+      ;;
+  esac
+  ACTIVE_SEGS+=("$STATE_SEG")
+  ACTIVE_BGS+=("$STATE_BG")
+  ACTIVE_FGS+=("$STATE_FG")
+fi
 
 # 2. Vim Editor Mode (Issue #62)
-if [ -n "$VIM_MODE" ]; then
+if [ "$SHOW_VIM" = "true" ] && [ -n "$VIM_MODE" ]; then
   if [ "$USE_CLASSIC_ICONS" = "true" ]; then
     VIM_SEG="[${VIM_MODE}]"
     VIM_BG="$BG_VIM"
@@ -1132,7 +1227,7 @@ else
 fi
 
 # 3. VCS Branch
-if [ -n "$VCS_BRANCH" ]; then
+if [ "$SHOW_BRANCH" = "true" ] && [ -n "$VCS_BRANCH" ]; then
   b_disp=$(truncate_str "$VCS_BRANCH" "$max_b")
   [ "$VCS_DIRTY" = "true" ] && b_disp="${b_disp}*"
   ACTIVE_SEGS+=("${ICON_VCS} ${b_disp}")
@@ -1146,7 +1241,7 @@ if [ -n "$VCS_BRANCH" ]; then
 fi
 
 # 4. Model
-if [ -n "$MODEL_DISP" ]; then
+if [ "$SHOW_MODEL" = "true" ] && [ -n "$MODEL_DISP" ]; then
   m_disp=$(truncate_str "$MODEL_DISP" "$max_m")
   if [ "$USE_CLASSIC_ICONS" = "true" ]; then
     ACTIVE_SEGS+=("${m_disp}")
@@ -1158,8 +1253,8 @@ if [ -n "$MODEL_DISP" ]; then
 fi
 
 # Clamp essential segments if they exceed COLS
-while [ "$(calc_line1_len "$USE_CLASSIC_ICONS" "${ACTIVE_SEGS[@]}")" -gt "$COLS" ]; do
-  if [ "$max_m" -gt 8 ] && [ -n "$MODEL_DISP" ]; then
+while [ "${#ACTIVE_SEGS[@]}" -gt 0 ] && [ "$(calc_line1_len "$USE_CLASSIC_ICONS" "${ACTIVE_SEGS[@]}")" -gt "$COLS" ]; do
+  if [ "$max_m" -gt 8 ] && [ -n "$MODEL_DISP" ] && [ "$SHOW_MODEL" = "true" ]; then
     max_m=$(( max_m - 3 ))
     m_disp=$(truncate_str "$MODEL_DISP" "$max_m")
     if [ "$USE_CLASSIC_ICONS" = "true" ]; then m_seg="${m_disp}"; else m_seg="${ICON_MODEL} ${m_disp}"; fi
@@ -1169,7 +1264,7 @@ while [ "$(calc_line1_len "$USE_CLASSIC_ICONS" "${ACTIVE_SEGS[@]}")" -gt "$COLS"
         break
       fi
     done
-  elif [ "$max_b" -gt 8 ] && [ -n "$VCS_BRANCH" ]; then
+  elif [ "$max_b" -gt 8 ] && [ -n "$VCS_BRANCH" ] && [ "$SHOW_BRANCH" = "true" ]; then
     max_b=$(( max_b - 3 ))
     b_disp=$(truncate_str "$VCS_BRANCH" "$max_b")
     [ "$VCS_DIRTY" = "true" ] && b_disp="${b_disp}*"
@@ -1186,10 +1281,10 @@ while [ "$(calc_line1_len "$USE_CLASSIC_ICONS" "${ACTIVE_SEGS[@]}")" -gt "$COLS"
 done
 
 # 5. Directory
-if [ -n "$CWD_SHORT" ]; then
+if [ "$SHOW_DIR" = "true" ] && [ -n "$CWD_SHORT" ]; then
   d_disp=$(truncate_str "$CWD_SHORT" "$max_d")
   d_seg="${ICON_DIR} ${d_disp}"
-  if [ "$(calc_line1_len "$USE_CLASSIC_ICONS" "${ACTIVE_SEGS[@]}" "$d_seg")" -le "$COLS" ]; then
+  if [ "$(calc_line1_len "$USE_CLASSIC_ICONS" ${ACTIVE_SEGS[@]+"${ACTIVE_SEGS[@]}"} "$d_seg")" -le "$COLS" ]; then
     ACTIVE_SEGS+=("$d_seg")
     ACTIVE_BGS+=("$BG_DIR")
     ACTIVE_FGS+=("$FG_DIR_TEXT")
@@ -1197,9 +1292,9 @@ if [ -n "$CWD_SHORT" ]; then
 fi
 
 # 6. Conversation
-if [ -n "$CONV_ID" ] && [ "$COLS" -ge 80 ]; then
+if [ "$SHOW_CONV" = "true" ] && [ -n "$CONV_ID" ] && [ "$COLS" -ge 80 ]; then
   conv_seg="${ICON_CONV} ${CONV_ID:0:8}"
-  if [ "$(calc_line1_len "$USE_CLASSIC_ICONS" "${ACTIVE_SEGS[@]}" "$conv_seg")" -le "$COLS" ]; then
+  if [ "$(calc_line1_len "$USE_CLASSIC_ICONS" ${ACTIVE_SEGS[@]+"${ACTIVE_SEGS[@]}"} "$conv_seg")" -le "$COLS" ]; then
     ACTIVE_SEGS+=("$conv_seg")
     ACTIVE_BGS+=("$BG_META")
     ACTIVE_FGS+=("$FG_META_TEXT")
@@ -1207,7 +1302,7 @@ if [ -n "$CONV_ID" ] && [ "$COLS" -ge 80 ]; then
 fi
 
 # 7. User Plan & Account
-if { [ -n "$PLAN_TIER" ] || [ -n "$USER_EMAIL" ]; } && [ "$COLS" -ge 130 ]; then
+if [ "$SHOW_ACCOUNT" = "true" ] && { [ -n "$PLAN_TIER" ] || [ -n "$USER_EMAIL" ]; } && [ "$COLS" -ge 130 ]; then
   u_label="${PLAN_TIER}"
   if [ -n "$USER_EMAIL" ]; then
     if [ -n "$u_label" ]; then
@@ -1222,7 +1317,7 @@ if { [ -n "$PLAN_TIER" ] || [ -n "$USER_EMAIL" ]; } && [ "$COLS" -ge 130 ]; then
   else
     u_seg="👤 ${u_label}"
   fi
-  if [ "$(calc_line1_len "$USE_CLASSIC_ICONS" "${ACTIVE_SEGS[@]}" "$u_seg")" -le "$COLS" ]; then
+  if [ "$(calc_line1_len "$USE_CLASSIC_ICONS" ${ACTIVE_SEGS[@]+"${ACTIVE_SEGS[@]}"} "$u_seg")" -le "$COLS" ]; then
     ACTIVE_SEGS+=("$u_seg")
     ACTIVE_BGS+=("$BG_META")
     ACTIVE_FGS+=("$FG_META_TEXT")
@@ -1230,14 +1325,14 @@ if { [ -n "$PLAN_TIER" ] || [ -n "$USER_EMAIL" ]; } && [ "$COLS" -ge 130 ]; then
 fi
 
 # 8. Host IP
-if [ -n "$HOST_INFO" ] && [ "$COLS" -ge 110 ]; then
+if [ "$SHOW_HOST" = "true" ] && [ -n "$HOST_INFO" ] && [ "$COLS" -ge 110 ]; then
   host_label=$(truncate_str "$HOST_INFO" 20)
   if [ "$USE_CLASSIC_ICONS" = "true" ]; then
     host_seg="${host_label}"
   else
     host_seg="󰒋 ${host_label}"
   fi
-  if [ "$(calc_line1_len "$USE_CLASSIC_ICONS" "${ACTIVE_SEGS[@]}" "$host_seg")" -le "$COLS" ]; then
+  if [ "$(calc_line1_len "$USE_CLASSIC_ICONS" ${ACTIVE_SEGS[@]+"${ACTIVE_SEGS[@]}"} "$host_seg")" -le "$COLS" ]; then
     ACTIVE_SEGS+=("$host_seg")
     ACTIVE_BGS+=("$BG_META")
     ACTIVE_FGS+=("$FG_META_TEXT")
@@ -1245,9 +1340,9 @@ if [ -n "$HOST_INFO" ] && [ "$COLS" -ge 110 ]; then
 fi
 
 # 9. Version
-if [ -n "$CLI_VERSION" ] && [ "$COLS" -ge 120 ]; then
+if [ "$SHOW_VERSION" = "true" ] && [ -n "$CLI_VERSION" ] && [ "$COLS" -ge 120 ]; then
   ver_label=$(truncate_str "v${CLI_VERSION}" 10)
-  if [ "$(calc_line1_len "$USE_CLASSIC_ICONS" "${ACTIVE_SEGS[@]}" "$ver_label")" -le "$COLS" ]; then
+  if [ "$(calc_line1_len "$USE_CLASSIC_ICONS" ${ACTIVE_SEGS[@]+"${ACTIVE_SEGS[@]}"} "$ver_label")" -le "$COLS" ]; then
     ACTIVE_SEGS+=("$ver_label")
     ACTIVE_BGS+=("$BG_META")
     ACTIVE_FGS+=("$FG_META_TEXT")
@@ -1281,10 +1376,12 @@ done
 BADGE_LIST=()
 
 # 1. Context Usage Bar
-[ -n "$CTX_BAR" ] && BADGE_LIST+=("$CTX_BAR")
+if [ "$SHOW_CONTEXT_USAGE" = "true" ]; then
+  [ -n "$CTX_BAR" ] && BADGE_LIST+=("$CTX_BAR")
+fi
 
 # 2. Token Details Badge
-if [ "$CTX_USED" -gt 0 ] 2>/dev/null; then
+if [ "$SHOW_TOKENS_USAGE" = "true" ] && [ "$CTX_USED" -gt 0 ] 2>/dev/null; then
   turn_str=""
   if [ "$TURN_INPUT_TOKENS" -gt 0 ] || [ "$TURN_OUTPUT_TOKENS" -gt 0 ]; then
     turn_str=" | turn: +${TURN_INPUT_FMT}/${TURN_OUTPUT_FMT}"
@@ -1297,30 +1394,44 @@ if [ "$CTX_USED" -gt 0 ] 2>/dev/null; then
 fi
 
 # 3. System Resources (RAM & Load)
-[ -n "$SYS_FMT" ] && BADGE_LIST+=("$SYS_FMT")
+if [ "$SHOW_SYS" = "true" ]; then
+  [ -n "$SYS_FMT" ] && BADGE_LIST+=("$SYS_FMT")
+fi
 
 # 4. Artifacts Counter
-[ -n "$ART_FMT" ] && BADGE_LIST+=("$ART_FMT")
+if [ "$SHOW_ARTIFACTS" = "true" ]; then
+  [ -n "$ART_FMT" ] && BADGE_LIST+=("$ART_FMT")
+fi
 
 # 5. Subagents Counter
-[ -n "$SUB_FMT" ] && BADGE_LIST+=("$SUB_FMT")
+if [ "$SHOW_SUBAGENTS" = "true" ]; then
+  [ -n "$SUB_FMT" ] && BADGE_LIST+=("$SUB_FMT")
+fi
 
 # 6. Background Tasks Counter
-[ -n "$BG_FMT" ] && BADGE_LIST+=("$BG_FMT")
+if [ "$SHOW_TASKS" = "true" ]; then
+  [ -n "$BG_FMT" ] && BADGE_LIST+=("$BG_FMT")
+fi
 
 # 7. Sandbox Status
-[ -n "$SB_FMT" ] && BADGE_LIST+=("$SB_FMT")
+if [ "$SHOW_SANDBOX" = "true" ]; then
+  [ -n "$SB_FMT" ] && BADGE_LIST+=("$SB_FMT")
+fi
 
 # 8. Quotas
-if { [ -n "$Q_5H" ] && [ "$Q_5H" != "-1" ]; }; then
-  BADGE_LIST+=("$(make_quota_bar "$Q_5H" "5H" "37" "$Q_5H_R")")
-fi
-if { [ -n "$Q_WK" ] && [ "$Q_WK" != "-1" ]; }; then
-  BADGE_LIST+=("$(make_quota_bar "$Q_WK" "7D" "135" "$Q_WK_R")")
+if [ "$SHOW_QUOTA" = "true" ]; then
+  if { [ -n "$Q_5H" ] && [ "$Q_5H" != "-1" ]; }; then
+    BADGE_LIST+=("$(make_quota_bar "$Q_5H" "5H" "37" "$Q_5H_R")")
+  fi
+  if { [ -n "$Q_WK" ] && [ "$Q_WK" != "-1" ]; }; then
+    BADGE_LIST+=("$(make_quota_bar "$Q_WK" "7D" "135" "$Q_WK_R")")
+  fi
 fi
 
 # 9. Power Status
-[ -n "$POWER_FMT" ] && BADGE_LIST+=("$POWER_FMT")
+if [ "$SHOW_POWER" = "true" ]; then
+  [ -n "$POWER_FMT" ] && BADGE_LIST+=("$POWER_FMT")
+fi
 
 # Greedy Line-Packing Routine
 PACKED_LINES=()
@@ -1333,38 +1444,57 @@ else
 fi
 if [ "$max_vis" -lt 40 ]; then max_vis=40; fi
 
-for badge in "${BADGE_LIST[@]}"; do
-  [ -z "$badge" ] && continue
-  b_vis=$(visible_len "$badge")
-  
-  if [ -z "$curr_line" ]; then
-    curr_line="$badge"
-    curr_vis=$b_vis
-  elif [ $(( curr_vis + 2 + b_vis )) -le "$max_vis" ]; then
-    curr_line="${curr_line}  ${badge}"
-    curr_vis=$(( curr_vis + 2 + b_vis ))
-  else
-    PACKED_LINES+=("$curr_line")
-    curr_line="$badge"
-    curr_vis=$b_vis
-  fi
-done
+if [ "${#BADGE_LIST[@]}" -gt 0 ]; then
+  for badge in "${BADGE_LIST[@]}"; do
+    [ -z "$badge" ] && continue
+    b_vis=$(visible_len "$badge")
+    
+    if [ -z "$curr_line" ]; then
+      curr_line="$badge"
+      curr_vis=$b_vis
+    elif [ $(( curr_vis + 2 + b_vis )) -le "$max_vis" ]; then
+      curr_line="${curr_line}  ${badge}"
+      curr_vis=$(( curr_vis + 2 + b_vis ))
+    else
+      PACKED_LINES+=("$curr_line")
+      curr_line="$badge"
+      curr_vis=$b_vis
+    fi
+  done
+fi
 [ -n "$curr_line" ] && PACKED_LINES+=("$curr_line")
 
 # Output rendering with dynamic box borders
+total_packed=${#PACKED_LINES[@]}
+
 if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-  echo -e "${LINE1}"
-  for pline in "${PACKED_LINES[@]}"; do
-    echo -e "${pline}"
-  done
+  if [ -n "$LINE1" ]; then
+    echo -e "${LINE1}"
+  fi
+  if [ "$total_packed" -gt 0 ]; then
+    for pline in "${PACKED_LINES[@]}"; do
+      echo -e "${pline}"
+    done
+  fi
 else
-  echo -e "${FG_GRAY}╭─${R}${LINE1}"
-  total_packed=${#PACKED_LINES[@]}
-  for ((i = 0; i < total_packed; i++)); do
-    if [ "$((i + 1))" -eq "$total_packed" ]; then
-      echo -e "${FG_GRAY}╰─${R}${PACKED_LINES[i]}"
-    else
-      echo -e "${FG_GRAY}├─${R}${PACKED_LINES[i]}"
-    fi
-  done
+  if [ -n "$LINE1" ]; then
+    echo -e "${FG_GRAY}╭─${R}${LINE1}"
+    for ((i = 0; i < total_packed; i++)); do
+      if [ "$((i + 1))" -eq "$total_packed" ]; then
+        echo -e "${FG_GRAY}╰─${R}${PACKED_LINES[i]}"
+      else
+        echo -e "${FG_GRAY}├─${R}${PACKED_LINES[i]}"
+      fi
+    done
+  else
+    for ((i = 0; i < total_packed; i++)); do
+      if [ "$i" -eq 0 ]; then
+        echo -e "${FG_GRAY}╭─${R}${PACKED_LINES[i]}"
+      elif [ "$((i + 1))" -eq "$total_packed" ]; then
+        echo -e "${FG_GRAY}╰─${R}${PACKED_LINES[i]}"
+      else
+        echo -e "${FG_GRAY}├─${R}${PACKED_LINES[i]}"
+      fi
+    done
+  fi
 fi

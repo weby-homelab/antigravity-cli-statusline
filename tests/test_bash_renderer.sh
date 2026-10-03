@@ -206,6 +206,214 @@ c_plain=$(echo "$c_out" | strip_ansi)
 assert_contains "$c_plain" "AC" "Classic mode renders AC"
 assert_not_contains "$c_plain" "AC AC" "Classic mode does not duplicate AC AC"
 
+# Test 8: Telemetry Customization & Suppression Flags
+echo "--- Testing Telemetry Customization & Suppression Flags ---"
+
+# Baseline run with full payload at 150 cols (all fields active)
+base_out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" 2>&1 || true)
+base_plain=$(echo "$base_out" | strip_ansi)
+base_classic=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --classic 2>&1 || true)
+base_classic_plain=$(echo "$base_classic" | strip_ansi)
+
+# Verify baseline contains expected indicators
+assert_contains "$base_plain" "WORKING" "Baseline contains state WORKING"
+assert_contains "$base_plain" "NORMAL" "Baseline contains vim mode NORMAL"
+assert_contains "$base_plain" "qa/test-fixtures" "Baseline contains branch"
+assert_contains "$base_plain" "Gemini 2.0 Flash" "Baseline contains model"
+assert_contains "$base_plain" "qa-fixtures" "Baseline contains dir"
+assert_contains "$base_plain" "62e3d023" "Baseline contains conversation ID"
+assert_contains "$base_plain" "rekvizitor" "Baseline contains user account"
+assert_contains "$base_plain" "v0.2.4" "Baseline contains version"
+assert_contains "$base_plain" "14.2%" "Baseline contains context bar percentage"
+assert_contains "$base_plain" "88.2K/61.1K" "Baseline contains token sum"
+assert_contains "$base_plain" "RAM:" "Baseline contains sys RAM"
+assert_contains "$base_plain" "net-on" "Baseline contains sandbox status"
+assert_contains "$base_plain" "5H" "Baseline contains quota 5H"
+assert_contains "$base_plain" "7D" "Baseline contains quota 7D"
+assert_contains "$base_plain" "AC" "Baseline contains power AC"
+assert_contains "$base_classic_plain" "artifacts 3" "Baseline classic contains artifacts"
+assert_contains "$base_classic_plain" "subagents 2" "Baseline classic contains subagents"
+assert_contains "$base_classic_plain" "tasks 2" "Baseline classic contains tasks"
+
+# 8a: Header Segments Individual Suppression
+# --no-state
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-state 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "WORKING" "--no-state suppresses agent state"
+
+# --no-vim and alias --no-vim-mode
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-vim 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "NORMAL" "--no-vim suppresses vim mode"
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-vim-mode 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "NORMAL" "--no-vim-mode suppresses vim mode"
+
+# --no-branch and alias --no-git
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-branch 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "qa/test-fixtures" "--no-branch suppresses VCS branch"
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-git 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "qa/test-fixtures" "--no-git suppresses VCS branch"
+
+# --no-model
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-model 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "Gemini 2.0 Flash" "--no-model suppresses active model"
+
+# --no-dir and alias --no-cwd
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-dir 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "qa-fixtures" "--no-dir suppresses working directory"
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-cwd 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "qa-fixtures" "--no-cwd suppresses working directory"
+
+# --no-conv and alias --no-conversation
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-conv 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "62e3d023" "--no-conv suppresses conversation prefix"
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-conversation 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "62e3d023" "--no-conversation suppresses conversation prefix"
+
+# --no-account and aliases --no-user, --no-plan
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-account 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "rekvizitor" "--no-account suppresses user account info"
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-user 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "rekvizitor" "--no-user suppresses user account info"
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-plan 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "rekvizitor" "--no-plan suppresses user account info"
+
+# --no-host
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-host 2>&1 || true)
+assert_not_contains "$out" "󰒋" "--no-host suppresses host indicator"
+
+# --no-version
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-version 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "v0.2.4" "--no-version suppresses version badge"
+
+# 8b: Pill Badges Individual Suppression
+# --no-context-usage and alias --no-context
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-context-usage 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "14.2%" "--no-context-usage suppresses context bar"
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-context 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "14.2%" "--no-context suppresses context bar"
+
+# --no-tokens-usage and alias --no-tokens
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-tokens-usage 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "88.2K/61.1K" "--no-tokens-usage suppresses token usage badge"
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-tokens 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "88.2K/61.1K" "--no-tokens suppresses token usage badge"
+
+# --no-cost
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-cost 2>&1)
+res=$?
+assert_exit_code "$res" 0 "--no-cost flag runs safely"
+
+# --no-sys and aliases --no-system, --no-resources
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-sys 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "RAM:" "--no-sys suppresses CPU/RAM badge"
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-system 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "RAM:" "--no-system suppresses CPU/RAM badge"
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-resources 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "RAM:" "--no-resources suppresses CPU/RAM badge"
+
+# --no-artifacts
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --classic --no-artifacts 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "artifacts" "--no-artifacts suppresses artifacts badge"
+
+# --no-subagents
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --classic --no-subagents 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "subagents" "--no-subagents suppresses subagents badge"
+
+# --no-tasks
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --classic --no-tasks 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "tasks" "--no-tasks suppresses tasks badge"
+
+# --no-sandbox
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-sandbox 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "net-on" "--no-sandbox suppresses sandbox badge"
+
+# --no-quota
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-quota 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "5H" "--no-quota suppresses 5H quota bar"
+assert_not_contains "$(echo "$out" | strip_ansi)" "7D" "--no-quota suppresses 7D quota bar"
+
+# --no-power
+out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-power 2>&1 || true)
+assert_not_contains "$(echo "$out" | strip_ansi)" "AC" "--no-power suppresses AC power badge"
+
+# 8c: Combinations & Presets
+# Privacy mode preset: hides git branch, cwd, conversation, user account, host
+priv_out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-git --no-cwd --no-conv --no-account --no-host 2>&1 || true)
+priv_plain=$(echo "$priv_out" | strip_ansi)
+assert_not_contains "$priv_plain" "qa/test-fixtures" "Privacy mode hides git branch"
+assert_not_contains "$priv_plain" "qa-fixtures" "Privacy mode hides current directory"
+assert_not_contains "$priv_plain" "62e3d023" "Privacy mode hides conversation ID"
+assert_not_contains "$priv_plain" "rekvizitor" "Privacy mode hides user account"
+assert_contains "$priv_plain" "WORKING" "Privacy mode preserves agent state"
+assert_contains "$priv_plain" "Gemini 2.0 Flash" "Privacy mode preserves active model"
+assert_contains "$priv_plain" "14.2%" "Privacy mode preserves context metrics"
+
+# Minimalist preset: hides heavy telemetry badges and Line 1 metadata
+min_out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-dir --no-conv --no-account --no-host --no-version --no-tokens --no-sys --no-artifacts --no-subagents --no-tasks --no-sandbox --no-quota --no-power 2>&1 || true)
+min_plain=$(echo "$min_out" | strip_ansi)
+assert_contains "$min_plain" "WORKING" "Minimalist preset preserves state"
+assert_contains "$min_plain" "Gemini 2.0 Flash" "Minimalist preset preserves model"
+assert_contains "$min_plain" "14.2%" "Minimalist preset preserves context bar"
+assert_not_contains "$min_plain" "RAM:" "Minimalist preset suppresses sys metrics"
+assert_not_contains "$min_plain" "5H" "Minimalist preset suppresses quota"
+assert_not_contains "$min_plain" "AC" "Minimalist preset suppresses power"
+
+# Test 9: Header Collapse & Full Suppression
+echo "--- Testing Header Collapse & Full Suppression ---"
+
+# 9a: Header Collapse: Passing all Line 1 suppression flags omits Line 1 and renders first badge row with '╭─'
+all_l1_flags="--no-state --no-vim --no-branch --no-model --no-dir --no-conv --no-account --no-host --no-version"
+hc_out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" $all_l1_flags 2>&1 || true)
+hc_first_line=$(echo "$hc_out" | head -n 1)
+
+assert_not_contains "$hc_out" "WORKING" "Header Collapse omits state"
+assert_not_contains "$hc_out" "NORMAL" "Header Collapse omits vim mode"
+assert_not_contains "$hc_out" "qa/test-fixtures" "Header Collapse omits branch"
+assert_not_contains "$hc_out" "Gemini 2.0 Flash" "Header Collapse omits model"
+assert_contains "$hc_first_line" "╭─" "Header Collapse starts first badge row with ╭─"
+assert_not_contains "$hc_first_line" "├─" "Header Collapse first row does not start with divider ├─"
+assert_contains "$hc_first_line" "ctx" "Header Collapse first row contains context badge"
+
+# 9b: Header Collapse with single badge row
+hc_single_out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" $all_l1_flags --no-tokens --no-sys --no-artifacts --no-subagents --no-tasks --no-sandbox --no-quota --no-power 2>&1 || true)
+hc_single_lines=$(echo "$hc_single_out" | grep -c .)
+assert_contains "$hc_single_out" "╭─" "Single-row collapsed badge starts with ╭─"
+if [ "$hc_single_lines" -eq 1 ]; then
+  echo "  [PASS] Single-row collapsed badge renders exactly 1 row"
+  PASSED=$((PASSED + 1))
+else
+  echo "  [FAIL] Single-row collapsed badge expected 1 row, got $hc_single_lines"
+  FAILED=$((FAILED + 1))
+fi
+
+# 9c: Header Collapse in Classic Mode
+hc_classic_out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --classic $all_l1_flags 2>&1 || true)
+assert_not_contains "$hc_classic_out" "WORKING" "Classic Header Collapse omits Line 1"
+hc_classic_first=$(echo "$hc_classic_out" | head -n 1)
+assert_contains "$hc_classic_first" "ctx" "Classic Header Collapse first line begins with badges"
+
+# 9d: Full Suppression: Line 1 + Line 2 suppression produces clean empty output
+all_flags="--no-state --no-vim --no-branch --no-model --no-dir --no-conv --no-account --no-host --no-version --no-context --no-tokens --no-cost --no-sys --no-artifacts --no-subagents --no-tasks --no-sandbox --no-quota --no-power"
+full_supp_out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" $all_flags 2>&1 || true)
+full_supp_plain=$(echo "$full_supp_out" | tr -d '[:space:]')
+if [ -z "$full_supp_plain" ]; then
+  echo "  [PASS] Full suppression produces clean empty output (0 bytes)"
+  PASSED=$((PASSED + 1))
+else
+  echo "  [FAIL] Full suppression expected empty output, got: '$full_supp_out'"
+  FAILED=$((FAILED + 1))
+fi
+
+# 9e: Full Suppression in Classic Mode
+full_supp_classic=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --classic $all_flags 2>&1 || true)
+full_supp_classic_plain=$(echo "$full_supp_classic" | tr -d '[:space:]')
+if [ -z "$full_supp_classic_plain" ]; then
+  echo "  [PASS] Full suppression in classic mode produces clean empty output"
+  PASSED=$((PASSED + 1))
+else
+  echo "  [FAIL] Full suppression in classic mode expected empty output, got: '$full_supp_classic'"
+  FAILED=$((FAILED + 1))
+fi
+
 rm -rf "$MOCK_PSY"
 rm -rf "$TEST_WORKDIR"
 

@@ -320,7 +320,115 @@ else
 fi
 cleanup_sandbox
 
+# Test 10: Customization Argument Forwarding & Upgrades
+echo "--- Test 10: Customization Argument Forwarding & Upgrades ---"
+setup_sandbox
+settings="$HOME/.gemini/antigravity-cli/settings.json"
+cat << 'EOF' > "$settings"
+{
+  "theme": "monokai",
+  "editor.fontSize": 14,
+  "telemetry.enabled": false
+}
+EOF
+
+# 1. Install with customization arguments
+bash "$INSTALL_SH" --no-model --no-tokens-usage --no-account >/dev/null 2>&1
+
+cmd=$(jq -r '.statusLine.command // ""' "$settings")
+sl_type=$(jq -r '.statusLine.type // ""' "$settings")
+sl_enabled=$(jq -r '.statusLine.enabled // false' "$settings")
+theme=$(jq -r '.theme // ""' "$settings")
+font=$(jq -r '."editor.fontSize" // 0' "$settings")
+telemetry=$(jq -r '."telemetry.enabled"' "$settings")
+
+if [[ "$cmd" == *" --no-model --no-tokens-usage --no-account" ]]; then
+  echo "  [PASS] statusLine.command ends with forwarded customization arguments"
+  PASSED=$((PASSED + 1))
+else
+  echo "  [FAIL] statusLine.command did not end with customization arguments (got: '$cmd')"
+  FAILED=$((FAILED + 1))
+fi
+
+if [ "$sl_type" = "command" ] && [ "$sl_enabled" = "true" ]; then
+  echo "  [PASS] statusLine.type and enabled correctly set"
+  PASSED=$((PASSED + 1))
+else
+  echo "  [FAIL] statusLine type or enabled incorrect (type: '$sl_type', enabled: '$sl_enabled')"
+  FAILED=$((FAILED + 1))
+fi
+
+if [ "$theme" = "monokai" ] && [ "$font" -eq 14 ] && [ "$telemetry" = "false" ]; then
+  echo "  [PASS] Unrelated settings preserved on customized install"
+  PASSED=$((PASSED + 1))
+else
+  echo "  [FAIL] Unrelated settings were lost during customized install"
+  FAILED=$((FAILED + 1))
+fi
+
+# Verify statusline command actually executes cleanly with forwarded flags
+exec_test=$(echo '{}' | bash -c "$cmd" 2>&1)
+exec_status=$?
+if [ "$exec_status" -eq 0 ]; then
+  echo "  [PASS] Configured statusline command executes successfully with forwarded arguments"
+  PASSED=$((PASSED + 1))
+else
+  echo "  [FAIL] Configured command failed execution: $exec_test"
+  FAILED=$((FAILED + 1))
+fi
+
+# 2. Add an unknown statusLine field and upgrade with updated arguments
+jq '.statusLine.customField = "preserved_value"' "$settings" > "${settings}.tmp" && mv "${settings}.tmp" "$settings"
+bash "$INSTALL_SH" --classic --no-sys >/dev/null 2>&1
+
+updated_cmd=$(jq -r '.statusLine.command // ""' "$settings")
+custom_field=$(jq -r '.statusLine.customField // ""' "$settings")
+theme_after=$(jq -r '.theme // ""' "$settings")
+font_after=$(jq -r '."editor.fontSize" // 0' "$settings")
+
+if [[ "$updated_cmd" == *" --classic --no-sys" ]] && [[ "$updated_cmd" != *" --no-model" ]]; then
+  echo "  [PASS] Reinstall cleanly upgrades statusLine.command with new arguments"
+  PASSED=$((PASSED + 1))
+else
+  echo "  [FAIL] Reinstall failed to cleanly upgrade command arguments (got: '$updated_cmd')"
+  FAILED=$((FAILED + 1))
+fi
+
+if [ "$custom_field" = "preserved_value" ] && [ "$theme_after" = "monokai" ] && [ "$font_after" -eq 14 ]; then
+  echo "  [PASS] Unrelated and custom fields preserved across argument upgrade"
+  PASSED=$((PASSED + 1))
+else
+  echo "  [FAIL] Unrelated or custom fields corrupted during argument upgrade"
+  FAILED=$((FAILED + 1))
+fi
+
+# 3. Verify uninstall restores or cleans up as expected
+bash "$HOME/.antigravity/uninstall.sh" >/dev/null 2>&1
+
+has_sl=$(jq -r '.statusLine // empty' "$settings" 2>/dev/null || echo "")
+theme_restored=$(jq -r '.theme // ""' "$settings" 2>/dev/null || echo "")
+font_restored=$(jq -r '."editor.fontSize" // 0' "$settings" 2>/dev/null || echo "0")
+
+if [ -z "$has_sl" ] && [ "$theme_restored" = "monokai" ] && [ "$font_restored" -eq 14 ]; then
+  echo "  [PASS] Uninstall removed statusLine and restored pre-existing settings"
+  PASSED=$((PASSED + 1))
+else
+  echo "  [FAIL] Uninstall failed after argument upgrades (statusLine: '$has_sl', theme: '$theme_restored')"
+  FAILED=$((FAILED + 1))
+fi
+
+if [ ! -e "$HOME/.antigravity/statusline.sh" ] && [ ! -e "$HOME/.antigravity/uninstall.sh" ]; then
+  echo "  [PASS] Uninstaller removed installation files from disk"
+  PASSED=$((PASSED + 1))
+else
+  echo "  [FAIL] Installation files still present after uninstall"
+  FAILED=$((FAILED + 1))
+fi
+
+cleanup_sandbox
+
 echo "============================================================"
 echo " Installer Tests: ${PASSED} passed, ${FAILED} failed"
 echo "============================================================"
 [ "$FAILED" -eq 0 ] || exit 1
+

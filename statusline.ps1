@@ -4,6 +4,29 @@ $ProgressPreference = 'SilentlyContinue'
 # Set Output Encoding to UTF-8 to support nerd font icons on Windows
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
+# Default telemetry display states & theme
+$USE_CLASSIC_ICONS = $false
+$SHOW_STATE = $true
+$SHOW_VIM = $true
+$SHOW_BRANCH = $true
+$SHOW_MODEL = $true
+$SHOW_DIR = $true
+$SHOW_CONV = $true
+$SHOW_ACCOUNT = $true
+$SHOW_HOST = $true
+$SHOW_VERSION = $true
+
+$SHOW_CONTEXT_USAGE = $true
+$SHOW_TOKENS_USAGE = $true
+$SHOW_COST = $true
+$SHOW_SYS = $true
+$SHOW_ARTIFACTS = $true
+$SHOW_SUBAGENTS = $true
+$SHOW_TASKS = $true
+$SHOW_SANDBOX = $true
+$SHOW_QUOTA = $true
+$SHOW_POWER = $true
+
 # Check for CLI flags before reading stdin
 foreach ($arg in $args) {
     $a = if ($arg) { $arg.ToString().ToLower() } else { "" }
@@ -49,6 +72,66 @@ foreach ($arg in $args) {
         Write-Host "`nTIPS:" -ForegroundColor White
         Write-Host "  To toggle Classic Icon mode, use the -classic or --classic option in settings.json configuration."
         exit
+    }
+    if ($a -in @("--classic", "-classic", "-c", "classic", "--no-nerdfont", "-no-nerdfont", "-nonerdfont", "--compatibility", "-compatibility")) {
+        $USE_CLASSIC_ICONS = $true
+    }
+    if ($a -in @("--no-state", "-nostate")) {
+        $SHOW_STATE = $false
+    }
+    if ($a -in @("--no-vim", "--no-vim-mode", "-novim", "-novimmode")) {
+        $SHOW_VIM = $false
+    }
+    if ($a -in @("--no-branch", "--no-git", "-nobranch", "-nogit")) {
+        $SHOW_BRANCH = $false
+    }
+    if ($a -in @("--no-model", "-nomodel")) {
+        $SHOW_MODEL = $false
+    }
+    if ($a -in @("--no-dir", "--no-cwd", "-nodir", "-nocwd")) {
+        $SHOW_DIR = $false
+    }
+    if ($a -in @("--no-conv", "--no-conversation", "-noconv", "-noconversation")) {
+        $SHOW_CONV = $false
+    }
+    if ($a -in @("--no-account", "--no-user", "--no-plan", "-noaccount", "-nouser", "-noplan")) {
+        $SHOW_ACCOUNT = $false
+    }
+    if ($a -in @("--no-host", "-nohost")) {
+        $SHOW_HOST = $false
+    }
+    if ($a -in @("--no-version", "-noversion")) {
+        $SHOW_VERSION = $false
+    }
+    if ($a -in @("--no-context-usage", "--no-context", "-nocontextusage", "-nocontext")) {
+        $SHOW_CONTEXT_USAGE = $false
+    }
+    if ($a -in @("--no-tokens-usage", "--no-tokens", "-notokensusage", "-notokens")) {
+        $SHOW_TOKENS_USAGE = $false
+    }
+    if ($a -in @("--no-cost", "-nocost")) {
+        $SHOW_COST = $false
+    }
+    if ($a -in @("--no-sys", "--no-system", "--no-resources", "-nosys", "-nosystem", "-noresources")) {
+        $SHOW_SYS = $false
+    }
+    if ($a -in @("--no-artifacts", "-noartifacts")) {
+        $SHOW_ARTIFACTS = $false
+    }
+    if ($a -in @("--no-subagents", "-nosubagents")) {
+        $SHOW_SUBAGENTS = $false
+    }
+    if ($a -in @("--no-tasks", "-notasks")) {
+        $SHOW_TASKS = $false
+    }
+    if ($a -in @("--no-sandbox", "-nosandbox")) {
+        $SHOW_SANDBOX = $false
+    }
+    if ($a -in @("--no-quota", "-noquota")) {
+        $SHOW_QUOTA = $false
+    }
+    if ($a -in @("--no-power", "-nopower")) {
+        $SHOW_POWER = $false
     }
 }
 
@@ -290,7 +373,7 @@ function Run-WithTimeout {
 
 # VCS directly from git (Bypasses JSON caches)
 $GIT_DIR = if ($CWD) { $CWD } else { "." }
-if (Test-Path "$GIT_DIR") {
+if ($SHOW_BRANCH -and (Test-Path "$GIT_DIR")) {
     $gitBranch = Run-WithTimeout -Command "git" -Arguments @("-C", "`"$GIT_DIR`"", "rev-parse", "--abbrev-ref", "HEAD")
     if ($gitBranch) {
         $VCS_BRANCH = $gitBranch.Trim()
@@ -348,15 +431,6 @@ function shorten_path($path) {
 }
 $CWD_SHORT = shorten_path $CWD
 
-# ─── Parse CLI Arguments & Theme ─────────────────────────────────────────────
-$USE_CLASSIC_ICONS = $false
-foreach ($arg in $args) {
-    $a = if ($arg) { $arg.ToString().ToLower() } else { "" }
-    if ($a -in @("--classic", "-classic", "-c", "classic", "--no-nerdfont", "-no-nerdfont", "--compatibility", "-compatibility")) {
-        $USE_CLASSIC_ICONS = $true
-    }
-}
-
 if ($USE_CLASSIC_ICONS) {
     $DOT_L1 = "${FG_GRAY} ╱ ${R}"
     $DOT_L2 = "${FG_GRAY} · ${R}"
@@ -411,6 +485,30 @@ function visible_len($str) {
     return $stripped.Length
 }
 
+function Format-Line1($segments) {
+    if (-not $segments -or $segments.Count -eq 0) { return "" }
+    $res = ""
+    for ($i = 0; $i -lt $segments.Count; $i++) {
+        $item = $segments[$i]
+        $txt = if ($item -is [hashtable] -or ($item.PSObject -and $item.PSObject.Properties['text'])) { $item.text } else { $item.ToString() }
+        if (-not $txt) { continue }
+        if ($res.Length -eq 0) {
+            if ($txt.StartsWith("$ESC")) {
+                if ($txt -match '\x1b\[1m ') {
+                    $res = $txt
+                } else {
+                    $res = " " + $txt
+                }
+            } else {
+                $res = " " + $txt
+            }
+        } else {
+            $res += "${DOT_L1}${txt}"
+        }
+    }
+    return $res
+}
+
 function to_ansi_color($code) {
     switch ($code) {
         "220" { return $FG_YELLOW }
@@ -441,15 +539,15 @@ function make_badge($icon, $val, $icon_color) {
 
 # Version (>= 120 cols)
 $CLI_VER_FMT = ""
-if ($CLI_VERSION -and $COLS -ge 120) {
+if ($SHOW_VERSION -and $CLI_VERSION -and $COLS -ge 120) {
     $ver = $CLI_VERSION
     if ($ver.Length -gt 16) { $ver = $ver.Substring(0, 13) + "..." }
-    $CLI_VER_FMT = "${DOT_L1}${FG_GRAY}v${ver}${R}"
+    $CLI_VER_FMT = "${FG_GRAY}v${ver}${R}"
 }
 
 # User Plan & Account (>= 130 cols)
 $USER_FMT = ""
-if (($PLAN_TIER -or $USER_EMAIL) -and $COLS -ge 130) {
+if ($SHOW_ACCOUNT -and ($PLAN_TIER -or $USER_EMAIL) -and $COLS -ge 130) {
     $userInfo = ""
     if ($PLAN_TIER -and $USER_EMAIL) {
         $userInfo = "${PLAN_TIER} (${USER_EMAIL})"
@@ -462,25 +560,29 @@ if (($PLAN_TIER -or $USER_EMAIL) -and $COLS -ge 130) {
         $userInfo = $userInfo.Substring(0, 22) + "..."
     }
     if ($USE_CLASSIC_ICONS) {
-        $USER_FMT = "${DOT_L1}${FG_GRAY}${userInfo}${R}"
+        $USER_FMT = "${FG_GRAY}${userInfo}${R}"
     } else {
-        $USER_FMT = "${DOT_L1}${FG_GRAY}󰇮 ${userInfo}${R}"
+        $USER_FMT = "${FG_GRAY}󰇮 ${userInfo}${R}"
     }
 }
 
 # Hostname and Tailscale IP (>= 110 cols)
 $HOST_NAME = ""
-try { $HOST_NAME = [System.Net.Dns]::GetHostName() } catch {}
+if ($SHOW_HOST) {
+    try { $HOST_NAME = [System.Net.Dns]::GetHostName() } catch {}
+}
 $TS_IP = ""
-try {
-    if (Get-Command tailscale -ErrorAction SilentlyContinue) {
-        $tsStatus = tailscale ip -4 2>$null
-        if ($tsStatus) { $TS_IP = $tsStatus.Trim() }
-    }
-} catch {}
+if ($SHOW_HOST) {
+    try {
+        if (Get-Command tailscale -ErrorAction SilentlyContinue) {
+            $tsStatus = tailscale ip -4 2>$null
+            if ($tsStatus) { $TS_IP = $tsStatus.Trim() }
+        }
+    } catch {}
+}
 
 $HOST_FMT = ""
-if ($HOST_NAME -and $COLS -ge 110) {
+if ($SHOW_HOST -and $HOST_NAME -and $COLS -ge 110) {
     $hostDetails = $HOST_NAME
     if ($TS_IP) {
         $hostDetails = "${HOST_NAME} (${TS_IP})"
@@ -489,106 +591,110 @@ if ($HOST_NAME -and $COLS -ge 110) {
         $hostDetails = $hostDetails.Substring(0, 22) + "..."
     }
     if ($USE_CLASSIC_ICONS) {
-        $HOST_FMT = "${DOT_L1}${FG_BRIGHT_BLUE}${hostDetails}${R}"
+        $HOST_FMT = "${FG_BRIGHT_BLUE}${hostDetails}${R}"
     } else {
-        $HOST_FMT = "${DOT_L1}${FG_BRIGHT_BLUE}󰒋 ${hostDetails}${R}"
+        $HOST_FMT = "${FG_BRIGHT_BLUE}󰒋 ${hostDetails}${R}"
     }
 }
 
 # Power Status
 $POWER_FMT = ""
-try {
-    $ac_online = $null
-    $bat_cap = $null
-    $has_battery = $false
-
-    # 1. Primary: .NET SystemInformation PowerStatus (Works in Windows PowerShell 5.1 & Core on Windows)
+if ($SHOW_POWER) {
     try {
-        if (-not ([System.Management.Automation.PSTypeName]'System.Windows.Forms.SystemInformation').Type) {
-            Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue
-        }
-        if (([System.Management.Automation.PSTypeName]'System.Windows.Forms.SystemInformation').Type) {
-            $pStatus = [System.Windows.Forms.SystemInformation]::PowerStatus
-            if ($pStatus) {
-                $lineStatus = $pStatus.PowerLineStatus.ToString()
-                if ($lineStatus -eq "Online") {
-                    $ac_online = $true
-                } elseif ($lineStatus -eq "Offline") {
-                    $ac_online = $false
-                }
-                $chargeStatus = $pStatus.BatteryChargeStatus
-                if (-not $chargeStatus.HasFlag([System.Windows.Forms.BatteryChargeStatus]::NoSystemBattery)) {
-                    $has_battery = $true
-                    $pct = [int][Math]::Round($pStatus.BatteryLifePercent * 100)
-                    if ($pct -ge 0 -and $pct -le 100) {
-                        $bat_cap = $pct
+        $ac_online = $null
+        $bat_cap = $null
+        $has_battery = $false
+
+        # 1. Primary: .NET SystemInformation PowerStatus (Works in Windows PowerShell 5.1 & Core on Windows)
+        try {
+            if (-not ([System.Management.Automation.PSTypeName]'System.Windows.Forms.SystemInformation').Type) {
+                Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue
+            }
+            if (([System.Management.Automation.PSTypeName]'System.Windows.Forms.SystemInformation').Type) {
+                $pStatus = [System.Windows.Forms.SystemInformation]::PowerStatus
+                if ($pStatus) {
+                    $lineStatus = $pStatus.PowerLineStatus.ToString()
+                    if ($lineStatus -eq "Online") {
+                        $ac_online = $true
+                    } elseif ($lineStatus -eq "Offline") {
+                        $ac_online = $false
+                    }
+                    $chargeStatus = $pStatus.BatteryChargeStatus
+                    if (-not $chargeStatus.HasFlag([System.Windows.Forms.BatteryChargeStatus]::NoSystemBattery)) {
+                        $has_battery = $true
+                        $pct = [int][Math]::Round($pStatus.BatteryLifePercent * 100)
+                        if ($pct -ge 0 -and $pct -le 100) {
+                            $bat_cap = $pct
+                        }
                     }
                 }
             }
+        } catch {}
+
+        # 2. Secondary fallback: root/wmi:BatteryStatus (AC line online check)
+        if ($ac_online -eq $null) {
+            try {
+                $wmiBat = Get-CimInstance -Namespace root/wmi -ClassName BatteryStatus -ErrorAction SilentlyContinue
+                if ($wmiBat) {
+                    $firstBat = if ($wmiBat -is [array]) { $wmiBat[0] } else { $wmiBat }
+                    if ($firstBat.PowerOnline -ne $null) {
+                        $ac_online = [bool]$firstBat.PowerOnline
+                        $has_battery = $true
+                    }
+                }
+            } catch {}
+        }
+
+        # 3. Tertiary fallback: Win32_Battery
+        if ($ac_online -eq $null) {
+            try {
+                $win32Bat = Get-CimInstance -ClassName Win32_Battery -ErrorAction SilentlyContinue
+                if ($win32Bat) {
+                    $has_battery = $true
+                    $bObj = if ($win32Bat -is [array]) { $win32Bat[0] } else { $win32Bat }
+                    $st = [int]$bObj.BatteryStatus
+                    if ($bObj.EstimatedChargeRemaining -ne $null) {
+                        $bat_cap = [int]$bObj.EstimatedChargeRemaining
+                    }
+                    # 3=Fully Charged, 6,7,8,9=Charging -> AC Online
+                    if ($st -in 3, 6, 7, 8, 9) {
+                        $ac_online = $true
+                    } elseif ($st -in 1, 2, 4, 5) {
+                        $ac_online = $false
+                    }
+                }
+            } catch {}
+        }
+
+        # Desktop PC without battery
+        if ($ac_online -eq $null -and -not $has_battery) {
+            $ac_online = $true
+        }
+
+        if ($ac_online -eq $true) {
+            $POWER_FMT = (make_badge $ICON_AC "AC" "76")
+        } elseif ($has_battery -or $ac_online -eq $false) {
+            $lbl = if ($bat_cap -ne $null -and $bat_cap -ge 0) { "${bat_cap}%" } else { "BAT" }
+            $POWER_FMT = (make_badge $ICON_BAT $lbl "214")
         }
     } catch {}
-
-    # 2. Secondary fallback: root/wmi:BatteryStatus (AC line online check)
-    if ($ac_online -eq $null) {
-        try {
-            $wmiBat = Get-CimInstance -Namespace root/wmi -ClassName BatteryStatus -ErrorAction SilentlyContinue
-            if ($wmiBat) {
-                $firstBat = if ($wmiBat -is [array]) { $wmiBat[0] } else { $wmiBat }
-                if ($firstBat.PowerOnline -ne $null) {
-                    $ac_online = [bool]$firstBat.PowerOnline
-                    $has_battery = $true
-                }
-            }
-        } catch {}
-    }
-
-    # 3. Tertiary fallback: Win32_Battery
-    if ($ac_online -eq $null) {
-        try {
-            $win32Bat = Get-CimInstance -ClassName Win32_Battery -ErrorAction SilentlyContinue
-            if ($win32Bat) {
-                $has_battery = $true
-                $bObj = if ($win32Bat -is [array]) { $win32Bat[0] } else { $win32Bat }
-                $st = [int]$bObj.BatteryStatus
-                if ($bObj.EstimatedChargeRemaining -ne $null) {
-                    $bat_cap = [int]$bObj.EstimatedChargeRemaining
-                }
-                # 3=Fully Charged, 6,7,8,9=Charging -> AC Online
-                if ($st -in 3, 6, 7, 8, 9) {
-                    $ac_online = $true
-                } elseif ($st -in 1, 2, 4, 5) {
-                    $ac_online = $false
-                }
-            }
-        } catch {}
-    }
-
-    # Desktop PC without battery
-    if ($ac_online -eq $null -and -not $has_battery) {
-        $ac_online = $true
-    }
-
-    if ($ac_online -eq $true) {
-        $POWER_FMT = (make_badge $ICON_AC "AC" "76")
-    } elseif ($has_battery -or $ac_online -eq $false) {
-        $lbl = if ($bat_cap -ne $null -and $bat_cap -ge 0) { "${bat_cap}%" } else { "BAT" }
-        $POWER_FMT = (make_badge $ICON_BAT $lbl "214")
-    }
-} catch {}
+}
 
 # State Indicator
 $S = ""
-switch ($STATE) {
-    "idle"     { $S = "${FG_BRIGHT_GREEN}${B} ${ICON_READY} READY${R}" }
-    "thinking" { $S = "${FG_BRIGHT_YELLOW}${B} ${ICON_THINKING} THINKING${R}" }
-    "working"  { $S = "${FG_BRIGHT_CYAN}${B} ${ICON_WORKING} WORKING${R}" }
-    "tool_use" { $S = "${FG_BRIGHT_MAGENTA}${B} ${ICON_TOOL} TOOL${R}" }
-    default    { $S = "${FG_WHITE}${B} ${ICON_STATE_UNKNOWN} $($STATE.ToUpper())${R}" }
+if ($SHOW_STATE) {
+    switch ($STATE) {
+        "idle"     { $S = "${FG_BRIGHT_GREEN}${B} ${ICON_READY} READY${R}" }
+        "thinking" { $S = "${FG_BRIGHT_YELLOW}${B} ${ICON_THINKING} THINKING${R}" }
+        "working"  { $S = "${FG_BRIGHT_CYAN}${B} ${ICON_WORKING} WORKING${R}" }
+        "tool_use" { $S = "${FG_BRIGHT_MAGENTA}${B} ${ICON_TOOL} TOOL${R}" }
+        default    { $S = "${FG_WHITE}${B} ${ICON_STATE_UNKNOWN} $($STATE.ToUpper())${R}" }
+    }
 }
 
 # Vim Mode (#62)
 $VIM_FMT = ""
-if ($VIM_MODE) {
+if ($SHOW_VIM -and $VIM_MODE) {
     $vim_mode_upper = $VIM_MODE.ToUpper()
     $vim_color = $FG_BRIGHT_CYAN
     switch -Wildcard ($vim_mode_upper) {
@@ -598,15 +704,15 @@ if ($VIM_MODE) {
         default         { $vim_color = $FG_BRIGHT_CYAN }
     }
     if ($USE_CLASSIC_ICONS) {
-        $VIM_FMT = "${DOT_L1}${vim_color}[${VIM_MODE}]${R}"
+        $VIM_FMT = "${vim_color}[${VIM_MODE}]${R}"
     } else {
-        $VIM_FMT = "${DOT_L1}${vim_color}${B}[${VIM_MODE}]${R}"
+        $VIM_FMT = "${vim_color}${B}[${VIM_MODE}]${R}"
     }
 }
 
 # VCS Branch details
 $V = ""
-if ($VCS_BRANCH) {
+if ($SHOW_BRANCH -and $VCS_BRANCH) {
     $max_b = if ($COLS -lt 90) { 16 } elseif ($COLS -lt 120) { 24 } else { 35 }
     $b_name = $VCS_BRANCH
     if ($b_name.Length -gt $max_b) {
@@ -614,15 +720,15 @@ if ($VCS_BRANCH) {
     }
     if ($VCS_DIRTY -eq $true) {
         if ($USE_CLASSIC_ICONS) {
-            $V = "${DOT_L1}${FG_BRIGHT_RED}${b_name}${FG_BRIGHT_YELLOW}*${R}"
+            $V = "${FG_BRIGHT_RED}${b_name}${FG_BRIGHT_YELLOW}*${R}"
         } else {
-            $V = "${DOT_L1}${R}${FG_BRIGHT_RED}${ICON_VCS} ${b_name}${FG_BRIGHT_YELLOW}*${R}"
+            $V = "${R}${FG_BRIGHT_RED}${ICON_VCS} ${b_name}${FG_BRIGHT_YELLOW}*${R}"
         }
     } else {
         if ($USE_CLASSIC_ICONS) {
-            $V = "${DOT_L1}${FG_BRIGHT_BLUE}${b_name}${R}"
+            $V = "${FG_BRIGHT_BLUE}${b_name}${R}"
         } else {
-            $V = "${DOT_L1}${R}${FG_BRIGHT_BLUE}${ICON_VCS} ${b_name}${R}"
+            $V = "${R}${FG_BRIGHT_BLUE}${ICON_VCS} ${b_name}${R}"
         }
     }
 }
@@ -630,15 +736,15 @@ if ($VCS_BRANCH) {
 # Model details
 $disp = if ($MODEL_NAME) { $MODEL_NAME } else { $MODEL_ID }
 $M = ""
-if ($disp) {
+if ($SHOW_MODEL -and $disp) {
     $max_m = if ($COLS -lt 90) { 16 } elseif ($COLS -lt 120) { 24 } else { 35 }
     if ($disp.Length -gt $max_m) {
         $disp = $disp.Substring(0, $max_m - 3) + "..."
     }
     if ($USE_CLASSIC_ICONS) {
-        $M = "${DOT_L1}${FG_BRIGHT_MAGENTA}${I}${disp}${R}"
+        $M = "${FG_BRIGHT_MAGENTA}${I}${disp}${R}"
     } else {
-        $M = "${DOT_L1}${FG_BRIGHT_MAGENTA}${I}${ICON_MODEL} ${disp}${R}"
+        $M = "${FG_BRIGHT_MAGENTA}${I}${ICON_MODEL} ${disp}${R}"
     }
 }
 
@@ -725,21 +831,21 @@ if ($USE_CLASSIC_ICONS) {
 }
 
 $DIR_FMT = ""
-if ($CWD_SHORT) {
+if ($SHOW_DIR -and $CWD_SHORT) {
     if ($USE_CLASSIC_ICONS) {
-        $DIR_FMT = "${DOT_L1}${FG_CYAN}${CWD_SHORT}${R}"
+        $DIR_FMT = "${FG_CYAN}${CWD_SHORT}${R}"
     } else {
-        $DIR_FMT = "${DOT_L1}${FG_CYAN}${ICON_DIR} ${CWD_SHORT}${R}"
+        $DIR_FMT = "${FG_CYAN}${ICON_DIR} ${CWD_SHORT}${R}"
     }
 }
 
 $CONV_FMT = ""
-if ($CONV_ID -and $COLS -ge 80) {
+if ($SHOW_CONV -and $CONV_ID -and $COLS -ge 80) {
     $short_conv = $CONV_ID.Substring(0, [Math]::Min(8, $CONV_ID.Length))
     if ($USE_CLASSIC_ICONS) {
-        $CONV_FMT = "${DOT_L1}${FG_GRAY}${short_conv}${R}"
+        $CONV_FMT = "${FG_GRAY}${short_conv}${R}"
     } else {
-        $CONV_FMT = "${DOT_L1}${FG_GRAY}${ICON_CONV} ${short_conv}${R}"
+        $CONV_FMT = "${FG_GRAY}${ICON_CONV} ${short_conv}${R}"
     }
 }
 
@@ -900,39 +1006,32 @@ function print_right_aligned($left, $right, $total_cols) {
     return "${left}${spaces}${right}"
 }
 
-# Smart Dynamic Line-Packing Engine
-$LINE1 = "$S$VIM_FMT$V$M$DIR_FMT$CONV_FMT$HOST_FMT$USER_FMT$CLI_VER_FMT"
+# Assemble active Line 1 segments dynamically
+$ACTIVE_L1 = @()
+if ($S) { $ACTIVE_L1 += @{ name = "state"; text = $S } }
+if ($VIM_FMT) { $ACTIVE_L1 += @{ name = "vim"; text = $VIM_FMT } }
+if ($V) { $ACTIVE_L1 += @{ name = "branch"; text = $V } }
+if ($M) { $ACTIVE_L1 += @{ name = "model"; text = $M } }
+if ($DIR_FMT) { $ACTIVE_L1 += @{ name = "dir"; text = $DIR_FMT } }
+if ($CONV_FMT) { $ACTIVE_L1 += @{ name = "conv"; text = $CONV_FMT } }
+if ($HOST_FMT) { $ACTIVE_L1 += @{ name = "host"; text = $HOST_FMT } }
+if ($USER_FMT) { $ACTIVE_L1 += @{ name = "account"; text = $USER_FMT } }
+if ($CLI_VER_FMT) { $ACTIVE_L1 += @{ name = "version"; text = $CLI_VER_FMT } }
 
 # Responsive layout protection: ensure LINE1 never wraps on widths 60-255
 $max_l1 = if ($USE_CLASSIC_ICONS) { $COLS - 1 } else { $COLS - 3 }
-if ((visible_len $LINE1) -gt $max_l1) {
-    $LINE1 = "$S$VIM_FMT$V$M$DIR_FMT$CONV_FMT$HOST_FMT$CLI_VER_FMT"
+$drop_priority = @("account", "version", "host", "conv", "dir", "model", "branch", "vim")
+foreach ($drop_name in $drop_priority) {
+    if ((visible_len (Format-Line1 $ACTIVE_L1)) -le $max_l1 -or $ACTIVE_L1.Count -le 1) {
+        break
+    }
+    $ACTIVE_L1 = @($ACTIVE_L1 | Where-Object { $_.name -ne $drop_name })
 }
-if ((visible_len $LINE1) -gt $max_l1) {
-    $LINE1 = "$S$VIM_FMT$V$M$DIR_FMT$CONV_FMT$HOST_FMT"
-}
-if ((visible_len $LINE1) -gt $max_l1) {
-    $LINE1 = "$S$VIM_FMT$V$M$DIR_FMT$CONV_FMT"
-}
-if ((visible_len $LINE1) -gt $max_l1) {
-    $LINE1 = "$S$VIM_FMT$V$M$DIR_FMT"
-}
-if ((visible_len $LINE1) -gt $max_l1) {
-    $LINE1 = "$S$VIM_FMT$V$M"
-}
-if ((visible_len $LINE1) -gt $max_l1) {
-    $LINE1 = "$S$VIM_FMT$V"
-}
-if ((visible_len $LINE1) -gt $max_l1) {
-    $LINE1 = "$S$VIM_FMT"
-}
-if ((visible_len $LINE1) -gt $max_l1) {
-    $LINE1 = "$S"
-}
+$LINE1 = Format-Line1 $ACTIVE_L1
 
 $BADGE_LIST = @()
-if ($CTX_BAR) { $BADGE_LIST += $CTX_BAR }
-if ($CTX_USED -gt 0) {
+if ($SHOW_CONTEXT_USAGE -and $CTX_BAR) { $BADGE_LIST += $CTX_BAR }
+if ($SHOW_TOKENS_USAGE -and $CTX_USED -gt 0) {
     $turn_str = ""
     if (($TURN_INPUT_TOKENS -gt 0 -or $TURN_OUTPUT_TOKENS -gt 0) -and $COLS -ge 100) {
         $turn_str = " | turn: +${TURN_INPUT_FMT}/${TURN_OUTPUT_FMT}"
@@ -943,13 +1042,15 @@ if ($CTX_USED -gt 0) {
         $BADGE_LIST += (make_badge $ICON_TOK_SUM "total: ${INPUT_TOK_FMT}/${OUTPUT_TOK_FMT}${turn_str}" "220")
     }
 }
-if ($ART_FMT) { $BADGE_LIST += $ART_FMT }
-if ($SUB_FMT) { $BADGE_LIST += $SUB_FMT }
-if ($BG_FMT) { $BADGE_LIST += $BG_FMT }
-if ($SB) { $BADGE_LIST += $SB }
-if ($Q_5H -ne $null -and $Q_5H -ne -1) { $BADGE_LIST += (make_quota_bar $Q_5H "5H" $FG_BRIGHT_CYAN $Q_5H_R) }
-if ($Q_WK -ne $null -and $Q_WK -ne -1) { $BADGE_LIST += (make_quota_bar $Q_WK "7D" $FG_BRIGHT_MAGENTA $Q_WK_R) }
-if ($POWER_FMT) { $BADGE_LIST += $POWER_FMT }
+if ($SHOW_ARTIFACTS -and $ART_FMT) { $BADGE_LIST += $ART_FMT }
+if ($SHOW_SUBAGENTS -and $SUB_FMT) { $BADGE_LIST += $SUB_FMT }
+if ($SHOW_TASKS -and $BG_FMT) { $BADGE_LIST += $BG_FMT }
+if ($SHOW_SANDBOX -and $SB) { $BADGE_LIST += $SB }
+if ($SHOW_QUOTA) {
+    if ($Q_5H -ne $null -and $Q_5H -ne -1) { $BADGE_LIST += (make_quota_bar $Q_5H "5H" $FG_BRIGHT_CYAN $Q_5H_R) }
+    if ($Q_WK -ne $null -and $Q_WK -ne -1) { $BADGE_LIST += (make_quota_bar $Q_WK "7D" $FG_BRIGHT_MAGENTA $Q_WK_R) }
+}
+if ($SHOW_POWER -and $POWER_FMT) { $BADGE_LIST += $POWER_FMT }
 
 $PACKED_LINES = @()
 $curr_line = ""
@@ -975,16 +1076,34 @@ foreach ($badge in $BADGE_LIST) {
 if ($curr_line) { $PACKED_LINES += $curr_line }
 
 if ($USE_CLASSIC_ICONS) {
-    $LINE1
-    foreach ($pline in $PACKED_LINES) { $pline }
+    if ($LINE1) {
+        $LINE1
+    }
+    if ($PACKED_LINES.Count -gt 0) {
+        foreach ($pline in $PACKED_LINES) { $pline }
+    }
 } else {
-    "${FG_GRAY}╭─${R}${LINE1}"
     $total_packed = $PACKED_LINES.Count
-    for ($i = 0; $i -lt $total_packed; $i++) {
-        if (($i + 1) -eq $total_packed) {
-            "${FG_GRAY}╰─${R}$($PACKED_LINES[$i])"
-        } else {
-            "${FG_GRAY}├─${R}$($PACKED_LINES[$i])"
+    if ($LINE1) {
+        "${FG_GRAY}╭─${R}${LINE1}"
+        for ($i = 0; $i -lt $total_packed; $i++) {
+            if (($i + 1) -eq $total_packed) {
+                "${FG_GRAY}╰─${R}$($PACKED_LINES[$i])"
+            } else {
+                "${FG_GRAY}├─${R}$($PACKED_LINES[$i])"
+            }
+        }
+    } else {
+        if ($total_packed -gt 0) {
+            for ($i = 0; $i -lt $total_packed; $i++) {
+                if ($i -eq 0) {
+                    "${FG_GRAY}╭─${R}$($PACKED_LINES[$i])"
+                } elseif (($i + 1) -eq $total_packed) {
+                    "${FG_GRAY}╰─${R}$($PACKED_LINES[$i])"
+                } else {
+                    "${FG_GRAY}├─${R}$($PACKED_LINES[$i])"
+                }
+            }
         }
     }
 }
