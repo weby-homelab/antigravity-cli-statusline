@@ -285,8 +285,13 @@ NUM_COLOR="${FG_BRIGHT_WHITE}${B}"
     (if (.context_window.total_input_tokens | type == "number") then .context_window.total_input_tokens else 0 end),
     (if (.context_window.total_output_tokens | type == "number") then .context_window.total_output_tokens else 0 end),
     (if (.context_window.context_window_size | type == "number") then .context_window.context_window_size else 0 end),
-    (if (.context_window.total_tokens | type == "number") and .context_window.total_tokens > 0 then
+    (if (.context_window.used_percentage | type == "number") and .context_window.used_percentage > 0 and
+         (.context_window.context_window_size | type == "number") and .context_window.context_window_size > 0 then
+      ((.context_window.used_percentage * .context_window.context_window_size / 100) | round)
+    elif (.context_window.total_tokens | type == "number") and .context_window.total_tokens > 0 then
       .context_window.total_tokens
+    elif (.context_window.total_input_tokens | type == "number") and .context_window.total_input_tokens > 0 then
+      .context_window.total_input_tokens
     else
       ((if (.context_window.total_input_tokens | type == "number") then .context_window.total_input_tokens else 0 end) +
        (if (.context_window.total_output_tokens | type == "number") then .context_window.total_output_tokens else 0 end))

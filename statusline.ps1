@@ -299,8 +299,12 @@ $OUTPUT_TOKENS = if ($data.context_window.total_output_tokens -ne $null) { Safe-
 $CTX_LIMIT = if ($data.context_window.context_window_size -ne $null) { Safe-Int64 $data.context_window.context_window_size 0 } else { 0 }
 
 $RAW_TOTAL = if ($data.context_window.total_tokens -ne $null) { Safe-Int64 $data.context_window.total_tokens 0 } else { 0 }
-if ($RAW_TOTAL -gt 0) {
+if ($data.context_window.used_percentage -ne $null -and $CTX_LIMIT -gt 0 -and $USED_PCT -gt 0) {
+    $CTX_USED = [int64][Math]::Round(($USED_PCT * $CTX_LIMIT) / 100.0)
+} elseif ($RAW_TOTAL -gt 0) {
     $CTX_USED = $RAW_TOTAL
+} elseif ($INPUT_TOKENS -gt 0) {
+    $CTX_USED = $INPUT_TOKENS
 } else {
     $CTX_USED = $INPUT_TOKENS + $OUTPUT_TOKENS
 }
