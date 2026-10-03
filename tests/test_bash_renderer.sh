@@ -210,10 +210,10 @@ assert_not_contains "$c_plain" "AC AC" "Classic mode does not duplicate AC AC"
 # Test 8: Telemetry Customization & Suppression Flags
 echo "--- Testing Telemetry Customization & Suppression Flags ---"
 
-# Baseline run with full payload at 150 cols (all fields active)
-base_out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" 2>&1 || true)
+# Baseline run with full payload at 200 cols (all fields active)
+base_out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=200 bash "$STATUSLINE" 2>&1 || true)
 base_plain=$(echo "$base_out" | strip_ansi)
-base_classic=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --classic 2>&1 || true)
+base_classic=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=200 bash "$STATUSLINE" --classic 2>&1 || true)
 base_classic_plain=$(echo "$base_classic" | strip_ansi)
 
 # Verify baseline contains expected indicators

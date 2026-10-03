@@ -301,7 +301,7 @@ class TestWindowsPowerShellParity(unittest.TestCase):
 
         def run_ps1(*args):
             cmd = [ps_bin, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ps1_path, *args]
-            res = subprocess.run(cmd, input=payload, capture_output=True, text=True, timeout=10)
+            res = subprocess.run(cmd, input=payload, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=10)
             return res.stdout
 
         # Baseline
