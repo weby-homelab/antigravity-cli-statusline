@@ -3,7 +3,7 @@
 [![Latest release](https://img.shields.io/github/v/release/weby-homelab/antigravity-cli-statusline?display_name=tag&sort=semver)](https://github.com/weby-homelab/antigravity-cli-statusline/releases/latest)
 [![Platforms](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-2563eb)](#supported-platforms)
 
-Add an adaptive statusline to [Antigravity CLI](https://github.com/weby-homelab/antigravity-cli). The Bash renderer supports Linux and macOS; the PowerShell renderer supports Windows. Both read the CLI’s JSON payload from standard input and combine it with local Git and host data.
+Add an adaptive statusline to [Antigravity CLI](https://github.com/weby-homelab/antigravity-cli). The Bash renderer supports Linux and macOS; the PowerShell renderer supports Windows. Both read the CLI’s JSON payload from standard input and supplement it with local Git and host data when available.
 
 ![Antigravity CLI Statusline in a medium terminal](screenshots/Antigravity-cli-statusline-MEDIUM-2.png)
 
@@ -12,29 +12,31 @@ Add an adaptive statusline to [Antigravity CLI](https://github.com/weby-homelab/
 
 ## What the statusline shows
 
-The renderers combine Antigravity CLI state with local Git and operating-system checks. Available fields include:
+The renderers combine Antigravity CLI payload data with local Git and operating-system checks. Available fields include:
 
 - **Agent and Vim state**: `idle`, `thinking`, `working`, and `tool_use` map to `READY`, `THINKING`, `WORKING`, and `TOOL`. Other agent states appear in uppercase. Vim mode appears when the payload contains `vim.mode`.
-- **Model and session**: model ID or display name, CLI version, and the first eight characters of the conversation ID. The conversation ID appears at 80 columns or wider.
-- **Account**: plan tier and account identifier from `plan_tier` and `email`. These appear at 130 columns or wider.
-- **Workspace**: shortened working directory and Git branch. When Git is available, the renderer marks a dirty working tree, including untracked files. Without Git, it can still use VCS values from the CLI payload.
-- **Context and tokens**: context usage bar, percentage, used-token count, and context limit when present. The renderer uses a positive `context_window.total_tokens` value; otherwise, it sums `total_input_tokens` and `total_output_tokens`. It can also show total input/output and current-turn token counts.
-- **Quota**: model-aware selection between Gemini and third-party quota buckets, remaining-use bars, and reset countdowns when the payload includes them. The renderer uses available buckets as a fallback when the preferred bucket is missing.
+- **Model and session**: model ID or display name, CLI version, and the first eight characters of the conversation ID. The conversation ID has an 80-column minimum; CLI version has a 120-column minimum.
+- **Account**: plan tier and account identifier from `plan_tier` and `email`. These fields have a 130-column minimum.
+- **Workspace**: shortened working directory and branch/dirty state. Payload-supplied VCS values are used when present. If the payload has no branch, the local Git fallback checks tracked working-tree changes; its `git status --porcelain -uno` command ignores untracked files.
+- **Context and tokens**: context usage bar, percentage, used-token count, and context limit when available. If both `context_window.used_percentage` and `context_window.context_window_size` are positive, the used-token count is `round(context_window.used_percentage × context_window.context_window_size / 100)`. Otherwise, the renderer uses a positive `context_window.total_tokens`, then a positive `context_window.total_input_tokens`, and finally the sum of `context_window.total_input_tokens` and `context_window.total_output_tokens`. PowerShell can derive a missing percentage from the used count and limit; Bash can derive a missing limit from the used count and percentage. The renderers can also show total input/output and current-turn token counts.
+- **Quota**: model-aware selection between Gemini and third-party quota buckets, remaining-use bars, and reset countdowns when the payload includes them. The renderer uses available buckets as a fallback when the preferred bucket is missing. Bash classifies third-party models by model ID; PowerShell checks both model ID and display name.
 - **Execution**: sandbox network state, artifact count for the conversation, subagent count, and running background-task count.
-- **Host**: hostname, Tailscale IPv4 address when detectable, and power or battery state when the operating system exposes it. Linux also reports one-minute load average and RAM usage from `/proc`.
+- **Host**: hostname, Tailscale IPv4 address when detectable, and power or battery state when detectable. If no battery or AC status is detected on a desktop/server, the renderer may assume AC power. Linux also reports one-minute load average and RAM usage from `/proc`.
+
+Width thresholds are minimum eligibility gates, not guarantees that a field will be shown: the payload must contain the value, and the header must have enough remaining room for it.
 
 The renderers set a one-second deadline for reading standard input. Empty or stalled input falls back to an idle payload instead of waiting indefinitely. They do not upload the CLI JSON payload to a remote service.
 
 ## Choose a display mode
 
-The default mode uses 256-color ANSI styling and [Nerd Fonts 3](https://www.nerdfonts.com/) glyphs. The renderer packs badges into box-drawn rows. Bar lengths and optional first-row fields change with the terminal width reported by Antigravity CLI.
+The default mode uses 256-color ANSI styling and [Nerd Fonts 3](https://www.nerdfonts.com/) glyphs. The renderer packs badges into box-drawn rows. Bar lengths and optional first-row fields change with the effective layout width. PowerShell uses `terminal_width` from the CLI payload; Bash prefers a positive `COLUMNS` environment value over the payload width unless a fixed-width flag is set.
 
 | Terminal width | Context bar | Quota bar | Behavior |
 | :--- | :---: | :---: | :--- |
 | **235 columns or wider** | 20 segments | 15 segments | Widest labels and optional account, host, and token fields. |
 | **180–234 columns** | 10 segments | 8 segments | More room for model, branch, account, and host fields. |
 | **130–179 columns** | 10 segments | 8 segments | Account fields can appear when the payload includes them. |
-| **100–129 columns** | 10 segments | 8 segments | Shorter first-row labels; host and version fields may fit. |
+| **100–129 columns** | 10 segments | 8 segments | Shorter first-row labels; host fields require 110 columns and version requires 120, subject to available room. |
 | **60–99 columns** | 10 segments | 8 segments | Shorter labels and more packed rows. |
 
 Both implementations use the same bar-length thresholds and greedy badge-packing approach, but their fields and options differ. Row count depends on the payload. Packing counts characters after removing ANSI codes, so terminals can wrap wide glyphs differently.
@@ -85,7 +87,7 @@ Both implementations use the same bar-length thresholds and greedy badge-packing
 
 </details>
 
-Use Classic mode if your terminal lacks Nerd Font glyphs. It uses text labels, Unicode block characters, and 16-color ANSI output; it is not ASCII-only.
+Use Classic mode if your terminal lacks Nerd Font glyphs. It uses text labels, Unicode block characters, and 16-color ANSI output; it is not ASCII-only. The powerline header and boxed-row descriptions below apply to the default styled mode; Classic mode prints unboxed rows.
 
 ## Supported platforms
 
@@ -188,7 +190,7 @@ The Bash and PowerShell renderers also accept `--no-nerdfont` and `--compatibili
 
 ### Override the layout width
 
-These width overrides are available in Bash only. The PowerShell renderer uses `terminal_width` from the Antigravity CLI payload.
+These width overrides are available in Bash only. Without one of these flags, Bash prefers a positive `COLUMNS` environment value over `terminal_width` from the Antigravity CLI payload. PowerShell uses the payload width.
 
 | Bash flag | Effective width | Result |
 | --- | ---: | --- |
@@ -200,11 +202,11 @@ Append one Bash flag to the `command` value in `settings.json` to test a fixed w
 
 ### Customize telemetry segments
 
-All telemetry segments and badges are enabled by default whenever the corresponding data is present. Customization uses exclusion-only **Suppression Flags** (`--no-*` in Bash, `--no-*` or `-No*` in PowerShell) to disable specific components without affecting other indicators.
+Implemented telemetry segments and badges are enabled by default whenever the corresponding data is present. Customization uses exclusion-only **Suppression Flags** (`--no-*` in Bash, `--no-*` or `-No*` in PowerShell). A few accepted flags currently have no rendered component to suppress; these are called out in the reference below.
 
 #### Visual structure & terminology
 
-The statusline is organized into two primary telemetry layers:
+In the default styled mode, the statusline is organized into two primary telemetry layers:
 
 - **Header Segments** (Line 1): Positioned in the top Powerline header row with directional dividers (``), indicating core session context.
 - **Pill Badges** (Lines 2+): Self-contained metrics packed into secondary boxed rows beneath the header by the dynamic **Packer**.
@@ -232,8 +234,8 @@ The statusline is organized into two primary telemetry layers:
 | :--- | :--- | :--- | :--- |
 | **Context Usage Bar** | `--no-context-usage` (`--no-context`) | `-NoContextUsage` (`-NoContext`) | Suppresses context progress bar, percentage, and token counts. |
 | **Token Totals** | `--no-tokens-usage` (`--no-tokens`) | `-NoTokensUsage` (`-NoTokens`) | Suppresses total session input/output and turn token deltas. |
-| **Cost** | `--no-cost` | `-NoCost` | Ensures cost indicators are omitted. |
-| **System Resources** | `--no-sys` (`--no-system`, `--no-resources`) | `-NoSys` (`-NoSystem`, `-NoResources`) | Suppresses CPU load average and RAM utilization (Linux). |
+| **Cost** | `--no-cost` | `-NoCost` | No cost indicator is currently rendered; this accepted flag has no visible effect. |
+| **System Resources** | `--no-sys` (`--no-system`, `--no-resources`) | `-NoSys` (`-NoSystem`, `-NoResources`; no effect) | Suppresses CPU load average and RAM utilization in the Linux Bash renderer. PowerShell currently renders no system-resource badge. |
 | **Artifacts** | `--no-artifacts` | `-NoArtifacts` | Suppresses generated artifacts counter. |
 | **Subagents** | `--no-subagents` | `-NoSubagents` | Suppresses spawned subagents counter. |
 | **Background Tasks** | `--no-tasks` | `-NoTasks` | Suppresses running background tasks counter. |
@@ -258,7 +260,7 @@ Suppression flags can be specified directly in `settings.json` or passed as argu
   --no-state --no-vim --no-branch --no-model --no-dir --no-conv --no-account --no-host --no-version
   ```
 
-For detailed architectural rationale and full configuration options, see the [Statusline Customization Guide](docs/customization.md) and architectural decisions in [docs/adr/](docs/adr/).
+This README is the current reference for the available configuration flags. See [CHANGELOG.md](CHANGELOG.md) for release-specific behavior changes.
 
 ## Verify the installation
 
@@ -298,7 +300,7 @@ Run the master suite on Linux or macOS:
 bash tests/run_all.sh
 ```
 
-It runs renderer, stdin-timeout, subagent-state, installer, and Python compatibility checks. The Python checks run when Python 3 is available.
+It runs renderer, stdin-timeout, subagent-state, and installer suites. Python 3 is required by the stdin-timeout suite; when available, the runner also executes the Python compatibility checks.
 
 Run the PowerShell renderer and Python checks on Windows:
 
@@ -359,7 +361,7 @@ Use these checks when the statusline does not render as expected:
 - **Live Git data is missing**: install Git and run Antigravity CLI inside a Git working tree. The renderer can still use VCS values from the payload.
 - **Windows reports an illegal path**: when editing `settings.json` manually, quote the `-File` path only when it contains spaces. The installer adds these quotes when needed.
 - **PowerShell 5.1 shows garbled characters**: preserve the UTF-8 BOM at the start of `statusline.ps1`. Use Classic mode if your terminal font lacks Nerd Font glyphs.
-- **Context or quota percentages are wrong in Windows PowerShell 5.1**: a comma-decimal locale issue is tracked in [issue #75](https://github.com/weby-homelab/antigravity-cli-statusline/issues/75).
+- **Context or quota percentages are wrong in Windows PowerShell 5.1**: update to v0.3.1 or newer; parsing under comma-decimal locales was fixed in v0.3.1.
 - **A narrow terminal adds rows**: this is expected when the available badges do not fit. Bash width overrides are documented above; PowerShell uses the width from the CLI payload.
 - **Host fields are missing**: the renderer omits diagnostics that the operating system or local tools do not expose.
 
