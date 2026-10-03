@@ -1,4 +1,4 @@
-# tests/test_powershell_renderer.ps1 - PowerShell test suite for Windows CI
+﻿# tests/test_powershell_renderer.ps1 - PowerShell test suite for Windows CI
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot = Split-Path -Parent $ScriptDir
@@ -268,8 +268,8 @@ Assert-Condition ($hcOut -notmatch "WORKING") "Header Collapse omits agent state
 Assert-Condition ($hcOut -notmatch "NORMAL") "Header Collapse omits vim mode"
 $cornerBox = "$([char]0x256d)$([char]0x2500)"
 $dividerBox = "$([char]0x251c)$([char]0x2500)"
-Assert-Condition ($hcLines.Count -gt 0 -and $hcLines[0] -match [regex]::Escape($cornerBox)) "Header Collapse first row starts with ╭─"
-Assert-Condition ($hcLines.Count -gt 0 -and $hcLines[0] -notmatch [regex]::Escape($dividerBox)) "Header Collapse first row does not start with divider ├─"
+Assert-Condition ($hcLines.Count -gt 0 -and $hcLines[0] -match [regex]::Escape($cornerBox)) "Header Collapse first row starts with corner box"
+Assert-Condition ($hcLines.Count -gt 0 -and $hcLines[0] -notmatch [regex]::Escape($dividerBox)) "Header Collapse first row does not start with divider box"
 Assert-Condition ($hcLines.Count -gt 0 -and $hcLines[0] -match "ctx") "Header Collapse first row contains context badge"
 
 # 9b: Single row collapsed badge
@@ -277,7 +277,7 @@ $singleBadgeArgs = $allL1 + @("--no-tokens", "--no-sys", "--no-artifacts", "--no
 $singleOut = Invoke-StatuslineProcess -Payload $testPayload -Arguments $singleBadgeArgs
 $singleLines = @($singleOut -split "`r?`n" | Where-Object { $_ -match '\S' })
 Assert-Condition ($singleLines.Count -eq 1) "Single-row collapsed badge renders exactly 1 row (got $($singleLines.Count))"
-Assert-Condition ($singleLines.Count -eq 1 -and $singleLines[0] -match [regex]::Escape($cornerBox)) "Single-row collapsed badge starts with ╭─"
+Assert-Condition ($singleLines.Count -eq 1 -and $singleLines[0] -match [regex]::Escape($cornerBox)) "Single-row collapsed badge starts with corner box"
 
 # 9c: Classic Header Collapse
 $classicHcOut = Invoke-StatuslineProcess -Payload $testPayload -Arguments (@("--classic") + $allL1)
