@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2026-10-04
+### Fixed & Harmonized
+- **Context Window Token Metrics Harmonization (PR #85)**:
+  - Harmonized context window token calculation (`CTX_USED`) with the active context window occupancy percentage: `round(used_percentage * context_window_size / 100)`.
+  - Resolves mathematical contradiction where `(CTX_USED/CTX_LIMIT)` was displaying cumulative lifetime session generation tokens (e.g., `512.9K/1.0M` = ~48.9%) right next to `22.9%` active context window usage.
+  - Active context window is now 100% mathematically consistent across percentage, visual bar, and token fraction, while cumulative session totals continue to be cleanly displayed in the dedicated `total: IN/OUT` badge.
+  - Preserved UTF-8 BOM encoding on `statusline.ps1` for complete backward compatibility with Windows PowerShell 5.1.
+- **Dynamic Boxed Layout & Visible Length Escape Fix (PR #84)**:
+  - Fixed ANSI escape stripping in Bash `visible_len` where literal `\033` string sequences from printf were not being stripped, resulting in inflated line lengths that exceeded terminal width and split badges across 10 individual framed rows.
+  - Re-established compact 2-3 row dynamic boxed layout (`╭─`, `├─`, `╰─`).
+
 ## [0.3.1] - 2026-10-04
 ### Fixed & Hardened
 - **Culture-Resilient Number Parsing in PowerShell (Issue #75, reported by @plwm)**:
