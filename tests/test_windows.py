@@ -4,6 +4,7 @@
 import json
 import os
 import shutil
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -277,7 +278,9 @@ class TestWindowsPowerShellParity(unittest.TestCase):
         self.assertIn('if ($total_packed -gt 0)', ps1_text)
 
     def test_powershell_execution_and_header_collapse_parity(self):
-        """When powershell or pwsh is available, execute statusline.ps1 and test runtime parity."""
+        """When powershell or pwsh is available on Windows, execute statusline.ps1 and test runtime parity."""
+        if sys.platform != "win32":
+            self.skipTest("Live PowerShell execution parity is tested on Windows runners")
         import subprocess
         ps_bin = shutil.which("powershell") or shutil.which("pwsh")
         if not ps_bin:

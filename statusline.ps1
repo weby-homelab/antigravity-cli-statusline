@@ -145,7 +145,9 @@ function Read-StatuslineInput {
 
     try {
         if ($null -eq $Reader) {
-            $Reader = [Console]::In
+            $Reader = [System.IO.StreamReader]::new(
+                [Console]::OpenStandardInput(), [System.Text.Encoding]::UTF8, $true
+            )
         } else {
             $readerType = $Reader.GetType()
             $readMethod = $readerType.GetMethod("Read", [type[]]@([char[]], [int], [int]))
