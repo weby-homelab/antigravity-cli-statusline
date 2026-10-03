@@ -52,27 +52,44 @@ foreach ($arg in $args) {
     }
 }
 
-# TextReader.ReadToEnd reads through EOF; Task.Wait(milliseconds) bounds the caller's wait.
-# Microsoft Learn: https://learn.microsoft.com/dotnet/api/system.io.textreader.readtoend
-# https://learn.microsoft.com/dotnet/api/system.threading.tasks.task.wait
+# Console.In is synchronized and may block before ReadAsync returns a task. A
+# StreamReader over the raw stdin stream can wait asynchronously for pipe data.
 function Read-StatuslineInput {
     param(
-        [System.IO.TextReader]$Reader = [Console]::In,
+        [System.IO.TextReader]$Reader = $null,
         [int]$TimeoutMilliseconds = 1000
     )
 
     try {
-        $readerMethod = $Reader.GetType().GetMethod("ReadToEnd")
-        $readDelegate = [System.Delegate]::CreateDelegate(
-            [System.Func[string]],
-            $Reader,
-            $readerMethod
-        )
-        $readTask = [System.Threading.Tasks.Task]::Run([System.Func[string]]$readDelegate)
-        if ($readTask.Wait($TimeoutMilliseconds)) {
-            $result = $readTask.Result
-            if (-not [string]::IsNullOrWhiteSpace($result)) {
-                return $result
+        if ($null -eq $Reader) {
+            $Reader = [System.IO.StreamReader]::new(
+                [Console]::OpenStandardInput(), [System.Text.Encoding]::UTF8, $true
+            )
+        }
+
+        $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+        $sb = New-Object System.Text.StringBuilder
+        $chars = New-Object char[] 4096
+
+        while ($stopwatch.ElapsedMilliseconds -lt $TimeoutMilliseconds) {
+            $remainingMs = [int]($TimeoutMilliseconds - $stopwatch.ElapsedMilliseconds)
+            if ($remainingMs -le 0) { break }
+
+            $readTask = $Reader.ReadAsync($chars, 0, $chars.Length)
+            if (-not $readTask.Wait($remainingMs)) { break }
+            $charsRead = $readTask.Result
+            if ($charsRead -le 0) { break }
+
+            [void]$sb.Append($chars, 0, $charsRead)
+            $accumulated = $sb.ToString().Trim()
+
+            if ($accumulated.StartsWith("{") -and $accumulated.EndsWith("}")) {
+                try {
+                    $null = ConvertFrom-Json $accumulated -ErrorAction Stop
+                    return $accumulated
+                } catch {
+                    # The last brace may close an inner object; keep reading.
+                }
             }
         }
     } catch {
@@ -85,12 +102,14 @@ function Read-StatuslineInput {
 
 # Read JSON input with a bounded wait. A short delay can happen during CLI startup,
 # while an open-but-empty pipe must never block the statusline indefinitely.
-$inputJson = ""
 if ([Console]::IsInputRedirected) {
     $inputJson = Read-StatuslineInput
 } else {
+    # Resolve pipeline input only here. A direct automatic-variable reference makes
+    # powershell.exe -File consume redirected stdin before the pipe reader sees it.
     try {
-        $inputJson = $input | Out-String
+        $pipelineInput = Get-Variable -Name input -ValueOnly -ErrorAction Stop
+        $inputJson = $pipelineInput | Out-String
     } catch {
         $inputJson = ""
     }
@@ -99,11 +118,11 @@ if ([Console]::IsInputRedirected) {
     }
 }
 
-# Parse JSON safely
+# Parse JSON safely with fallback to empty object for malformed or incomplete payloads
 try {
-    $data = ConvertFrom-Json $inputJson
+    $data = ConvertFrom-Json $inputJson -ErrorAction Stop
 } catch {
-    exit
+    $data = ConvertFrom-Json "{}"
 }
 
 # Helper functions for input hardening & safe type parsing
