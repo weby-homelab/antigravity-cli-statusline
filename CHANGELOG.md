@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-10-03
+### Added & Improved
+- **Statusline Telemetry Customization (PR #80 by @Jancera)**:
+  - Exclusion-only suppression flags (`--no-*` in Bash, `--no-*` and `-No*` in PowerShell) to selectively disable individual telemetry components and badges while preserving 100% default-on backward compatibility.
+  - Supports suppressing: Agent State (`--no-state`), Vim Mode (`--no-vim`), Git Branch (`--no-branch`), Model (`--no-model`), Working Directory (`--no-dir`), Conversation ID (`--no-conv`), Account & Plan (`--no-account`), Host Diagnostics (`--no-host`), CLI Version (`--no-version`), Context Usage (`--no-context-usage`), Token Totals (`--no-tokens-usage`), Cost (`--no-cost`), System Resources (`--no-sys`), Artifacts (`--no-artifacts`), Subagents (`--no-subagents`), Background Tasks (`--no-tasks`), Sandbox State (`--no-sandbox`), Quota Bars (`--no-quota`), and Power/Battery (`--no-power`).
+  - **Adaptive Header Collapse**: Omits Line 1 when all Header Segments are suppressed or empty, dynamically adjusting the box border (`╭─` on the first badge row) without rendering an empty top frame.
+  - **Full Suppression Protection**: Suppressing all components yields clean empty output (0 bytes) without leftover border frames.
+  - **Installer Argument Forwarding**: Customization flags passed to `install.sh` and `install.ps1` are automatically forwarded into `statusLine.command` in `settings.json`.
+  - **Bash 3.2 Safeguard**: Protected empty array expansions under `set -u` on macOS default Bash.
+
+### Fixed & Hardened
+- **PowerShell Stdin Stream Resilience (PR #79 by @onenowy)**:
+  - Replaced synchronous `ReadToEnd` blocking wait with an asynchronous chunked stream reader (`[System.IO.StreamReader]::new([Console]::OpenStandardInput(), [System.Text.Encoding]::UTF8, $true)`), reading until a complete JSON object is received.
+  - Eliminates telemetry dropping and quota masking on Windows when standard input remains open without immediate EOF.
+  - Isolated pipeline `$input` evaluation to prevent `powershell.exe -File` from consuming redirected stdin before the stream reader executes.
+  - Fallback to empty JSON object `{}` for malformed or incomplete payloads to guarantee resilient fallback statusline rendering.
+- **PowerShell Test Suite Encoding & Mock Hardening**:
+  - Added UTF-8 BOM to `tests/test_powershell_renderer.ps1` to prevent Windows-1252 character corruption under Windows PowerShell 5.1.
+  - Hardened box border regex assertions using character codes `$([char]0x256d)$([char]0x2500)` and `$([char]0x251c)$([char]0x2500)`.
+  - Updated `StatuslineTestTextReader` mock to implement both `Read` and `ReadToEnd`.
+
 ## [0.2.6] - 2026-09-23
 ### Fixed & Improved
 - **Stdin Startup Resilience (PR #74)**: Increased the bounded read windows in PowerShell and Bash to accommodate delayed startup payloads; PowerShell now renders a minimal idle statusline when stdin is empty or remains open, instead of exiting silently or hanging.

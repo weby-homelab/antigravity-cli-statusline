@@ -78,7 +78,8 @@ assert_contains "$delayed_plain" "14.2%" "Payload arriving after 400ms is still 
 # Test 2: CLI Flags
 echo "--- Testing CLI Flags ---"
 ver_out=$(bash "$STATUSLINE" --version 2>&1)
-assert_contains "$ver_out" "0.2.6" "Version flag reports 0.2.6"
+assert_contains "$ver_out" "0.3.0" "Version flag reports 0.3.0"
+assert_not_contains "$ver_out" "0.2.6" "Version flag does not contain stale 0.2.6"
 assert_not_contains "$ver_out" "0.2.5" "Version flag does not contain stale 0.2.5"
 assert_not_contains "$ver_out" "0.2.4" "Version flag does not contain stale 0.2.4"
 assert_not_contains "$ver_out" "0.2.2" "Version flag does not contain stale 0.2.2"
@@ -209,10 +210,10 @@ assert_not_contains "$c_plain" "AC AC" "Classic mode does not duplicate AC AC"
 # Test 8: Telemetry Customization & Suppression Flags
 echo "--- Testing Telemetry Customization & Suppression Flags ---"
 
-# Baseline run with full payload at 150 cols (all fields active)
-base_out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" 2>&1 || true)
+# Baseline run with full payload at 200 cols (all fields active)
+base_out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=200 bash "$STATUSLINE" 2>&1 || true)
 base_plain=$(echo "$base_out" | strip_ansi)
-base_classic=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --classic 2>&1 || true)
+base_classic=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=200 bash "$STATUSLINE" --classic 2>&1 || true)
 base_classic_plain=$(echo "$base_classic" | strip_ansi)
 
 # Verify baseline contains expected indicators
@@ -226,7 +227,9 @@ assert_contains "$base_plain" "rekvizitor" "Baseline contains user account"
 assert_contains "$base_plain" "v0.2.4" "Baseline contains version"
 assert_contains "$base_plain" "14.2%" "Baseline contains context bar percentage"
 assert_contains "$base_plain" "88.2K/61.1K" "Baseline contains token sum"
-assert_contains "$base_plain" "RAM:" "Baseline contains sys RAM"
+if [ -f /proc/meminfo ]; then
+  assert_contains "$base_plain" "RAM:" "Baseline contains sys RAM"
+fi
 assert_contains "$base_plain" "net-on" "Baseline contains sandbox status"
 assert_contains "$base_plain" "5H" "Baseline contains quota 5H"
 assert_contains "$base_plain" "7D" "Baseline contains quota 7D"
