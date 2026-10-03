@@ -286,10 +286,11 @@ class TestWindowsPowerShellParity(unittest.TestCase):
         if not ps_bin:
             self.skipTest("PowerShell executable not found on this runner (skipped live execution)")
 
+        current_branch = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True).stdout.strip() or "main"
         payload = json.dumps({
             "agent_state": "working",
             "terminal_width": 150,
-            "vcs": {"branch": "main", "dirty": False},
+            "vcs": {"branch": current_branch, "dirty": False},
             "model": {"id": "gemini-2.0-flash", "display_name": "Gemini 2.0 Flash"},
             "context_window": {
                 "used_percentage": 14.2,
@@ -311,7 +312,6 @@ class TestWindowsPowerShellParity(unittest.TestCase):
         base = run_ps1()
         self.assertIn("WORKING", base)
         self.assertIn("NORMAL", base)
-        current_branch = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True).stdout.strip()
         if current_branch:
             self.assertIn(current_branch, base)
         self.assertIn("Gemini 2.0 Flash", base)

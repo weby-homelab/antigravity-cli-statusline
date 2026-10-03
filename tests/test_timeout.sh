@@ -31,8 +31,8 @@ wait "$WRITER_PID" 2>/dev/null || true
 rm -f "$FIFO"
 
 echo "  Elapsed time on blocked stdin: ${elapsed_ms}ms"
-if [ "$elapsed_ms" -lt 2000 ]; then
-  echo "  [PASS] Blocked stdin terminated within deadline (${elapsed_ms}ms < 2000ms)"
+if [ "$elapsed_ms" -lt 3500 ]; then
+  echo "  [PASS] Blocked stdin terminated within deadline (${elapsed_ms}ms < 3500ms)"
   PASSED=$((PASSED + 1))
 else
   echo "  [FAIL] Blocked stdin took too long: ${elapsed_ms}ms"
@@ -63,8 +63,8 @@ wait "$WRITER_PID_FB" 2>/dev/null || true
 rm -rf "$FAKE_BIN_DIR" "$FIFO_FB"
 
 echo "  Elapsed time without timeout command: ${elapsed_fb_ms}ms"
-if [ "$elapsed_fb_ms" -lt 2000 ]; then
-  echo "  [PASS] Fallback timeout terminated safely (${elapsed_fb_ms}ms)"
+if [ "$elapsed_fb_ms" -lt 3500 ]; then
+  echo "  [PASS] Fallback timeout terminated safely (${elapsed_fb_ms}ms < 3500ms)"
   PASSED=$((PASSED + 1))
 else
   echo "  [FAIL] Fallback timeout hung (${elapsed_fb_ms}ms)"

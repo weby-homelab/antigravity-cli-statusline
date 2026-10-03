@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # statusline.sh - Resilient and Maximized Telemetry Statusline for Antigravity CLI
 # Built with premium 256-color powerline theme & instant system diagnostics
 
@@ -31,11 +31,11 @@ SHOW_POWER=true
 for arg in "$@"; do
   case "$arg" in
     --version|-v)
-      echo "Antigravity CLI Statusline v0.3.0"
+      echo "Antigravity CLI Statusline v0.3.1"
       exit 0
       ;;
     --legend|-l|legend)
-      echo -e "\033[92m\033[1m🚀 Antigravity CLI Maximized Statusline Legend (v0.3.0)\033[0m"
+      echo -e "\033[92m\033[1m🚀 Antigravity CLI Maximized Statusline Legend (v0.3.1)\033[0m"
       echo -e "This statusline adapts dynamically to terminal width and displays high-density system & agent telemetry."
       echo -e ""
       echo -e "\033[1mLAYOUTS & AUTO-PACKING:\033[0m"
@@ -311,6 +311,7 @@ NUM_COLOR="${FG_BRIGHT_WHITE}${B}"
 # ─── Dynamic String Sanitization (Defensive against ANSI, newlines, control chars)
 sanitize_str() {
   local s="$1"
+  [ -z "$s" ] && return 0
   s=$(printf '%s' "$s" | sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g')
   printf '%s' "$s" | tr -d '[:cntrl:]'
 }
@@ -555,19 +556,24 @@ else
 fi
 
 if [ "$SHOW_BRANCH" = "true" ]; then
-  GIT_DIR="${CWD:-.}"
-  git_branch=$(run_with_timeout 1 git -C "$GIT_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
-  if [ -n "$git_branch" ]; then
-    VCS_BRANCH="$git_branch"
-    VCS_TYPE="git"
-    if run_with_timeout 1 git -C "$GIT_DIR" status --porcelain 2>/dev/null | grep -q .; then
-      VCS_DIRTY="true"
-    else
-      VCS_DIRTY="false"
-    fi
+  if [ -n "$VCS_BRANCH" ]; then
+    VCS_TYPE="${VCS_TYPE:-git}"
   else
-    if [ -n "$VCS_BRANCH" ]; then
-      VCS_TYPE="${VCS_TYPE:-git}"
+    GIT_DIR="${CWD:-.}"
+    if [ -d "$GIT_DIR" ]; then
+      git_branch=$(run_with_timeout 1 git -C "$GIT_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+      if [ -n "$git_branch" ]; then
+        VCS_BRANCH="$git_branch"
+        VCS_TYPE="git"
+        if [ -n "$(run_with_timeout 1 git -C "$GIT_DIR" status --porcelain -uno 2>/dev/null | head -n 1)" ]; then
+          VCS_DIRTY="true"
+        else
+          VCS_DIRTY="false"
+        fi
+      else
+        VCS_TYPE=""
+        VCS_DIRTY="false"
+      fi
     else
       VCS_TYPE=""
       VCS_DIRTY="false"
@@ -642,7 +648,13 @@ shorten_path() {
 CWD_SHORT=$(shorten_path "$CWD")
 
 visible_len() {
-  printf '%s' "$(echo -e "$1" | sed 's/\x1b\[[0-9;]*m//g')" | wc -m
+  local str="$1"
+  local esc=$'\e'
+  local re="$esc\[[0-9;]*m"
+  while [[ "$str" =~ $re ]]; do
+    str="${str//${BASH_REMATCH[0]}/}"
+  done
+  echo "${#str}"
 }
 
 # Get Tailscale and Host Info
@@ -719,7 +731,21 @@ if [ "$SHOW_POWER" = "true" ]; then
       AC_CONNECTED=1
     fi
   elif command -v pmset &>/dev/null; then
-    pmset_out=$(pmset -g batt 2>/dev/null || echo "")
+    cache_file="/tmp/agy_pmset_cache_${UID:-$(id -u)}"
+    pmset_out=""
+    now=$(date +%s 2>/dev/null || echo 0)
+    if [ -f "$cache_file" ]; then
+      cache_mtime=$(stat -c %Y "$cache_file" 2>/dev/null || stat -f %m "$cache_file" 2>/dev/null || echo 0)
+      if [ $(( now - cache_mtime )) -le 15 ]; then
+        pmset_out=$(cat "$cache_file" 2>/dev/null || echo "")
+      fi
+    fi
+    if [ -z "$pmset_out" ]; then
+      pmset_out=$(pmset -g batt 2>/dev/null || echo "")
+      if [ -n "$pmset_out" ]; then
+        printf '%s' "$pmset_out" > "$cache_file" 2>/dev/null || true
+      fi
+    fi
     if [ -z "$pmset_out" ] || echo "$pmset_out" | grep -q -i "No battery"; then
       AC_CONNECTED=1
       HAS_SYS_BATTERY=0
