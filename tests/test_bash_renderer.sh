@@ -227,7 +227,9 @@ assert_contains "$base_plain" "rekvizitor" "Baseline contains user account"
 assert_contains "$base_plain" "v0.2.4" "Baseline contains version"
 assert_contains "$base_plain" "14.2%" "Baseline contains context bar percentage"
 assert_contains "$base_plain" "88.2K/61.1K" "Baseline contains token sum"
-assert_contains "$base_plain" "RAM:" "Baseline contains sys RAM"
+if [ -f /proc/meminfo ]; then
+  assert_contains "$base_plain" "RAM:" "Baseline contains sys RAM"
+fi
 assert_contains "$base_plain" "net-on" "Baseline contains sandbox status"
 assert_contains "$base_plain" "5H" "Baseline contains quota 5H"
 assert_contains "$base_plain" "7D" "Baseline contains quota 7D"

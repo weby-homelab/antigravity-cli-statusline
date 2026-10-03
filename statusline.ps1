@@ -145,9 +145,7 @@ function Read-StatuslineInput {
 
     try {
         if ($null -eq $Reader) {
-            $Reader = [System.IO.StreamReader]::new(
-                [Console]::OpenStandardInput(), [System.Text.Encoding]::UTF8, $true
-            )
+            $Reader = [Console]::In
         } else {
             $readerType = $Reader.GetType()
             $readMethod = $readerType.GetMethod("Read", [type[]]@([char[]], [int], [int]))
@@ -192,6 +190,14 @@ function Read-StatuslineInput {
                     # The last brace may close an inner object; keep reading.
                 }
             }
+        }
+
+        $accumulated = $sb.ToString().Trim()
+        if ($accumulated.StartsWith("{") -and $accumulated.EndsWith("}")) {
+            try {
+                $null = ConvertFrom-Json $accumulated -ErrorAction Stop
+                return $accumulated
+            } catch {}
         }
     } catch {
         # A missing, closed, or unreadable stdin should not suppress the whole statusline.
