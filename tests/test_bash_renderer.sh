@@ -100,6 +100,13 @@ ctx_exp_out=$(cat "${FIXTURES}/context_window_explicit.json" | bash "$STATUSLINE
 ctx_exp_plain=$(echo "$ctx_exp_out" | strip_ansi)
 assert_contains "$ctx_exp_plain" "149.3K" "Context explicit total_tokens displays 149.3K"
 
+# Multi-turn session context token harmony: cumulative session output must not distort active context
+multi_turn_payload='{"agent_state":"idle","terminal_width":120,"context_window":{"total_input_tokens":240123,"total_output_tokens":272777,"context_window_size":1048576,"used_percentage":22.9}}'
+multi_turn_plain=$(printf '%s' "$multi_turn_payload" | bash "$STATUSLINE" --classic 2>&1 | strip_ansi || true)
+assert_contains "$multi_turn_plain" "22.9%" "Multi-turn context percentage ~22.9%"
+assert_contains "$multi_turn_plain" "240.1K/1.0M" "Multi-turn context used displays 240.1K/1.0M without cumulative output distortion"
+
+
 # Test 4: Model-aware Quota Resolution
 echo "--- Testing Model-Aware Quota Selection ---"
 claude_out=$(cat "${FIXTURES}/quota_both_claude_model.json" | bash "$STATUSLINE" --classic 2>&1 || true)
