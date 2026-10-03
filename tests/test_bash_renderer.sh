@@ -78,7 +78,8 @@ assert_contains "$delayed_plain" "14.2%" "Payload arriving after 400ms is still 
 # Test 2: CLI Flags
 echo "--- Testing CLI Flags ---"
 ver_out=$(bash "$STATUSLINE" --version 2>&1)
-assert_contains "$ver_out" "0.3.0" "Version flag reports 0.3.0"
+assert_contains "$ver_out" "0.3.1" "Version flag reports 0.3.1"
+assert_not_contains "$ver_out" "0.3.0" "Version flag does not contain stale 0.3.0"
 assert_not_contains "$ver_out" "0.2.6" "Version flag does not contain stale 0.2.6"
 assert_not_contains "$ver_out" "0.2.5" "Version flag does not contain stale 0.2.5"
 assert_not_contains "$ver_out" "0.2.4" "Version flag does not contain stale 0.2.4"

@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-10-04
+### Fixed & Hardened
+- **Culture-Resilient Number Parsing in PowerShell (Issue #75, reported by @plwm)**:
+  - Fixed decimal parsing bug where European/Polish/German/Ukrainian locales with comma decimal separators caused `14.2%` context usage to be incorrectly parsed as `142%` due to `NumberStyles.Any` treating commas as thousand separators under `InvariantCulture`.
+  - `Safe-Double` now directly preserves native numeric types (`[double]`, `[float]`, `[decimal]`), normalizes decimal commas to dots (`.Replace(',', '.')`), and parses using `NumberStyles.Float` under invariant culture.
+  - Hardened `Safe-Int` and `Safe-Int64` with direct type-checking and whitespace trimming.
+  - Added comprehensive multi-culture test suite covering `pl-PL`, `de-DE`, `uk-UA`, `en-US`, and `fr-FR`.
+
+### Performance & Optimization
+- **Large Repository Performance & Watchdog Elimination (Issue #81, investigated by @apklein)**:
+  - **Fast-path VCS payload handling**: Prioritize `vcs.branch` and `vcs.dirty` provided by the Antigravity CLI payload in both Bash and PowerShell scripts, eliminating redundant and blocking git subprocesses on every statusline refresh.
+  - **Optimized git fallback**: When git detection fallback is required, added `-uno` (skipping untracked files traversal) and piped to `head -n 1` so git status terminates immediately upon discovering the first dirty file without traversing massive repository trees.
+  - **Zero-fork Bash visible length calculation**: Replaced heavy subprocess pipeline (`echo -e | sed | wc -m`) with a pure Bash regex loop, speeding up ANSI stripping by over 28x (from ~690ms down to ~24ms per 100 calls) and eliminating process thrashing.
+  - **Empty string early return in string sanitization**: Added fast-path exit in `sanitize_str` to bypass `sed` and `tr` forks for empty fields.
+  - **Cached battery telemetry on macOS**: Added 15-second TTL cache for `pmset -g batt` in `/tmp/agy_pmset_cache_${UID}` to eliminate command execution latency across concurrent sessions.
+  - **Portable shebang**: Changed shebang in `statusline.sh` to `#!/usr/bin/env bash` for seamless execution across NixOS, FreeBSD, and non-standard environments.
+
 ## [0.3.0] - 2026-10-03
 ### Added & Improved
 - **Statusline Telemetry Customization (PR #80 by @Jancera)**:

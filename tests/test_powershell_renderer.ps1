@@ -1,4 +1,4 @@
-﻿# tests/test_powershell_renderer.ps1 - PowerShell test suite for Windows CI
+# tests/test_powershell_renderer.ps1 - PowerShell test suite for Windows CI
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot = Split-Path -Parent $ScriptDir
@@ -203,13 +203,14 @@ function Invoke-StatuslineProcess($payload, [string[]]$arguments) {
     return $stdout
 }
 
-$testPayload = '{"agent_state":"working","terminal_width":150,"vcs":{"branch":"main","dirty":false},"model":{"id":"gemini-2.0-flash","display_name":"Gemini 2.0 Flash"},"context_window":{"used_percentage":14.2,"total_input_tokens":88244,"total_output_tokens":61074,"context_window_size":1048576},"vim":{"mode":"NORMAL"},"conversation_id":"c40d17f851f8","plan_tier":"Pro","email":"test@example.com"}'
+$currentGitBranch = (git rev-parse --abbrev-ref HEAD 2>$null)
+if (-not $currentGitBranch) { $currentGitBranch = "main" } else { $currentGitBranch = $currentGitBranch.Trim() }
+
+$testPayload = "{`"agent_state`":`"working`",`"terminal_width`":150,`"vcs`":{`"branch`":`"$currentGitBranch`",`"dirty`":false},`"model`":{`"id`":`"gemini-2.0-flash`",`"display_name`":`"Gemini 2.0 Flash`"},`"context_window`":{`"used_percentage`":14.2,`"total_input_tokens`":88244,`"total_output_tokens`":61074,`"context_window_size`":1048576},`"vim`":{`"mode`":`"NORMAL`"},`"conversation_id`":`"c40d17f851f8`",`"plan_tier`":`"Pro`",`"email`":`"test@example.com`"}"
 
 # Test 8: Telemetry Suppression Flags & POSIX/PowerShell Switch Parity
 Write-Host "--- Test 8: Telemetry Suppression Flags & Switch Parity ---"
 $baseOut = Invoke-StatuslineProcess -Payload $testPayload -Arguments @()
-$currentGitBranch = (git rev-parse --abbrev-ref HEAD 2>$null)
-if (-not $currentGitBranch) { $currentGitBranch = "main" } else { $currentGitBranch = $currentGitBranch.Trim() }
 Assert-Condition ($baseOut -match "WORKING") "Baseline output contains agent state"
 Assert-Condition ($baseOut -match "NORMAL") "Baseline output contains vim mode"
 Assert-Condition ($baseOut -match [regex]::Escape($currentGitBranch)) "Baseline output contains VCS branch"
@@ -292,8 +293,49 @@ $fullSuppClean = $fullSuppOut.Trim()
 Assert-Condition ([string]::IsNullOrEmpty($fullSuppClean)) "Full suppression produces clean empty output (0 bytes)"
 
 $fullSuppClassicOut = Invoke-StatuslineProcess -Payload $testPayload -Arguments (@("--classic") + $allSuppArgs)
-$fullSuppClassicClean = $fullSuppClassicOut.Trim()
+$fullSuppClassicClean = if ($fullSuppClassicOut) { $fullSuppClassicOut.Trim() } else { "" }
 Assert-Condition ([string]::IsNullOrEmpty($fullSuppClassicClean)) "Full suppression in classic mode produces clean empty output"
+
+# Test 11: Culture-Resilient Safe-Double and Numeric Parsing (#75)
+Write-Host "--- Test 11: Culture-Resilient Safe-Double Parsing (#75) ---"
+$safeFuncAst = $statuslineAst.Find({
+    param($node)
+    $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+        $node.Name -in @("Safe-Int", "Safe-Int64", "Safe-Double")
+}, $true)
+foreach ($fn in $statuslineAst.EndBlock.Statements) {
+    if ($fn -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $fn.Name -in @("Safe-Int", "Safe-Int64", "Safe-Double")) {
+        . ([scriptblock]::Create($fn.Extent.Text))
+    }
+}
+
+$origCulture = [System.Threading.Thread]::CurrentThread.CurrentCulture
+try {
+    foreach ($cultureName in @("pl-PL", "de-DE", "uk-UA", "en-US", "fr-FR")) {
+        [System.Threading.Thread]::CurrentThread.CurrentCulture = [System.Globalization.CultureInfo]::GetCultureInfo($cultureName)
+
+        $dNative = Safe-Double 14.2 0.0
+        $dDot = Safe-Double "14.2" 0.0
+        $dComma = Safe-Double "14,2" 0.0
+        $dNull = Safe-Double $null 99.0
+        $dInv = Safe-Double "invalid" 42.0
+
+        Assert-Condition ($dNative -eq 14.2) "Safe-Double preserves native [double] in $cultureName"
+        Assert-Condition ($dDot -eq 14.2) "Safe-Double parses '14.2' as 14.2 in $cultureName"
+        Assert-Condition ($dComma -eq 14.2) "Safe-Double parses '14,2' as 14.2 without thousands bug (not 142) in $cultureName"
+        Assert-Condition ($dNull -eq 99.0) "Safe-Double fallback on null in $cultureName"
+        Assert-Condition ($dInv -eq 42.0) "Safe-Double fallback on invalid string in $cultureName"
+
+        $iNative = Safe-Int 42 0
+        $iStr = Safe-Int "42" 0
+        $i64Native = Safe-Int64 ([int64]88244) 0
+        $i64Str = Safe-Int64 "88244" 0
+        Assert-Condition ($iNative -eq 42 -and $iStr -eq 42) "Safe-Int parses integer correctly in $cultureName"
+        Assert-Condition ($i64Native -eq 88244 -and $i64Str -eq 88244) "Safe-Int64 parses int64 correctly in $cultureName"
+    }
+} finally {
+    [System.Threading.Thread]::CurrentThread.CurrentCulture = $origCulture
+}
 
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host " PowerShell Tests: $Passed passed, $Failed failed" -ForegroundColor Cyan

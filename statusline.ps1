@@ -31,11 +31,11 @@ $SHOW_POWER = $true
 foreach ($arg in $args) {
     $a = if ($arg) { $arg.ToString().ToLower() } else { "" }
     if ($a -in @("--version", "-version", "-v", "version")) {
-        Write-Host "Antigravity CLI Statusline v0.3.0" -ForegroundColor Green
+        Write-Host "Antigravity CLI Statusline v0.3.1" -ForegroundColor Green
         exit
     }
     if ($a -in @("--legend", "-legend", "-l", "legend")) {
-        Write-Host "🚀 Antigravity CLI Statusline Legend (v0.3.0)" -ForegroundColor Green
+        Write-Host "🚀 Antigravity CLI Statusline Legend (v0.3.1)" -ForegroundColor Green
         Write-Host "This statusline adapts dynamically to your terminal width and theme settings.`n"
         
         Write-Host "LAYOUTS:" -ForegroundColor White
@@ -244,22 +244,26 @@ function Sanitize-String($str) {
 
 function Safe-Int($val, $default = 0) {
     if ($val -eq $null) { return $default }
+    if ($val -is [int] -or $val -is [int64] -or $val -is [byte] -or $val -is [int16]) { return [int]$val }
     $res = 0
-    if ([int]::TryParse($val.ToString(), [ref]$res)) { return $res }
+    if ([int]::TryParse($val.ToString().Trim(), [System.Globalization.NumberStyles]::Integer, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$res)) { return $res }
     return $default
 }
 
 function Safe-Int64($val, $default = 0) {
     if ($val -eq $null) { return $default }
+    if ($val -is [int64] -or $val -is [int] -or $val -is [byte] -or $val -is [int16]) { return [int64]$val }
     $res = [int64]0
-    if ([int64]::TryParse($val.ToString(), [ref]$res)) { return $res }
+    if ([int64]::TryParse($val.ToString().Trim(), [System.Globalization.NumberStyles]::Integer, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$res)) { return $res }
     return $default
 }
 
 function Safe-Double($val, $default = 0.0) {
     if ($val -eq $null) { return $default }
+    if ($val -is [double] -or $val -is [float] -or $val -is [decimal] -or $val -is [int] -or $val -is [int64]) { return [double]$val }
+    $s = $val.ToString().Trim().Replace(',', '.')
     $res = [double]0.0
-    if ([double]::TryParse($val.ToString(), [System.Globalization.NumberStyles]::Any, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$res)) { return $res }
+    if ([double]::TryParse($s, [System.Globalization.NumberStyles]::Float, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$res)) { return $res }
     return $default
 }
 
@@ -397,18 +401,22 @@ function Run-WithTimeout {
     return $null
 }
 
-# VCS directly from git (Bypasses JSON caches)
+# VCS detection (Fast path: prefer payload data; fallback to git probe with -uno)
 $GIT_DIR = if ($CWD) { $CWD } else { "." }
-if ($SHOW_BRANCH -and (Test-Path "$GIT_DIR")) {
-    $gitBranch = Run-WithTimeout -Command "git" -Arguments @("-C", "`"$GIT_DIR`"", "rev-parse", "--abbrev-ref", "HEAD")
-    if ($gitBranch) {
-        $VCS_BRANCH = $gitBranch.Trim()
-        $VCS_TYPE = "git"
-        $status = Run-WithTimeout -Command "git" -Arguments @("-C", "`"$GIT_DIR`"", "status", "--porcelain")
-        if ($status) {
-            $VCS_DIRTY = $true
-        } else {
-            $VCS_DIRTY = $false
+if ($SHOW_BRANCH) {
+    if ($VCS_BRANCH) {
+        if (-not $VCS_TYPE) { $VCS_TYPE = "git" }
+    } elseif (Test-Path "$GIT_DIR") {
+        $gitBranch = Run-WithTimeout -Command "git" -Arguments @("-C", "`"$GIT_DIR`"", "rev-parse", "--abbrev-ref", "HEAD")
+        if ($gitBranch) {
+            $VCS_BRANCH = $gitBranch.Trim()
+            $VCS_TYPE = "git"
+            $status = Run-WithTimeout -Command "git" -Arguments @("-C", "`"$GIT_DIR`"", "status", "--porcelain", "-uno")
+            if ($status) {
+                $VCS_DIRTY = $true
+            } else {
+                $VCS_DIRTY = $false
+            }
         }
     }
 }
