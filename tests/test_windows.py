@@ -308,7 +308,9 @@ class TestWindowsPowerShellParity(unittest.TestCase):
         base = run_ps1()
         self.assertIn("WORKING", base)
         self.assertIn("NORMAL", base)
-        self.assertIn("main", base)
+        current_branch = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True).stdout.strip()
+        if current_branch:
+            self.assertIn(current_branch, base)
         self.assertIn("Gemini 2.0 Flash", base)
 
         # Flag and Switch parity
@@ -316,6 +318,9 @@ class TestWindowsPowerShellParity(unittest.TestCase):
         self.assertNotIn("WORKING", run_ps1("-NoState"))
         self.assertNotIn("NORMAL", run_ps1("--no-vim"))
         self.assertNotIn("NORMAL", run_ps1("-NoVim"))
+        if current_branch:
+            self.assertNotIn(current_branch, run_ps1("--no-branch"))
+            self.assertNotIn(current_branch, run_ps1("-NoBranch"))
 
         # Header Collapse
         l1_flags = ["--no-state", "--no-vim", "--no-branch", "--no-model", "--no-dir", "--no-conv", "--no-account", "--no-host", "--no-version"]

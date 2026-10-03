@@ -208,9 +208,11 @@ $testPayload = '{"agent_state":"working","terminal_width":150,"vcs":{"branch":"m
 # Test 8: Telemetry Suppression Flags & POSIX/PowerShell Switch Parity
 Write-Host "--- Test 8: Telemetry Suppression Flags & Switch Parity ---"
 $baseOut = Invoke-StatuslineProcess -Payload $testPayload -Arguments @()
+$currentGitBranch = (git rev-parse --abbrev-ref HEAD 2>$null)
+if (-not $currentGitBranch) { $currentGitBranch = "main" } else { $currentGitBranch = $currentGitBranch.Trim() }
 Assert-Condition ($baseOut -match "WORKING") "Baseline output contains agent state"
 Assert-Condition ($baseOut -match "NORMAL") "Baseline output contains vim mode"
-Assert-Condition ($baseOut -match '(main| main)') "Baseline output contains VCS branch"
+Assert-Condition ($baseOut -match [regex]::Escape($currentGitBranch)) "Baseline output contains VCS branch"
 Assert-Condition ($baseOut -match "Gemini 2\.0 Flash") "Baseline output contains active model"
 Assert-Condition ($baseOut -match "ctx") "Baseline output contains context bar"
 
@@ -229,8 +231,8 @@ Assert-Condition ($noVimPs -notmatch "NORMAL") "-NoVim suppresses vim mode"
 # VCS Branch suppression parity
 $noBranchPosix = Invoke-StatuslineProcess -Payload $testPayload -Arguments @("--no-branch")
 $noBranchPs = Invoke-StatuslineProcess -Payload $testPayload -Arguments @("-NoBranch")
-Assert-Condition ($noBranchPosix -notmatch "main") "--no-branch suppresses git branch"
-Assert-Condition ($noBranchPs -notmatch "main") "-NoBranch suppresses git branch"
+Assert-Condition ($noBranchPosix -notmatch [regex]::Escape($currentGitBranch)) "--no-branch suppresses git branch"
+Assert-Condition ($noBranchPs -notmatch [regex]::Escape($currentGitBranch)) "-NoBranch suppresses git branch"
 
 # Model suppression parity
 $noModelPosix = Invoke-StatuslineProcess -Payload $testPayload -Arguments @("--no-model")
