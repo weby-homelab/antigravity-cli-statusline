@@ -204,7 +204,7 @@ else
 fi
 
 configured_version=$(bash -c "$configured_cmd --version" 2>/dev/null || true)
-if [ "$configured_version" = "Antigravity CLI Statusline v0.3.2" ]; then
+if [ "$configured_version" = "Antigravity CLI Statusline v0.3.3" ]; then
   echo "  [PASS] Shell-quoted custom path with spaces and a quote executes correctly"
   PASSED=$((PASSED + 1))
 else
