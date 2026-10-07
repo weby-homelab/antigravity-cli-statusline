@@ -21,7 +21,7 @@ The renderers combine Antigravity CLI payload data with local Git and operating-
 - **Context and tokens**: context usage bar, percentage, used-token count, and context limit when available. If both `context_window.used_percentage` and `context_window.context_window_size` are positive, the used-token count is `round(context_window.used_percentage × context_window.context_window_size / 100)`. Otherwise, the renderer uses a positive `context_window.total_tokens`, then a positive `context_window.total_input_tokens`, and finally the sum of `context_window.total_input_tokens` and `context_window.total_output_tokens`. PowerShell can derive a missing percentage from the used count and limit; Bash can derive a missing limit from the used count and percentage. The renderers can also show total input/output and current-turn token counts.
 - **Quota**: model-aware selection between Gemini and third-party quota buckets, remaining-use bars, and reset countdowns when the payload includes them. The renderer uses available buckets as a fallback when the preferred bucket is missing. Bash classifies third-party models by model ID; PowerShell checks both model ID and display name.
 - **Execution**: sandbox network state, artifact count for the conversation, subagent count, and running background-task count.
-- **Host**: hostname, Tailscale IPv4 address when detectable, and power or battery state when detectable. If no battery or AC status is detected on a desktop/server, the renderer may assume AC power. Linux also reports one-minute load average and RAM usage from `/proc`.
+- **Host**: hostname, Tailscale IPv4 address when detectable, and power or battery state when detectable. Host diagnostics in the header have a 110-column minimum. If no battery or AC status is detected on a desktop/server, the renderer may assume AC power. Linux also reports one-minute load average and RAM usage from `/proc`.
 
 Width thresholds are minimum eligibility gates, not guarantees that a field will be shown: the payload must contain the value, and the header must have enough remaining room for it.
 
@@ -138,7 +138,15 @@ wget -qO- "$installer_url" | bash
 
 ### Windows PowerShell
 
-Run the installer from PowerShell:
+Run the default installer from PowerShell:
+
+```powershell
+$base = "https://raw.githubusercontent.com/"
+$installerPath = "weby-homelab/antigravity-cli-statusline/main/install.ps1"
+Invoke-Expression (Invoke-RestMethod "$base$installerPath")
+```
+
+To choose a custom install directory, set the environment variable beforehand:
 
 ```powershell
 $env:AGY_STATUSLINE_INSTALL_DIR = Join-Path $HOME "Apps\Antigravity Statusline"
@@ -245,7 +253,10 @@ In the default styled mode, the statusline is organized into two primary telemet
 
 #### Configuration examples
 
-Suppression flags can be specified directly in `settings.json` or passed as arguments to `install.sh` / `install.ps1`:
+Suppression flags can be specified directly in the `statusLine.command` string within `settings.json` or forwarded during installation:
+
+- **Linux / macOS installer**: pass arguments after `bash -s --` (e.g. `curl -fsSL "$installer_url" | bash -s -- --no-host --no-conv`) or directly to local `install.sh`.
+- **Windows PowerShell installer**: pass arguments via scriptblock execution (e.g. `& ([scriptblock]::Create((Invoke-RestMethod "$base$installerPath"))) -NoHost -NoConv`) or directly to local `install.ps1`.
 
 - **Minimalist Statusline**:
   ```text
@@ -329,7 +340,7 @@ The installers keep renderer scripts separate from Antigravity CLI settings. The
 
 On Windows, the renderer and uninstaller are under `%USERPROFILE%\.antigravity`. The state snapshot also has a copy beside those scripts. Settings and the primary snapshot are under `%USERPROFILE%\.gemini\antigravity-cli`.
 
-The PowerShell renderer starts with a UTF-8 byte-order mark (BOM). Keep it if you edit the file; Windows PowerShell 5.1 uses it to read the non-ASCII source correctly.
+The PowerShell renderer (`statusline.ps1`) starts with a UTF-8 byte-order mark (BOM). Keep it if you edit the file; Windows PowerShell 5.1 uses it to read the non-ASCII source correctly. In contrast, `install.ps1` and `uninstall.ps1` are pure ASCII without a BOM so web one-liner execution via `Invoke-Expression` succeeds without parser errors.
 
 ## Uninstall
 
@@ -359,9 +370,10 @@ Use these checks when the statusline does not render as expected:
 - **No statusline appears**: confirm that `statusLine.enabled` is `true`, check the command path, and restart Antigravity CLI.
 - **The Bash renderer exits**: run `jq --version`; Bash requires `jq`.
 - **Live Git data is missing**: install Git and run Antigravity CLI inside a Git working tree. The renderer can still use VCS values from the payload.
-- **Windows reports an illegal path**: when editing `settings.json` manually, quote the `-File` path only when it contains spaces. The installer adds these quotes when needed.
+- **Windows reports an illegal path**: when editing `settings.json` manually, quote the `-File` path only when it contains spaces. The installer adds these quotes when needed, automatically trims surrounding quotes from custom install paths, and normalizes path separators.
 - **PowerShell 5.1 shows garbled characters**: preserve the UTF-8 BOM at the start of `statusline.ps1`. Use Classic mode if your terminal font lacks Nerd Font glyphs.
-- **Context or quota percentages are wrong in Windows PowerShell 5.1**: update to v0.3.1 or newer; parsing under comma-decimal locales was fixed in v0.3.1.
+- **Windows installer fails with `'#' is not recognized`**: rerun the installer from `main` (v0.3.3 or newer); `install.ps1` has been stripped of UTF-8 BOM to ensure clean `Invoke-Expression` execution.
+- **Context tokens or quota percentages mismatch in Windows PowerShell 5.1**: update to v0.3.2 or newer; parsing under comma-decimal locales was fixed in v0.3.1, and active context window token counts were harmonized with used percentages in v0.3.2.
 - **A narrow terminal adds rows**: this is expected when the available badges do not fit. Bash width overrides are documented above; PowerShell uses the width from the CLI payload.
 - **Host fields are missing**: the renderer omits diagnostics that the operating system or local tools do not expose.
 
