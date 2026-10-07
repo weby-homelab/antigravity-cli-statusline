@@ -31,11 +31,11 @@ $SHOW_POWER = $true
 foreach ($arg in $args) {
     $a = if ($arg) { $arg.ToString().ToLower() } else { "" }
     if ($a -in @("--version", "-version", "-v", "version")) {
-        Write-Host "Antigravity CLI Statusline v0.3.2" -ForegroundColor Green
+        Write-Host "Antigravity CLI Statusline v0.3.3" -ForegroundColor Green
         exit
     }
     if ($a -in @("--legend", "-legend", "-l", "legend")) {
-        Write-Host "🚀 Antigravity CLI Statusline Legend (v0.3.2)" -ForegroundColor Green
+        Write-Host "🚀 Antigravity CLI Statusline Legend (v0.3.3)" -ForegroundColor Green
         Write-Host "This statusline adapts dynamically to your terminal width and theme settings.`n"
         
         Write-Host "LAYOUTS:" -ForegroundColor White

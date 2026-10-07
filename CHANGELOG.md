@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] - 2026-10-07
+### Fixed & Hardened
+- **Windows Installer UTF-8 BOM Removal & Pure ASCII (Issue #89, reported by @zavada123, PR #90)**:
+  - Stripped UTF-8 Byte Order Mark (`\uFEFF`) from `install.ps1` and `uninstall.ps1` to ensure direct installation via `Invoke-RestMethod | Invoke-Expression` (web one-liner) does not fail with `# : The term '﻿#' is not recognized...`.
+  - Converted literal Unicode characters in installer completion messages to pure ASCII expressions (`[char]::ConvertFromUtf32` and `[char]0x2713`), making both scripts 100% ASCII-clean and preventing parsing issues across any Windows codepage.
+- **Windows Path Handling & Quoting Resilience (Issue #89, PR #90)**:
+  - Automatically trim wrapping quotes in `Resolve-InstallDirectory` (`$Path.Trim("`"'")`) to safely handle quoted custom install paths in `$env:AGY_STATUSLINE_INSTALL_DIR`.
+  - Added slash-normalized fallback matching (`.Replace('\', '/')`) in preflight command checks (`$commandMatches`) in both `install.ps1` and `uninstall.ps1` to seamlessly handle path upgrades and uninstalls regardless of forward vs backward slash styles.
+- **Test Coverage & Verification (PR #90)**:
+  - Added `test_installers_have_no_bom` and `test_installers_ascii_clean` to `tests/test_windows.py`.
+  - Added assertions for quote trimming and slash-resilient command matching across Windows test matrix.
+
 ## [0.3.2] - 2026-10-04
 ### Fixed & Harmonized
 - **Context Window Token Metrics Harmonization (PR #85)**:
