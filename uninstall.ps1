@@ -1,4 +1,4 @@
-﻿# uninstall.ps1 - Uninstaller for Windows/PowerShell
+# uninstall.ps1 - Uninstaller for Windows/PowerShell
 
 # Path.GetFullPath makes saved or caller-supplied relative locations absolute.
 # Microsoft Learn: https://learn.microsoft.com/dotnet/api/system.io.path.getfullpath
@@ -10,12 +10,15 @@ function Resolve-InstallDirectory {
 
     if ([string]::IsNullOrWhiteSpace($Path)) {
         $Path = Join-Path $HomePath ".antigravity"
-    } elseif ($Path -eq "~") {
-        $Path = $HomePath
-    } elseif ($Path.StartsWith("~/") -or $Path.StartsWith("~\")) {
-        $Path = Join-Path $HomePath $Path.Substring(2)
-    } elseif ($Path.StartsWith("~")) {
-        throw "Only '~' and '~/...' home-directory shortcuts are supported."
+    } else {
+        $Path = $Path.Trim("`"'")
+        if ($Path -eq "~") {
+            $Path = $HomePath
+        } elseif ($Path.StartsWith("~/") -or $Path.StartsWith("~\")) {
+            $Path = Join-Path $HomePath $Path.Substring(2)
+        } elseif ($Path.StartsWith("~")) {
+            throw "Only '~' and '~/...' home-directory shortcuts are supported."
+        }
     }
 
     return [System.IO.Path]::GetFullPath($Path)
@@ -84,7 +87,9 @@ $fileArg = if ($escapedScriptPath -match '\s') { "`"$escapedScriptPath`"" } else
 $expectedCommand = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File $fileArg"
 $currentCommand = [string]$currentSettings.statusLine.command
 $commandMatches = [string]::Equals($currentCommand, $expectedCommand, [System.StringComparison]::OrdinalIgnoreCase) -or
-    $currentCommand.StartsWith($expectedCommand + " ", [System.StringComparison]::OrdinalIgnoreCase)
+    $currentCommand.StartsWith($expectedCommand + " ", [System.StringComparison]::OrdinalIgnoreCase) -or
+    [string]::Equals($currentCommand.Replace('\', '/'), $expectedCommand.Replace('\', '/'), [System.StringComparison]::OrdinalIgnoreCase) -or
+    $currentCommand.Replace('\', '/').StartsWith($expectedCommand.Replace('\', '/') + " ", [System.StringComparison]::OrdinalIgnoreCase)
 if (-not $commandMatches) {
     Write-Error "settings.json does not point to this installation. No files were removed."
     exit 1
@@ -187,5 +192,6 @@ if (Test-Path -LiteralPath $targetUninstall) {
 }
 
 Write-Host "====================================================" -ForegroundColor Blue
-Write-Host "✓ Uninstallation completed successfully." -ForegroundColor Green
+$successPrefix = $(try { [char]0x2713 } catch { "[OK]" })
+Write-Host "$successPrefix Uninstallation completed successfully." -ForegroundColor Green
 Write-Host "====================================================" -ForegroundColor Blue
