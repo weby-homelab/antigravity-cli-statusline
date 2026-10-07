@@ -1,4 +1,4 @@
-﻿# install.ps1 - PowerShell installer for Windows
+# install.ps1 - PowerShell installer for Windows
 
 # Path.GetFullPath makes caller-supplied relative locations absolute before storing them.
 # Microsoft Learn: https://learn.microsoft.com/dotnet/api/system.io.path.getfullpath
@@ -10,12 +10,15 @@ function Resolve-InstallDirectory {
 
     if ([string]::IsNullOrWhiteSpace($Path)) {
         $Path = Join-Path $HomePath ".antigravity"
-    } elseif ($Path -eq "~") {
-        $Path = $HomePath
-    } elseif ($Path.StartsWith("~/") -or $Path.StartsWith("~\")) {
-        $Path = Join-Path $HomePath $Path.Substring(2)
-    } elseif ($Path.StartsWith("~")) {
-        throw "Only '~' and '~/...' home-directory shortcuts are supported."
+    } else {
+        $Path = $Path.Trim("`"'")
+        if ($Path -eq "~") {
+            $Path = $HomePath
+        } elseif ($Path.StartsWith("~/") -or $Path.StartsWith("~\")) {
+            $Path = Join-Path $HomePath $Path.Substring(2)
+        } elseif ($Path.StartsWith("~")) {
+            throw "Only '~' and '~/...' home-directory shortcuts are supported."
+        }
     }
 
     return [System.IO.Path]::GetFullPath($Path)
@@ -86,7 +89,9 @@ if ((Test-Path -LiteralPath $targetScript) -or (Test-Path -LiteralPath $targetUn
     }
     $existingCommand = [string]$existingSettings.statusLine.command
     $commandMatches = [string]::Equals($existingCommand, $expectedCommand, [System.StringComparison]::OrdinalIgnoreCase) -or
-        $existingCommand.StartsWith($expectedCommand + " ", [System.StringComparison]::OrdinalIgnoreCase)
+        $existingCommand.StartsWith($expectedCommand + " ", [System.StringComparison]::OrdinalIgnoreCase) -or
+        [string]::Equals($existingCommand.Replace('\', '/'), $expectedCommand.Replace('\', '/'), [System.StringComparison]::OrdinalIgnoreCase) -or
+        $existingCommand.Replace('\', '/').StartsWith($expectedCommand.Replace('\', '/') + " ", [System.StringComparison]::OrdinalIgnoreCase)
     if (-not $commandMatches) {
         Write-Error "Refusing to overwrite files not referenced by the active statusline settings."
         exit 1
@@ -298,7 +303,8 @@ $snapshotJson = Get-Content -Raw -LiteralPath $snapshotFile -Encoding UTF8
 [System.IO.File]::WriteAllText($altSnapshotFile, $snapshotJson, $utf8NoBom)
 
 Write-Host "====================================================" -ForegroundColor Blue
-Write-Host "🎉 Installation completed successfully!" -ForegroundColor Green
+$successPrefix = $(try { [char]::ConvertFromUtf32(0x1F389) } catch { "[OK]" })
+Write-Host "$successPrefix Installation completed successfully!" -ForegroundColor Green
 Write-Host "Restart your Antigravity CLI session to see your new statusline."
 Write-Host "Uninstaller copied to: $targetUninstall"
 Write-Host ""

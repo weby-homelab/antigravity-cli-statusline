@@ -23,6 +23,33 @@ class TestWindowsPowerShellParity(unittest.TestCase):
             "statusline.ps1 must start with UTF-8 BOM bytes (b'\\xef\\xbb\\xbf')",
         )
 
+    def test_installers_have_no_bom(self):
+        """install.ps1 and uninstall.ps1 must NOT start with UTF-8 BOM so Invoke-Expression web one-liner executes cleanly."""
+        for filename in ["install.ps1", "uninstall.ps1"]:
+            script_file = REPO_ROOT / filename
+            self.assertTrue(script_file.exists(), f"{filename} exists")
+            data = script_file.read_bytes()
+            self.assertFalse(
+                data.startswith(b"\xef\xbb\xbf"),
+                f"{filename} must not start with UTF-8 BOM bytes so Invoke-Expression parses it without '\\uFEFF#' error",
+            )
+            self.assertTrue(
+                data.startswith(b"#"),
+                f"{filename} must start cleanly with '#' comment character",
+            )
+
+    def test_installers_ascii_clean(self):
+        """install.ps1 and uninstall.ps1 must be pure ASCII to prevent parser and encoding errors across Windows codepages."""
+        for filename in ["install.ps1", "uninstall.ps1"]:
+            script_file = REPO_ROOT / filename
+            text = script_file.read_text(encoding="utf-8")
+            for idx, ch in enumerate(text):
+                self.assertLess(
+                    ord(ch),
+                    128,
+                    f"{filename} must be pure ASCII (found non-ASCII char at index {idx}: {repr(ch)})",
+                )
+
     def test_command_string_generation(self):
         """Command string must not pass literal escaped quotes that trigger 'Illegal characters in path'."""
         # Path without spaces must not have quotes around -File argument
@@ -80,6 +107,10 @@ class TestWindowsPowerShellParity(unittest.TestCase):
             "powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:/Users/weby/.antigravity/statusline.ps1",
         )
 
+        # Quotes trimmed in Resolve-InstallDirectory
+        self.assertIn('$Path = $Path.Trim("`"\'")', ps1_text)
+        self.assertIn('$Path = $Path.Trim("`"\'")', uninstall_ps1_text)
+
         # Preflight check in install.ps1 & uninstall.ps1 matches active command with arguments
         expected_prefix = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:/Users/weby/.antigravity/statusline.ps1"
         current_cmd = cmd_standard
@@ -88,6 +119,14 @@ class TestWindowsPowerShellParity(unittest.TestCase):
             or current_cmd.lower().startswith(expected_prefix.lower() + " ")
         )
         self.assertTrue(matches, "Installer preflight check must match active command string with extra arguments")
+
+        # Preflight check is resilient to slash variations (\ vs /)
+        backslashed_cmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\\Users\\weby\\.antigravity\\statusline.ps1 -NoModel"
+        normalized_match = (
+            backslashed_cmd.replace("\\", "/").lower() == expected_prefix.replace("\\", "/").lower()
+            or backslashed_cmd.replace("\\", "/").lower().startswith(expected_prefix.replace("\\", "/").lower() + " ")
+        )
+        self.assertTrue(normalized_match, "Preflight check must normalize slashes when comparing commands")
 
 
     def test_settings_json_has_no_bom(self):
