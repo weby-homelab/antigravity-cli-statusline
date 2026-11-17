@@ -47,6 +47,11 @@
       "output_tokens": 350
     }
   },
+  "cost": {
+    "total_usd": 0.4213,
+    "subagent_usd": 0.125,
+    "estimated": false
+  },
   "quota": {
     "gemini-5h": {
       "remaining_fraction": 0.85,

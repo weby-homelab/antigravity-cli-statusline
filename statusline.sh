@@ -57,6 +57,7 @@ for arg in "$@"; do
       echo -e "  Sandbox Off          󰦜          sandbox off Sandbox is disabled (runs on host)."
       echo -e "  Context Bar          󱍏          ctx         Context window usage bar (10 or 20 segments)."
       echo -e "  Tokens Sum                     (None)      Total input/output tokens & turn token delta."
+      echo -e "  Session Cost                   cost        Estimated session spend in USD (& subagent cost)."
       echo -e "  Sys resources                  sys         Host CPU load average & memory utilization."
       echo -e "  Artifacts                      artifacts   Number of active output artifacts."
       echo -e "  Subagents            󱙺          subagents   Number of spawned active subagents."
@@ -262,6 +263,9 @@ NUM_COLOR="${FG_BRIGHT_WHITE}${B}"
   read -r USER_EMAIL
   read -r TURN_INPUT_TOKENS
   read -r TURN_OUTPUT_TOKENS
+  read -r COST_TOTAL
+  read -r COST_SUBAGENT
+  read -r COST_ESTIMATED
 } <<< "$(
   printf '%s' "$INPUT_JSON" | jq -r '
     (.agent_state // "idle"),
@@ -309,8 +313,21 @@ NUM_COLOR="${FG_BRIGHT_WHITE}${B}"
     (.plan_tier // ""),
     (.email // ""),
     (.context_window.current_usage.input_tokens // 0),
-    (.context_window.current_usage.output_tokens // 0)
-  ' 2>/dev/null || printf "idle\n\n0\n\nfalse\n\n\nfalse\nfalse\n0\n0\n0\n\n\n80\n\n\n\n0\n0\n0\n0\n100\n-1\n-1\n-1\n-1\n-1\n-1\n-1\n-1\n\n\n\n0\n0\n"
+    (.context_window.current_usage.output_tokens // 0),
+    (if (.cost | type == "object") then
+      if (.cost.total_usd | type == "number") then .cost.total_usd
+      elif (.cost.total_usd | type == "string") then (.cost.total_usd | tonumber? // -1)
+      elif (.cost.total_cost_usd | type == "number") then .cost.total_cost_usd
+      elif (.cost.total_cost_usd | type == "string") then (.cost.total_cost_usd | tonumber? // -1)
+      else -1 end
+    else -1 end),
+    (if (.cost | type == "object") then
+      if (.cost.subagent_usd | type == "number") then .cost.subagent_usd
+      elif (.cost.subagent_usd | type == "string") then (.cost.subagent_usd | tonumber? // 0)
+      else 0 end
+    else 0 end),
+    (if (.cost | type == "object") and (.cost.estimated == true or .cost.estimated == "true") then "true" else "false" end)
+  ' 2>/dev/null || printf "idle\n\n0\n\nfalse\n\n\nfalse\nfalse\n0\n0\n0\n\n\n80\n\n\n\n0\n0\n0\n0\n100\n-1\n-1\n-1\n-1\n-1\n-1\n-1\n-1\n\n\n\n0\n0\n-1\n0\nfalse\n"
 )"
 
 # ─── Dynamic String Sanitization (Defensive against ANSI, newlines, control chars)
@@ -359,6 +376,9 @@ if [ "$CTX_LIMIT" -eq 0 ] 2>/dev/null && [ "$CTX_USED" -gt 0 ] 2>/dev/null; then
 fi
 if ! [[ "$TURN_INPUT_TOKENS" =~ ^[0-9]+$ ]]; then TURN_INPUT_TOKENS=0; fi
 if ! [[ "$TURN_OUTPUT_TOKENS" =~ ^[0-9]+$ ]]; then TURN_OUTPUT_TOKENS=0; fi
+if ! [[ "$COST_TOTAL" =~ ^[0-9]+(\.[0-9]+)?([eE][-+]?[0-9]+)?$ ]]; then COST_TOTAL="-1"; fi
+if ! [[ "$COST_SUBAGENT" =~ ^[0-9]+(\.[0-9]+)?([eE][-+]?[0-9]+)?$ ]]; then COST_SUBAGENT="0"; fi
+if [ "$COST_ESTIMATED" != "true" ]; then COST_ESTIMATED="false"; fi
 
 if ! [[ "$GEMINI_5H" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then GEMINI_5H="-1"; fi
 if ! [[ "$GEMINI_WK" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then GEMINI_WK="-1"; fi
@@ -437,6 +457,7 @@ if [ "$USE_CLASSIC_ICONS" = "true" ]; then
   ICON_DIR="╱"
   ICON_CONV="╱"
   ICON_TOK_SUM=""
+  ICON_COST="cost"
   ICON_RESET="⌛"
   ICON_AC="AC"
   ICON_BAT="BAT"
@@ -503,6 +524,7 @@ else
   ICON_DIR=""
   ICON_CONV="󰍪"
   ICON_TOK_SUM=""
+  ICON_COST=""
   ICON_RESET="⌛️"
   ICON_AC="󰚥"
   ICON_BAT="🔋"
@@ -636,6 +658,37 @@ CTX_LIMIT_FMT=$(human_format "$CTX_LIMIT")
 CTX_USED_FMT=$(human_format "$CTX_USED")
 TURN_INPUT_FMT=$(human_format "$TURN_INPUT_TOKENS")
 TURN_OUTPUT_FMT=$(human_format "$TURN_OUTPUT_TOKENS")
+
+format_usd() {
+  local val="$1"
+  if [ -z "$val" ] || ! [[ "$val" =~ ^[0-9]+(\.[0-9]+)?([eE][-+]?[0-9]+)?$ ]]; then
+    echo ""
+    return
+  fi
+  local mant="${val%%[eE]*}"
+  if ! [[ "$mant" =~ [1-9] ]]; then
+    echo ""
+    return
+  fi
+  local fixed6
+  printf -v fixed6 "%.6f" "$val" 2>/dev/null || { echo ""; return; }
+  local int_part="${fixed6%.*}"
+  local frac_part="${fixed6#*.}"
+  local micro=$(( 10#$frac_part ))
+  if [ "${int_part:-0}" -eq 0 ] 2>/dev/null && [ "$micro" -lt 100 ]; then
+    echo "<\$0.0001"
+    return
+  fi
+  if [ "${int_part:-0}" -eq 0 ] 2>/dev/null && [ "$micro" -lt 9950 ]; then
+    local u4=$(( (micro + 50) / 100 ))
+    printf "\$0.%04d" "$u4"
+    return
+  fi
+  local cents=$(( (micro + 5000) / 10000 ))
+  local dollars=$(( int_part + cents / 100 ))
+  local cents_rem=$(( cents % 100 ))
+  printf "\$%d.%02d" "$dollars" "$cents_rem"
+}
 
 shorten_path() {
   local path=$1
@@ -1098,6 +1151,35 @@ else
 fi
 BG_FMT=$(make_badge "${ICON_TASKS}" "${BG_TASKS}" "135")
 
+# Session Cost Badge
+COST_FMT=""
+if [ "$SHOW_COST" = "true" ] && [ "$COST_TOTAL" != "-1" ]; then
+  cost_total_str=$(format_usd "$COST_TOTAL")
+  if [ -n "$cost_total_str" ]; then
+    if [ "$COST_ESTIMATED" = "true" ]; then
+      cost_label="~${cost_total_str}"
+    else
+      cost_label="${cost_total_str}"
+    fi
+    cost_sub_str=$(format_usd "$COST_SUBAGENT")
+    if [ -n "$cost_sub_str" ]; then
+      cost_label="${cost_label} | sub: ${cost_sub_str}"
+    fi
+    cost_dollars=0
+    if [[ "$cost_total_str" == \$* ]]; then
+      cost_num="${cost_total_str#\$}"
+      cost_dollars="${cost_num%.*}"
+    fi
+    cost_color="76"
+    if [ "${cost_dollars:-0}" -ge 5 ] 2>/dev/null; then
+      cost_color="197"
+    elif [ "${cost_dollars:-0}" -ge 1 ] 2>/dev/null; then
+      cost_color="214"
+    fi
+    COST_FMT=$(make_badge "${ICON_COST}" "${cost_label}" "$cost_color")
+  fi
+fi
+
 # System Resources (RAM & Load average)
 SYS_FMT=""
 if [ -n "$MEM_PCT" ] && [ -n "$LOAD_1M" ]; then
@@ -1427,32 +1509,37 @@ if [ "$SHOW_TOKENS_USAGE" = "true" ] && [ "$CTX_USED" -gt 0 ] 2>/dev/null; then
   fi
 fi
 
-# 3. System Resources (RAM & Load)
+# 3. Session Cost
+if [ "$SHOW_COST" = "true" ]; then
+  [ -n "$COST_FMT" ] && BADGE_LIST+=("$COST_FMT")
+fi
+
+# 4. System Resources (RAM & Load)
 if [ "$SHOW_SYS" = "true" ]; then
   [ -n "$SYS_FMT" ] && BADGE_LIST+=("$SYS_FMT")
 fi
 
-# 4. Artifacts Counter
+# 5. Artifacts Counter
 if [ "$SHOW_ARTIFACTS" = "true" ]; then
   [ -n "$ART_FMT" ] && BADGE_LIST+=("$ART_FMT")
 fi
 
-# 5. Subagents Counter
+# 6. Subagents Counter
 if [ "$SHOW_SUBAGENTS" = "true" ]; then
   [ -n "$SUB_FMT" ] && BADGE_LIST+=("$SUB_FMT")
 fi
 
-# 6. Background Tasks Counter
+# 7. Background Tasks Counter
 if [ "$SHOW_TASKS" = "true" ]; then
   [ -n "$BG_FMT" ] && BADGE_LIST+=("$BG_FMT")
 fi
 
-# 7. Sandbox Status
+# 8. Sandbox Status
 if [ "$SHOW_SANDBOX" = "true" ]; then
   [ -n "$SB_FMT" ] && BADGE_LIST+=("$SB_FMT")
 fi
 
-# 8. Quotas
+# 9. Quotas
 if [ "$SHOW_QUOTA" = "true" ]; then
   if { [ -n "$Q_5H" ] && [ "$Q_5H" != "-1" ]; }; then
     BADGE_LIST+=("$(make_quota_bar "$Q_5H" "5H" "37" "$Q_5H_R")")
@@ -1462,7 +1549,7 @@ if [ "$SHOW_QUOTA" = "true" ]; then
   fi
 fi
 
-# 9. Power Status
+# 10. Power Status
 if [ "$SHOW_POWER" = "true" ]; then
   [ -n "$POWER_FMT" ] && BADGE_LIST+=("$POWER_FMT")
 fi

@@ -89,6 +89,7 @@ assert_not_contains "$ver_out" "0.2.2" "Version flag does not contain stale 0.2.
 legend_out=$(bash "$STATUSLINE" --legend 2>&1)
 assert_contains "$legend_out" "Legend" "Legend flag works"
 assert_contains "$legend_out" "Vim" "Legend mentions Vim mode"
+assert_contains "$legend_out" "Session Cost" "Legend mentions Session Cost"
 
 # Test 3: Context Window Metric Extraction & Calculation
 echo "--- Testing Context Window Token Metrics ---"
@@ -107,6 +108,39 @@ multi_turn_payload='{"agent_state":"idle","terminal_width":120,"context_window":
 multi_turn_plain=$(printf '%s' "$multi_turn_payload" | bash "$STATUSLINE" --classic 2>&1 | strip_ansi || true)
 assert_contains "$multi_turn_plain" "22.9%" "Multi-turn context percentage ~22.9%"
 assert_contains "$multi_turn_plain" "240.1K/1.0M" "Multi-turn context used displays 240.1K/1.0M without cumulative output distortion"
+
+# Test 3b: Session Cost Telemetry Extraction & Formatting
+echo "--- Testing Session Cost Telemetry ---"
+cost_exact_payload='{"agent_state":"idle","terminal_width":150,"cost":{"total_usd":0.4213,"subagent_usd":0.125,"estimated":false}}'
+cost_exact_plain=$(printf '%s' "$cost_exact_payload" | bash "$STATUSLINE" --classic 2>&1 | strip_ansi || true)
+assert_contains "$cost_exact_plain" "cost \$0.42 | sub: \$0.13" "Exact session and subagent cost formatted in classic mode"
+assert_not_contains "$cost_exact_plain" "~\$0.42" "Non-estimated cost does not include ~ prefix"
+
+cost_est_payload='{"agent_state":"idle","terminal_width":150,"cost":{"total_usd":1.5,"subagent_usd":0,"estimated":true}}'
+cost_est_plain=$(printf '%s' "$cost_est_payload" | bash "$STATUSLINE" 2>&1 | strip_ansi || true)
+assert_contains "$cost_est_plain" "~\$1.50" "Estimated cost includes ~ prefix and 2 decimal places"
+assert_not_contains "$cost_est_plain" "sub:" "Zero subagent cost omits subagent breakdown"
+
+cost_subcent_payload='{"agent_state":"idle","terminal_width":150,"cost":{"total_usd":0.0042,"estimated":false}}'
+cost_subcent_plain=$(printf '%s' "$cost_subcent_payload" | bash "$STATUSLINE" --classic 2>&1 | strip_ansi || true)
+assert_contains "$cost_subcent_plain" "cost \$0.0042" "Sub-cent cost displays 4 decimal places"
+
+cost_tiny_payload='{"agent_state":"idle","terminal_width":150,"cost":{"total_usd":3e-5,"estimated":true}}'
+cost_tiny_plain=$(printf '%s' "$cost_tiny_payload" | bash "$STATUSLINE" --classic 2>&1 | strip_ansi || true)
+assert_contains "$cost_tiny_plain" "cost ~<\$0.0001" "Scientific-notation micro-cost displays ~<\$0.0001"
+
+cost_fallback_payload='{"agent_state":"idle","terminal_width":150,"cost":{"total_cost_usd":0.75}}'
+cost_fallback_plain=$(printf '%s' "$cost_fallback_payload" | bash "$STATUSLINE" --classic 2>&1 | strip_ansi || true)
+assert_contains "$cost_fallback_plain" "cost \$0.75" "Fallback total_cost_usd field is supported"
+
+cost_zero_payload='{"agent_state":"idle","terminal_width":150,"cost":{"total_usd":0,"subagent_usd":0,"estimated":false}}'
+cost_zero_plain=$(printf '%s' "$cost_zero_payload" | bash "$STATUSLINE" --classic 2>&1 | strip_ansi || true)
+assert_not_contains "$cost_zero_plain" 'cost ' "Zero total_usd omits cost badge"
+
+cost_malformed_payload='{"agent_state":"working","terminal_width":150,"cost":"malformed"}'
+cost_malformed_plain=$(printf '%s' "$cost_malformed_payload" | bash "$STATUSLINE" --classic 2>&1 | strip_ansi || true)
+assert_contains "$cost_malformed_plain" 'WORKING' "Malformed non-object cost preserves remaining payload fields"
+assert_not_contains "$cost_malformed_plain" 'cost ' "Malformed cost omits cost badge"
 
 
 # Test 4: Model-aware Quota Resolution
@@ -237,6 +271,7 @@ assert_contains "$base_plain" "rekvizitor" "Baseline contains user account"
 assert_contains "$base_plain" "v0.2.4" "Baseline contains version"
 assert_contains "$base_plain" "14.2%" "Baseline contains context bar percentage"
 assert_contains "$base_plain" "88.2K/61.1K" "Baseline contains token sum"
+assert_contains "$base_plain" "\$0.42 | sub: \$0.13" "Baseline contains session and subagent cost"
 if [ -f /proc/meminfo ]; then
   assert_contains "$base_plain" "RAM:" "Baseline contains sys RAM"
 fi
@@ -244,6 +279,7 @@ assert_contains "$base_plain" "net-on" "Baseline contains sandbox status"
 assert_contains "$base_plain" "5H" "Baseline contains quota 5H"
 assert_contains "$base_plain" "7D" "Baseline contains quota 7D"
 assert_contains "$base_plain" "AC" "Baseline contains power AC"
+assert_contains "$base_classic_plain" "cost \$0.42 | sub: \$0.13" "Baseline classic contains cost badge"
 assert_contains "$base_classic_plain" "artifacts 3" "Baseline classic contains artifacts"
 assert_contains "$base_classic_plain" "subagents 2" "Baseline classic contains subagents"
 assert_contains "$base_classic_plain" "tasks 2" "Baseline classic contains tasks"
@@ -314,6 +350,9 @@ assert_not_contains "$(echo "$out" | strip_ansi)" "88.2K/61.1K" "--no-tokens sup
 out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-cost 2>&1)
 res=$?
 assert_exit_code "$res" 0 "--no-cost flag runs safely"
+assert_not_contains "$(echo "$out" | strip_ansi)" "\$0.42" "--no-cost suppresses cost badge"
+out_classic=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --classic --no-cost 2>&1 || true)
+assert_not_contains "$(echo "$out_classic" | strip_ansi)" "cost \$0.42" "--no-cost suppresses classic cost badge"
 
 # --no-sys and aliases --no-system, --no-resources
 out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" --no-sys 2>&1 || true)
@@ -387,7 +426,7 @@ assert_not_contains "$hc_first_line" "├─" "Header Collapse first row does no
 assert_contains "$hc_first_line" "ctx" "Header Collapse first row contains context badge"
 
 # 9b: Header Collapse with single badge row
-hc_single_out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" $all_l1_flags --no-tokens --no-sys --no-artifacts --no-subagents --no-tasks --no-sandbox --no-quota --no-power 2>&1 || true)
+hc_single_out=$(cat "${FIXTURES}/full_payload.json" | STATUSLINE_POWER_SUPPLY_DIR="$MOCK_PSY/s1" COLUMNS=150 bash "$STATUSLINE" $all_l1_flags --no-tokens --no-cost --no-sys --no-artifacts --no-subagents --no-tasks --no-sandbox --no-quota --no-power 2>&1 || true)
 hc_single_lines=$(echo "$hc_single_out" | grep -c .)
 assert_contains "$hc_single_out" "╭─" "Single-row collapsed badge starts with ╭─"
 if [ "$hc_single_lines" -eq 1 ]; then
