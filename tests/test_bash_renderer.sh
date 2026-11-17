@@ -125,6 +125,14 @@ cost_subcent_payload='{"agent_state":"idle","terminal_width":150,"cost":{"total_
 cost_subcent_plain=$(printf '%s' "$cost_subcent_payload" | bash "$STATUSLINE" --classic 2>&1 | strip_ansi || true)
 assert_contains "$cost_subcent_plain" "cost \$0.0042" "Sub-cent cost displays 4 decimal places"
 
+cost_round_once_payload='{"agent_state":"idle","terminal_width":150,"cost":{"total_usd":0.0149999,"subagent_usd":0.0042499,"estimated":false}}'
+cost_round_once_plain=$(printf '%s' "$cost_round_once_payload" | bash "$STATUSLINE" --classic 2>&1 | strip_ansi || true)
+assert_contains "$cost_round_once_plain" "cost \$0.01 | sub: \$0.0042" "Single-step rounding avoids double-rounding on 0.0149999 and 0.0042499"
+
+cost_micro_edge_payload='{"agent_state":"idle","terminal_width":150,"cost":{"total_usd":0.0000999,"estimated":false}}'
+cost_micro_edge_plain=$(printf '%s' "$cost_micro_edge_payload" | bash "$STATUSLINE" --classic 2>&1 | strip_ansi || true)
+assert_contains "$cost_micro_edge_plain" "cost <\$0.0001" "Single-step threshold keeps 0.0000999 below \$0.0001"
+
 cost_tiny_payload='{"agent_state":"idle","terminal_width":150,"cost":{"total_usd":3e-5,"estimated":true}}'
 cost_tiny_plain=$(printf '%s' "$cost_tiny_payload" | bash "$STATUSLINE" --classic 2>&1 | strip_ansi || true)
 assert_contains "$cost_tiny_plain" "cost ~<\$0.0001" "Scientific-notation micro-cost displays ~<\$0.0001"

@@ -670,22 +670,73 @@ format_usd() {
     echo ""
     return
   fi
-  local fixed6
-  printf -v fixed6 "%.6f" "$val" 2>/dev/null || { echo ""; return; }
-  local int_part="${fixed6%.*}"
-  local frac_part="${fixed6#*.}"
-  local micro=$(( 10#$frac_part ))
-  if [ "${int_part:-0}" -eq 0 ] 2>/dev/null && [ "$micro" -lt 100 ]; then
+  local exp=0
+  if [[ "$val" == *[eE]* ]]; then
+    local exp_raw="${val#*[eE]}"
+    if [[ "$exp_raw" == -* ]]; then
+      exp=$(( -10#${exp_raw#-} ))
+    else
+      exp=$(( 10#${exp_raw#+} ))
+    fi
+  fi
+  local int_d="$mant"
+  local frac_d=""
+  if [[ "$mant" == *.* ]]; then
+    int_d="${mant%%.*}"
+    frac_d="${mant#*.}"
+  fi
+  int_d="${int_d#"${int_d%%[!0]*}"}"
+  local digits="${int_d}${frac_d}"
+  local dec_pos=$(( ${#int_d} + exp ))
+  if [ "$dec_pos" -le -4 ]; then
     echo "<\$0.0001"
     return
   fi
-  if [ "${int_part:-0}" -eq 0 ] 2>/dev/null && [ "$micro" -lt 9950 ]; then
-    local u4=$(( (micro + 50) / 100 ))
+  local int_str="0"
+  local frac_str=""
+  if [ "$dec_pos" -le 0 ]; then
+    local z_pad=""
+    case "$(( -dec_pos ))" in
+      1) z_pad="0" ;;
+      2) z_pad="00" ;;
+      3) z_pad="000" ;;
+    esac
+    frac_str="${z_pad}${digits}"
+  elif [ "$dec_pos" -ge "${#digits}" ]; then
+    local r_cnt=$(( dec_pos - ${#digits} ))
+    local r_pad=""
+    if [ "$r_cnt" -gt 0 ]; then
+      printf -v r_pad "%0*d" "$r_cnt" 0
+    fi
+    int_str="${digits}${r_pad}"
+    int_str="${int_str#"${int_str%%[!0]*}"}"
+    printf "\$%s.00" "${int_str:-0}"
+    return
+  else
+    int_str="${digits:0:$dec_pos}"
+    frac_str="${digits:$dec_pos}"
+  fi
+  int_str="${int_str#"${int_str%%[!0]*}"}"
+  int_str="${int_str:-0}"
+  frac_str="${frac_str}00000"
+
+  if [ "$int_str" = "0" ] && [ "${frac_str:0:4}" = "0000" ]; then
+    echo "<\$0.0001"
+    return
+  fi
+  if [ "$int_str" = "0" ] && [ "$(( 10#${frac_str:0:5} ))" -lt 995 ]; then
+    local u4=$(( 10#${frac_str:0:4} ))
+    if [ "${frac_str:4:1}" -ge 5 ]; then
+      u4=$(( u4 + 1 ))
+    fi
     printf "\$0.%04d" "$u4"
     return
   fi
-  local cents=$(( (micro + 5000) / 10000 ))
-  local dollars=$(( int_part + cents / 100 ))
+  local cents=$(( 10#${frac_str:0:2} ))
+  if [ "${frac_str:2:1}" -ge 5 ]; then
+    cents=$(( cents + 1 ))
+  fi
+  local dollars=$(( 10#$int_str + cents / 100 ))
   local cents_rem=$(( cents % 100 ))
   printf "\$%d.%02d" "$dollars" "$cents_rem"
 }

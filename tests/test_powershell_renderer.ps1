@@ -350,8 +350,9 @@ try {
         Assert-Condition ($i64Native -eq 88244 -and $i64Str -eq 88244) "Safe-Int64 parses int64 correctly in $cultureName"
 
         Assert-Condition ((Format-Usd 0) -eq "" -and (Format-Usd -1) -eq "") "Format-Usd omits non-positive spend in $cultureName"
-        Assert-Condition ((Format-Usd 0.00003) -eq '<$0.0001') "Format-Usd formats micro-spend as <`$0.0001 in $cultureName"
-        Assert-Condition ((Format-Usd 0.0042) -eq '$0.0042') "Format-Usd formats sub-cent spend to 4 decimals in $cultureName"
+        Assert-Condition ((Format-Usd 0.00003) -eq '<$0.0001' -and (Format-Usd 0.0000999) -eq '<$0.0001') "Format-Usd formats micro-spend as <`$0.0001 in $cultureName"
+        Assert-Condition ((Format-Usd 0.0042) -eq '$0.0042' -and (Format-Usd 0.0042499) -eq '$0.0042') "Format-Usd formats sub-cent spend to 4 decimals without double-rounding in $cultureName"
+        Assert-Condition ((Format-Usd 0.0149999) -eq '$0.01' -and (Format-Usd 0.125) -eq '$0.13') "Format-Usd rounds half-up once on cent boundaries in $cultureName"
         Assert-Condition ((Format-Usd 0.4213) -eq '$0.42' -and (Format-Usd "0,4213") -eq '$0.42') "Format-Usd formats standard spend with dot decimal in $cultureName"
         Assert-Condition ((Format-Usd 1.5) -eq '$1.50') "Format-Usd pads standard spend to 2 decimals in $cultureName"
     }
