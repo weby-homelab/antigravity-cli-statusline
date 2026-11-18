@@ -316,6 +316,22 @@ class TestWindowsPowerShellParity(unittest.TestCase):
         # When LINE1 is empty and total_packed is 0, no box borders should be output
         self.assertIn('if ($total_packed -gt 0)', ps1_text)
 
+    def test_powershell_cost_telemetry_parity(self):
+        """statusline.ps1 and statusline.sh must both parse .cost fields and render a suppressible cost badge."""
+        ps1_text = (REPO_ROOT / "statusline.ps1").read_text(encoding="utf-8")
+        sh_text = (REPO_ROOT / "statusline.sh").read_text(encoding="utf-8")
+
+        for field in ["total_usd", "total_cost_usd", "subagent_usd", "estimated"]:
+            self.assertIn(field, ps1_text, f"statusline.ps1 must handle cost.{field}")
+            self.assertIn(field, sh_text, f"statusline.sh must handle cost.{field}")
+
+        self.assertIn("function Format-Usd", ps1_text)
+        self.assertIn("ICON_COST", ps1_text)
+        self.assertIn('if ($SHOW_COST -and $COST_FMT)', ps1_text)
+        self.assertIn("format_usd()", sh_text)
+        self.assertIn("ICON_COST", sh_text)
+        self.assertIn('if [ "$SHOW_COST" = "true" ]; then', sh_text)
+
     def test_powershell_execution_and_header_collapse_parity(self):
         """When powershell or pwsh is available on Windows, execute statusline.ps1 and test runtime parity."""
         if sys.platform != "win32":
@@ -337,6 +353,11 @@ class TestWindowsPowerShellParity(unittest.TestCase):
                 "total_output_tokens": 61074,
                 "context_window_size": 1048576,
             },
+            "cost": {
+                "total_usd": 0.4213,
+                "subagent_usd": 0.125,
+                "estimated": True,
+            },
             "vim": {"mode": "NORMAL"},
         })
 
@@ -354,12 +375,15 @@ class TestWindowsPowerShellParity(unittest.TestCase):
         if current_branch:
             self.assertIn(current_branch, base)
         self.assertIn("Gemini 2.0 Flash", base)
+        self.assertIn("~$0.42 | sub: $0.13", base)
 
         # Flag and Switch parity
         self.assertNotIn("WORKING", run_ps1("--no-state"))
         self.assertNotIn("WORKING", run_ps1("-NoState"))
         self.assertNotIn("NORMAL", run_ps1("--no-vim"))
         self.assertNotIn("NORMAL", run_ps1("-NoVim"))
+        self.assertNotIn("$0.42", run_ps1("--no-cost"))
+        self.assertNotIn("$0.42", run_ps1("-NoCost"))
         if current_branch:
             self.assertNotIn(current_branch, run_ps1("--no-branch"))
             self.assertNotIn(current_branch, run_ps1("-NoBranch"))

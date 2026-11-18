@@ -65,6 +65,7 @@ foreach ($arg in $args) {
         Write-Host "  Current Directory    " -NoNewline; Write-Host "           " -ForegroundColor Cyan -NoNewline; Write-Host "/           " -ForegroundColor Gray -NoNewline; Write-Host "Current working directory path (shortened)."
         Write-Host "  Conversation ID      " -NoNewline; Write-Host "󰍪           " -ForegroundColor Gray -NoNewline; Write-Host "/           " -ForegroundColor Gray -NoNewline; Write-Host "Short prefix of the current session ID."
         Write-Host "  Tokens Sum           " -NoNewline; Write-Host "           " -ForegroundColor Yellow -NoNewline; Write-Host "(None)      " -ForegroundColor DarkGray -NoNewline; Write-Host "Total input/output tokens parsed."
+        Write-Host "  Session Cost         " -NoNewline; Write-Host "           " -ForegroundColor Green -NoNewline; Write-Host "cost        " -ForegroundColor Gray -NoNewline; Write-Host "Estimated session spend in USD (& subagent cost)."
         Write-Host "  Quota Reset Time     " -NoNewline; Write-Host "⌛️          " -ForegroundColor Gray -NoNewline; Write-Host "⌛          " -ForegroundColor Gray -NoNewline; Write-Host "Remaining time until LLM quota resets."
         Write-Host "  Power Mains (AC)     " -NoNewline; Write-Host "󰚥           " -ForegroundColor Green -NoNewline; Write-Host "AC          " -ForegroundColor Green -NoNewline; Write-Host "Host is connected to external AC power."
         Write-Host "  Power Battery (UPS)  " -NoNewline; Write-Host "🔋           " -ForegroundColor Yellow -NoNewline; Write-Host "BAT         " -ForegroundColor Yellow -NoNewline; Write-Host "Host is running on battery (shows charge %)."
@@ -267,6 +268,21 @@ function Safe-Double($val, $default = 0.0) {
     return $default
 }
 
+function Format-Usd($val) {
+    $v = Safe-Double $val -1.0
+    if ($v -le 0.0) { return "" }
+    if ($v -lt 0.0001) { return '<$0.0001' }
+    if ($v -lt 0.00995) {
+        $r4 = [Math]::Round([decimal]$v, 4, [System.MidpointRounding]::AwayFromZero)
+        return '$' + $r4.ToString("0.0000", [System.Globalization.CultureInfo]::InvariantCulture)
+    }
+    if ($v -lt 1e15) {
+        $r2 = [Math]::Round([decimal]$v, 2, [System.MidpointRounding]::AwayFromZero)
+        return '$' + $r2.ToString("0.00", [System.Globalization.CultureInfo]::InvariantCulture)
+    }
+    return '$' + $v.ToString("0.00", [System.Globalization.CultureInfo]::InvariantCulture)
+}
+
 # Extract properties with fallbacks & input hardening
 $STATE = if ($data.agent_state) { Sanitize-String $data.agent_state } else { "idle" }
 $USED_PCT = if ($data.context_window.used_percentage -ne $null) { Safe-Double $data.context_window.used_percentage 0.0 } else { 0.0 }
@@ -292,6 +308,27 @@ $TURN_OUTPUT_TOKENS = if ($data.context_window.current_usage.output_tokens -ne $
 
 # Vim Mode (#62)
 $VIM_MODE = if ($data.vim -and $data.vim.mode) { Sanitize-String $data.vim.mode } else { $null }
+
+# Session Cost
+$COST_TOTAL = -1.0
+$COST_SUBAGENT = 0.0
+$COST_ESTIMATED = $false
+if ($null -ne $data.cost -and $data.cost.PSObject -and $data.cost.PSObject.Properties) {
+    if ($data.cost.PSObject.Properties['total_usd'] -and $null -ne $data.cost.total_usd) {
+        $COST_TOTAL = Safe-Double $data.cost.total_usd -1.0
+    } elseif ($data.cost.PSObject.Properties['total_cost_usd'] -and $null -ne $data.cost.total_cost_usd) {
+        $COST_TOTAL = Safe-Double $data.cost.total_cost_usd -1.0
+    }
+    if ($data.cost.PSObject.Properties['subagent_usd'] -and $null -ne $data.cost.subagent_usd) {
+        $COST_SUBAGENT = Safe-Double $data.cost.subagent_usd 0.0
+    }
+    if ($data.cost.PSObject.Properties['estimated'] -and $null -ne $data.cost.estimated) {
+        $estVal = $data.cost.estimated
+        if ($estVal -eq $true -or ($estVal -is [string] -and $estVal.Trim().ToLower() -eq "true")) {
+            $COST_ESTIMATED = $true
+        }
+    }
+}
 
 # Context tokens calculation (Section 5)
 $INPUT_TOKENS = if ($data.context_window.total_input_tokens -ne $null) { Safe-Int64 $data.context_window.total_input_tokens 0 } else { 0 }
@@ -489,6 +526,7 @@ if ($USE_CLASSIC_ICONS) {
     $ICON_DIR = "╱"
     $ICON_CONV = "╱"
     $ICON_TOK_SUM = ""
+    $ICON_COST = "cost"
     $ICON_RESET = "⌛"
     $ICON_AC = "AC"
     $ICON_BAT = "BAT"
@@ -512,6 +550,7 @@ if ($USE_CLASSIC_ICONS) {
     $ICON_DIR = ""
     $ICON_CONV = "󰍪"
     $ICON_TOK_SUM = ""
+    $ICON_COST = ""
     $ICON_RESET = "⌛️"
     $ICON_AC = "󰚥"
     $ICON_BAT = "🔋"
@@ -868,6 +907,26 @@ if ($USE_CLASSIC_ICONS) {
     $BG_FMT = (make_badge $ICON_TASKS $BG_TASKS "135")
 }
 
+$COST_FMT = ""
+if ($SHOW_COST -and $COST_TOTAL -gt 0.0) {
+    $costTotalStr = Format-Usd $COST_TOTAL
+    if ($costTotalStr) {
+        $costLabel = if ($COST_ESTIMATED) { "~$costTotalStr" } else { $costTotalStr }
+        $costSubStr = Format-Usd $COST_SUBAGENT
+        if ($costSubStr) {
+            $costLabel = "$costLabel | sub: $costSubStr"
+        }
+        $costRounded = if ($COST_TOTAL -lt 1e15) { [double][Math]::Round([decimal]$COST_TOTAL, 2, [System.MidpointRounding]::AwayFromZero) } else { $COST_TOTAL }
+        $costColor = "76"
+        if ($costRounded -ge 5.0) {
+            $costColor = "197"
+        } elseif ($costRounded -ge 1.0) {
+            $costColor = "214"
+        }
+        $COST_FMT = (make_badge $ICON_COST $costLabel $costColor)
+    }
+}
+
 $DIR_FMT = ""
 if ($SHOW_DIR -and $CWD_SHORT) {
     if ($USE_CLASSIC_ICONS) {
@@ -1080,6 +1139,7 @@ if ($SHOW_TOKENS_USAGE -and $CTX_USED -gt 0) {
         $BADGE_LIST += (make_badge $ICON_TOK_SUM "total: ${INPUT_TOK_FMT}/${OUTPUT_TOK_FMT}${turn_str}" "220")
     }
 }
+if ($SHOW_COST -and $COST_FMT) { $BADGE_LIST += $COST_FMT }
 if ($SHOW_ARTIFACTS -and $ART_FMT) { $BADGE_LIST += $ART_FMT }
 if ($SHOW_SUBAGENTS -and $SUB_FMT) { $BADGE_LIST += $SUB_FMT }
 if ($SHOW_TASKS -and $BG_FMT) { $BADGE_LIST += $BG_FMT }

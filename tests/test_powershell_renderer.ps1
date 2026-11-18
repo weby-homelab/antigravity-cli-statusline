@@ -206,7 +206,7 @@ function Invoke-StatuslineProcess($payload, [string[]]$arguments) {
 $currentGitBranch = (git rev-parse --abbrev-ref HEAD 2>$null)
 if (-not $currentGitBranch) { $currentGitBranch = "main" } else { $currentGitBranch = $currentGitBranch.Trim() }
 
-$testPayload = "{`"agent_state`":`"working`",`"terminal_width`":150,`"vcs`":{`"branch`":`"$currentGitBranch`",`"dirty`":false},`"model`":{`"id`":`"gemini-2.0-flash`",`"display_name`":`"Gemini 2.0 Flash`"},`"context_window`":{`"used_percentage`":14.2,`"total_input_tokens`":88244,`"total_output_tokens`":61074,`"context_window_size`":1048576},`"vim`":{`"mode`":`"NORMAL`"},`"conversation_id`":`"c40d17f851f8`",`"plan_tier`":`"Pro`",`"email`":`"test@example.com`"}"
+$testPayload = "{`"agent_state`":`"working`",`"terminal_width`":150,`"vcs`":{`"branch`":`"$currentGitBranch`",`"dirty`":false},`"model`":{`"id`":`"gemini-2.0-flash`",`"display_name`":`"Gemini 2.0 Flash`"},`"context_window`":{`"used_percentage`":14.2,`"total_input_tokens`":88244,`"total_output_tokens`":61074,`"context_window_size`":1048576},`"cost`":{`"total_usd`":0.4213,`"subagent_usd`":0.125,`"estimated`":false},`"vim`":{`"mode`":`"NORMAL`"},`"conversation_id`":`"c40d17f851f8`",`"plan_tier`":`"Pro`",`"email`":`"test@example.com`"}"
 
 # Test 8: Telemetry Suppression Flags & POSIX/PowerShell Switch Parity
 Write-Host "--- Test 8: Telemetry Suppression Flags & Switch Parity ---"
@@ -216,6 +216,7 @@ Assert-Condition ($baseOut -match "NORMAL") "Baseline output contains vim mode"
 Assert-Condition ($baseOut -match [regex]::Escape($currentGitBranch)) "Baseline output contains VCS branch"
 Assert-Condition ($baseOut -match "Gemini 2\.0 Flash") "Baseline output contains active model"
 Assert-Condition ($baseOut -match "ctx") "Baseline output contains context bar"
+Assert-Condition ($baseOut -match '\$0\.42 \| sub: \$0\.13') "Baseline output contains session and subagent cost"
 
 # Agent state suppression parity
 $noStatePosix = Invoke-StatuslineProcess -Payload $testPayload -Arguments @("--no-state")
@@ -259,6 +260,21 @@ $noTokPs = Invoke-StatuslineProcess -Payload $testPayload -Arguments @("-NoToken
 Assert-Condition ($noTokPosix -notmatch "total:") "--no-tokens suppresses token summary"
 Assert-Condition ($noTokPs -notmatch "total:") "-NoTokens suppresses token summary"
 
+# Cost badge suppression & formatting parity
+$noCostPosix = Invoke-StatuslineProcess -Payload $testPayload -Arguments @("--no-cost")
+$noCostPs = Invoke-StatuslineProcess -Payload $testPayload -Arguments @("-NoCost")
+Assert-Condition ($noCostPosix -notmatch '\$0\.42') "--no-cost suppresses session cost badge"
+Assert-Condition ($noCostPs -notmatch '\$0\.42') "-NoCost suppresses session cost badge"
+
+$estCostPayload = '{"agent_state":"idle","terminal_width":150,"cost":{"total_usd":1.5,"subagent_usd":0,"estimated":true}}'
+$estCostOut = Invoke-StatuslineProcess -Payload $estCostPayload -Arguments @("--classic")
+Assert-Condition ($estCostOut -match 'cost[\s\S]*~\$1\.50') "Estimated cost renders ~$1.50 in classic mode"
+Assert-Condition ($estCostOut -notmatch 'sub:') "Zero subagent cost omits subagent breakdown"
+
+$malformedCostPayload = '{"agent_state":"working","terminal_width":150,"cost":"malformed"}'
+$malformedCostOut = Invoke-StatuslineProcess -Payload $malformedCostPayload -Arguments @("--classic")
+Assert-Condition ($malformedCostOut -match "WORKING" -and $malformedCostOut -notmatch 'cost ') "Malformed cost preserves state and omits cost badge"
+
 # Test 9: Header Collapse Logic
 Write-Host "--- Test 9: Header Collapse Logic ---"
 $allL1 = @("--no-state", "--no-vim", "--no-branch", "--no-model", "--no-dir", "--no-conv", "--no-account", "--no-host", "--no-version")
@@ -273,7 +289,7 @@ Assert-Condition ($hcLines.Count -gt 0 -and $hcLines[0] -notmatch [regex]::Escap
 Assert-Condition ($hcLines.Count -gt 0 -and $hcLines[0] -match "ctx") "Header Collapse first row contains context badge"
 
 # 9b: Single row collapsed badge
-$singleBadgeArgs = $allL1 + @("--no-tokens", "--no-sys", "--no-artifacts", "--no-subagents", "--no-tasks", "--no-sandbox", "--no-quota", "--no-power")
+$singleBadgeArgs = $allL1 + @("--no-tokens", "--no-cost", "--no-sys", "--no-artifacts", "--no-subagents", "--no-tasks", "--no-sandbox", "--no-quota", "--no-power")
 $singleOut = Invoke-StatuslineProcess -Payload $testPayload -Arguments $singleBadgeArgs
 $singleLines = @($singleOut -split "`r?`n" | Where-Object { $_ -match '\S' })
 Assert-Condition ($singleLines.Count -eq 1) "Single-row collapsed badge renders exactly 1 row (got $($singleLines.Count))"
@@ -304,7 +320,7 @@ $safeFuncAst = $statuslineAst.Find({
         $node.Name -in @("Safe-Int", "Safe-Int64", "Safe-Double")
 }, $true)
 foreach ($fn in $statuslineAst.EndBlock.Statements) {
-    if ($fn -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $fn.Name -in @("Safe-Int", "Safe-Int64", "Safe-Double")) {
+    if ($fn -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $fn.Name -in @("Safe-Int", "Safe-Int64", "Safe-Double", "Format-Usd")) {
         . ([scriptblock]::Create($fn.Extent.Text))
     }
 }
@@ -332,6 +348,13 @@ try {
         $i64Str = Safe-Int64 "88244" 0
         Assert-Condition ($iNative -eq 42 -and $iStr -eq 42) "Safe-Int parses integer correctly in $cultureName"
         Assert-Condition ($i64Native -eq 88244 -and $i64Str -eq 88244) "Safe-Int64 parses int64 correctly in $cultureName"
+
+        Assert-Condition ((Format-Usd 0) -eq "" -and (Format-Usd -1) -eq "") "Format-Usd omits non-positive spend in $cultureName"
+        Assert-Condition ((Format-Usd 0.00003) -eq '<$0.0001' -and (Format-Usd 0.0000999) -eq '<$0.0001') "Format-Usd formats micro-spend as <`$0.0001 in $cultureName"
+        Assert-Condition ((Format-Usd 0.0042) -eq '$0.0042' -and (Format-Usd 0.0042499) -eq '$0.0042') "Format-Usd formats sub-cent spend to 4 decimals without double-rounding in $cultureName"
+        Assert-Condition ((Format-Usd 0.0149999) -eq '$0.01' -and (Format-Usd 0.125) -eq '$0.13') "Format-Usd rounds half-up once on cent boundaries in $cultureName"
+        Assert-Condition ((Format-Usd 0.4213) -eq '$0.42' -and (Format-Usd "0,4213") -eq '$0.42') "Format-Usd formats standard spend with dot decimal in $cultureName"
+        Assert-Condition ((Format-Usd 1.5) -eq '$1.50') "Format-Usd pads standard spend to 2 decimals in $cultureName"
     }
 } finally {
     [System.Threading.Thread]::CurrentThread.CurrentCulture = $origCulture
