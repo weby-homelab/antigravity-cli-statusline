@@ -31,17 +31,16 @@ $SHOW_POWER = $true
 foreach ($arg in $args) {
     $a = if ($arg) { $arg.ToString().ToLower() } else { "" }
     if ($a -in @("--version", "-version", "-v", "version")) {
-        Write-Host "Antigravity CLI Statusline v0.3.3" -ForegroundColor Green
+        Write-Host "Antigravity CLI Statusline v0.3.4" -ForegroundColor Green
         exit
     }
     if ($a -in @("--legend", "-legend", "-l", "legend")) {
-        Write-Host "🚀 Antigravity CLI Statusline Legend (v0.3.3)" -ForegroundColor Green
+        Write-Host "🚀 Antigravity CLI Statusline Legend (v0.3.4)" -ForegroundColor Green
         Write-Host "This statusline adapts dynamically to your terminal width and theme settings.`n"
         
-        Write-Host "LAYOUTS:" -ForegroundColor White
-        Write-Host "  - Wide Layout (>= 180 chars): Single-row, full developer telemetry dashboard."
-        Write-Host "  - Medium Layout (>= 90 chars): Two-line boxed block to prevent line wrap."
-        Write-Host "  - Small Layout (< 90 chars): Minimalist indicator for status, model, context & tasks.`n"
+        Write-Host "LAYOUTS & AUTO-PACKING:" -ForegroundColor White
+        Write-Host "  - Smart Dynamic Line-Packing Engine: Telemetry badges automatically pack into cleanly framed boxed rows (╭─, ├─, ╰─) without line wrapping."
+        Write-Host "  - Responsive Bar Widths: >= 235 cols use 20-segment context / 15-segment quota bars; narrower terminals use 10 / 8 segments.`n"
         
         Write-Host "COMPONENTS & ICONS:" -ForegroundColor White
         Write-Host "  Field                Nerd Font   Classic     Description" -ForegroundColor White
@@ -51,27 +50,30 @@ foreach ($arg in $args) {
         Write-Host "  State: THINKING      " -NoNewline; Write-Host "󰟷           " -ForegroundColor Yellow -NoNewline; Write-Host "◆           " -ForegroundColor Yellow -NoNewline; Write-Host "Agent is processing/thinking."
         Write-Host "  State: WORKING       " -NoNewline; Write-Host "           " -ForegroundColor Cyan -NoNewline; Write-Host "⚙           " -ForegroundColor Cyan -NoNewline; Write-Host "Agent is executing background operations."
         Write-Host "  State: TOOL          " -NoNewline; Write-Host "           " -ForegroundColor Magenta -NoNewline; Write-Host "🔧          " -ForegroundColor Magenta -NoNewline; Write-Host "Agent is running a tool."
-        Write-Host "  State: UNKNOWN       " -NoNewline; Write-Host "           " -ForegroundColor White -NoNewline; Write-Host "⏳          " -ForegroundColor White -NoNewline; Write-Host "Agent state is unknown or initializing."
-        Write-Host "  Vim Mode             " -NoNewline; Write-Host "           " -ForegroundColor Blue -NoNewline; Write-Host "[MODE]      " -ForegroundColor Blue -NoNewline; Write-Host "Current Vim editor mode (NORMAL, INSERT, VISUAL)."
-        Write-Host "  VCS Branch           " -NoNewline; Write-Host "           " -ForegroundColor Blue -NoNewline; Write-Host "/           " -ForegroundColor Gray -NoNewline; Write-Host "Current Git branch name (Red + * if dirty)."
+        Write-Host "  State: UNKNOWN       " -NoNewline; Write-Host "           " -ForegroundColor White -NoNewline; Write-Host "⏳          " -ForegroundColor White -NoNewline; Write-Host "Agent state is unknown or custom."
+        Write-Host "  Vim Mode             " -NoNewline; Write-Host "(None)      " -ForegroundColor Blue -NoNewline; Write-Host "[MODE]      " -ForegroundColor Blue -NoNewline; Write-Host "Active Vim mode ([MODE] in both styled and classic)."
+        Write-Host "  VCS Branch           " -NoNewline; Write-Host "           " -ForegroundColor Blue -NoNewline; Write-Host "╱           " -ForegroundColor Gray -NoNewline; Write-Host "Current Git branch name (Red + * if dirty)."
         Write-Host "  Model                " -NoNewline; Write-Host "           " -ForegroundColor Magenta -NoNewline; Write-Host "(None)      " -ForegroundColor DarkGray -NoNewline; Write-Host "Current active LLM model name/ID."
+        Write-Host "  User Account         " -NoNewline; Write-Host "󰇮           " -ForegroundColor Gray -NoNewline; Write-Host "(None)      " -ForegroundColor DarkGray -NoNewline; Write-Host "Subscription plan tier & email (>= 130 cols)."
+        Write-Host "  Host Diagnostics     " -NoNewline; Write-Host "󰒋           " -ForegroundColor Blue -NoNewline; Write-Host "(None)      " -ForegroundColor DarkGray -NoNewline; Write-Host "Hostname & Tailscale IPv4 (>= 110 cols)."
+        Write-Host "  CLI Version          " -NoNewline; Write-Host "vX.Y.Z      " -ForegroundColor Gray -NoNewline; Write-Host "vX.Y.Z      " -ForegroundColor Gray -NoNewline; Write-Host "Antigravity CLI version badge (>= 120 cols)."
         Write-Host "  Sandbox Network      " -NoNewline; Write-Host "󰒙           " -ForegroundColor Green -NoNewline; Write-Host "ON (net)    " -ForegroundColor Green -NoNewline; Write-Host "Sandbox enabled with internet access."
         Write-Host "  Sandbox Restricted   " -NoNewline; Write-Host "󰴴           " -ForegroundColor Green -NoNewline; Write-Host "ON (no-net) " -ForegroundColor Green -NoNewline; Write-Host "Sandbox enabled with network disabled."
-        Write-Host "  Sandbox Off          " -NoNewline; Write-Host "󰦜           " -ForegroundColor Red -NoNewline; Write-Host "sandbox off " -ForegroundColor Gray -NoNewline; Write-Host "Sandbox is disabled (runs on host)."
+        Write-Host "  Sandbox Off          " -NoNewline; Write-Host "󰦜 OFF       " -ForegroundColor Red -NoNewline; Write-Host "sandbox off " -ForegroundColor Gray -NoNewline; Write-Host "Sandbox is disabled (runs on host)."
         Write-Host "  Context Bar          " -NoNewline; Write-Host "󱍏           " -ForegroundColor Yellow -NoNewline; Write-Host "ctx         " -ForegroundColor Gray -NoNewline; Write-Host "Context window usage bar (10 or 20 segments)."
         Write-Host "  Artifacts            " -NoNewline; Write-Host "           " -ForegroundColor Blue -NoNewline; Write-Host "artifacts   " -ForegroundColor Gray -NoNewline; Write-Host "Number of active output artifacts."
         Write-Host "  Subagents            " -NoNewline; Write-Host "󱙺           " -ForegroundColor Cyan -NoNewline; Write-Host "subagents   " -ForegroundColor Gray -NoNewline; Write-Host "Number of spawned active subagents."
         Write-Host "  Background Tasks     " -NoNewline; Write-Host "           " -ForegroundColor Magenta -NoNewline; Write-Host "tasks       " -ForegroundColor Gray -NoNewline; Write-Host "Number of background tasks running."
-        Write-Host "  Current Directory    " -NoNewline; Write-Host "           " -ForegroundColor Cyan -NoNewline; Write-Host "/           " -ForegroundColor Gray -NoNewline; Write-Host "Current working directory path (shortened)."
-        Write-Host "  Conversation ID      " -NoNewline; Write-Host "󰍪           " -ForegroundColor Gray -NoNewline; Write-Host "/           " -ForegroundColor Gray -NoNewline; Write-Host "Short prefix of the current session ID."
-        Write-Host "  Tokens Sum           " -NoNewline; Write-Host "           " -ForegroundColor Yellow -NoNewline; Write-Host "(None)      " -ForegroundColor DarkGray -NoNewline; Write-Host "Total input/output tokens parsed."
+        Write-Host "  Current Directory    " -NoNewline; Write-Host "           " -ForegroundColor Cyan -NoNewline; Write-Host "╱           " -ForegroundColor Gray -NoNewline; Write-Host "Current working directory path (shortened)."
+        Write-Host "  Conversation ID      " -NoNewline; Write-Host "󰍪           " -ForegroundColor Gray -NoNewline; Write-Host "╱           " -ForegroundColor Gray -NoNewline; Write-Host "Short prefix of the current session ID (>= 80 cols)."
+        Write-Host "  Tokens Sum           " -NoNewline; Write-Host "           " -ForegroundColor Yellow -NoNewline; Write-Host "(None)      " -ForegroundColor DarkGray -NoNewline; Write-Host "Total input/output tokens & turn delta (>= 100 cols)."
         Write-Host "  Session Cost         " -NoNewline; Write-Host "           " -ForegroundColor Green -NoNewline; Write-Host "cost        " -ForegroundColor Gray -NoNewline; Write-Host "Estimated session spend in USD (& subagent cost)."
         Write-Host "  Quota Reset Time     " -NoNewline; Write-Host "⌛️          " -ForegroundColor Gray -NoNewline; Write-Host "⌛          " -ForegroundColor Gray -NoNewline; Write-Host "Remaining time until LLM quota resets."
         Write-Host "  Power Mains (AC)     " -NoNewline; Write-Host "󰚥           " -ForegroundColor Green -NoNewline; Write-Host "AC          " -ForegroundColor Green -NoNewline; Write-Host "Host is connected to external AC power."
         Write-Host "  Power Battery (UPS)  " -NoNewline; Write-Host "🔋           " -ForegroundColor Yellow -NoNewline; Write-Host "BAT         " -ForegroundColor Yellow -NoNewline; Write-Host "Host is running on battery (shows charge %)."
         
         Write-Host "`nTIPS:" -ForegroundColor White
-        Write-Host "  To toggle Classic Icon mode, use the -classic or --classic option in settings.json configuration."
+        Write-Host "  Use -Classic / --classic / -c for text icons, and suppression switches (-NoCost, -NoHost, etc.) to hide components."
         exit
     }
     if ($a -in @("--classic", "-classic", "-c", "classic", "--no-nerdfont", "-no-nerdfont", "-nonerdfont", "--compatibility", "-compatibility")) {

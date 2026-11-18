@@ -16,13 +16,13 @@ The renderers combine Antigravity CLI payload data with local Git and operating-
 
 - **Agent and Vim state**: `idle`, `thinking`, `working`, and `tool_use` map to `READY`, `THINKING`, `WORKING`, and `TOOL`. Other agent states appear in uppercase. Vim mode appears when the payload contains `vim.mode`.
 - **Model and session**: model ID or display name, CLI version, and the first eight characters of the conversation ID. The conversation ID has an 80-column minimum; CLI version has a 120-column minimum.
-- **Account**: plan tier and account identifier from `plan_tier` and `email`. These fields have a 130-column minimum.
+- **Account**: plan tier and account identifier from `plan_tier` and `email` (truncated to 25 characters). These fields have a 130-column minimum.
 - **Workspace**: shortened working directory and branch/dirty state. Payload-supplied VCS values are used when present. If the payload has no branch, the local Git fallback checks tracked working-tree changes; its `git status --porcelain -uno` command ignores untracked files.
-- **Context and tokens**: context usage bar, percentage, used-token count, and context limit when available. If both `context_window.used_percentage` and `context_window.context_window_size` are positive, the used-token count is `round(context_window.used_percentage × context_window.context_window_size / 100)`. Otherwise, the renderer uses a positive `context_window.total_tokens`, then a positive `context_window.total_input_tokens`, and finally the sum of `context_window.total_input_tokens` and `context_window.total_output_tokens`. PowerShell can derive a missing percentage from the used count and limit; Bash can derive a missing limit from the used count and percentage. The renderers can also show total input/output and current-turn token counts.
-- **Cost**: session spend in US dollars from `cost.total_usd` (with `cost.total_cost_usd` fallback), prefixed with `~` when `cost.estimated` is `true`, and `sub:` breakdown when `cost.subagent_usd` is positive.
+- **Context and tokens**: context usage bar, percentage, used-token count, and context limit when available. If both `context_window.used_percentage` and `context_window.context_window_size` are positive, the used-token count is `round(context_window.used_percentage × context_window.context_window_size / 100)`. Otherwise, the renderer uses a positive `context_window.total_tokens`, then a positive `context_window.total_input_tokens`, and finally the sum of `context_window.total_input_tokens` and `context_window.total_output_tokens`. Both renderers can derive a missing context limit from positive used-token count and percentage; PowerShell can also derive a missing percentage from positive used count and limit. When used tokens are positive, the renderers show total input/output tokens and current-turn token counts (`turn:` requires at least 100 columns in PowerShell).
+- **Cost**: session spend in US dollars from `cost.total_usd` (with `cost.total_cost_usd` fallback), formatted as `<$0.0001`, four decimals below `$0.00995`, or two decimals at `$0.00995` and above, prefixed with `~` when `cost.estimated` is `true`, and `| sub:` breakdown when `cost.subagent_usd` is positive.
 - **Quota**: model-aware selection between Gemini and third-party quota buckets, remaining-use bars, and reset countdowns when the payload includes them. The renderer uses available buckets as a fallback when the preferred bucket is missing. Bash classifies third-party models by model ID; PowerShell checks both model ID and display name.
-- **Execution**: sandbox network state, artifact count for the conversation, subagent count, and running background-task count.
-- **Host**: hostname, Tailscale IPv4 address when detectable, and power or battery state when detectable. Host diagnostics in the header have a 110-column minimum. If no battery or AC status is detected on a desktop/server, the renderer may assume AC power. Linux also reports one-minute load average and RAM usage from `/proc`.
+- **Execution**: sandbox network state, artifact count for the conversation, subagent count (omitted at `0` in Bash; always shown in PowerShell unless `--no-subagents` / `-NoSubagents` is set), and running background-task count.
+- **Host**: hostname, Tailscale IPv4 address when detectable (truncated to 20 characters in Bash, 25 in PowerShell; CLI version truncated to 10 characters in Bash, 16 in PowerShell), and power or battery state when detectable. Host diagnostics in the header have a 110-column minimum. If no battery or AC status is detected on a desktop/server, the renderer may assume AC power. Linux also reports one-minute load average and RAM usage from `/proc`.
 
 Width thresholds are minimum eligibility gates, not guarantees that a field will be shown: the payload must contain the value, and the header must have enough remaining room for it.
 
@@ -179,7 +179,7 @@ A Linux configuration has this shape:
 }
 ```
 
-On macOS, replace `/home/your_username` with `/Users/your_username`. The Windows installer writes a command like `powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:/u/.antigravity/statusline.ps1`. Replace this example path with the installed script path. If you edit the setting manually, quote the `-File` path when it contains spaces and escape those quotes in JSON.
+On macOS, replace `/home/your_username` with `/Users/your_username`. The Windows installer writes a command like `powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:/Users/your_username/.antigravity/statusline.ps1`. Replace this example path with the installed script path. If you edit the setting manually, quote the `-File` path when it contains spaces and escape those quotes in JSON.
 
 ### Use classic mode
 
@@ -195,7 +195,7 @@ Append `--classic` (or `-Classic` on Windows) to the configured command:
 }
 ```
 
-The Bash and PowerShell renderers also accept `--no-nerdfont` and `--compatibility`.
+The Bash renderer also accepts `--no-nerdfont` and `--compatibility`; PowerShell accepts `-Classic`, `-c`, `--classic`, `--no-nerdfont`, `-NoNerdFont`, `--compatibility`, and `-Compatibility`.
 
 ### Override the layout width
 
@@ -211,7 +211,7 @@ Append one Bash flag to the `command` value in `settings.json` to test a fixed w
 
 ### Customize telemetry segments
 
-Implemented telemetry segments and badges are enabled by default whenever the corresponding data is present. Customization uses exclusion-only **Suppression Flags** (`--no-*` in Bash, `--no-*` or `-No*` in PowerShell). A few accepted flags currently have no rendered component to suppress; these are called out in the reference below.
+All implemented telemetry segments and badges are enabled by default whenever the corresponding data is present. Customization uses exclusion-only **Suppression Flags** (`--no-*` in Bash, `--no-*` or `-No*` in PowerShell). Currently, only `--no-sys` / `-NoSys` in PowerShell has no rendered component to suppress.
 
 #### Visual structure & terminology
 
@@ -248,7 +248,7 @@ In the default styled mode, the statusline is organized into two primary telemet
 | **Artifacts** | `--no-artifacts` | `-NoArtifacts` | Suppresses generated artifacts counter. |
 | **Subagents** | `--no-subagents` | `-NoSubagents` | Suppresses spawned subagents counter. |
 | **Background Tasks** | `--no-tasks` | `-NoTasks` | Suppresses running background tasks counter. |
-| **Sandbox State** | `--no-sandbox` | `-NoSandbox` | Suppresses sandbox mode and network state (`net-on`, `net-off`, `host`). |
+| **Sandbox State** | `--no-sandbox` | `-NoSandbox` | Suppresses sandbox mode and network state (`net-on`, `net-off`, `host` in Bash; `ON (net)`, `ON (no-net)`, `OFF` / `sandbox off` in PowerShell). |
 | **Quota Bars** | `--no-quota` | `-NoQuota` | Suppresses 5-hour and 7-day model quota remaining bars and reset timers. |
 | **Power / Battery** | `--no-power` | `-NoPower` | Suppresses AC mains and battery charge percentage. |
 
@@ -306,13 +306,13 @@ The Windows renderer also accepts `--version`, `-v`, `--legend`, and `-l`.
 
 ## Run automated tests
 
-Run the master suite on Linux or macOS:
+Run the Bash & cross-platform test runner on Linux or macOS:
 
 ```bash
 bash tests/run_all.sh
 ```
 
-It runs renderer, stdin-timeout, subagent-state, and installer suites. Python 3 is required by the stdin-timeout suite; when available, the runner also executes the Python compatibility checks.
+It runs renderer, stdin-timeout, subagent-state, and installer suites, plus the Python compatibility checks (`tests/test_windows.py`) when `python3` is available.
 
 Run the PowerShell renderer and Python checks on Windows:
 
@@ -322,7 +322,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 python tests\test_windows.py
 ```
 
-CI runs the Bash suites on Ubuntu and macOS, and the PowerShell suite on Windows PowerShell 5.1 and PowerShell Core.
+CI runs `bash -n`, `shellcheck`, and `tests/run_all.sh` on Ubuntu and macOS, plus `tests/test_powershell_renderer.ps1` and `tests/test_windows.py` on Windows PowerShell 5.1 and PowerShell Core.
 
 ## Understand installed files
 
