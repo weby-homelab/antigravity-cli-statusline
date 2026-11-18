@@ -362,9 +362,9 @@ try {
 
 # Test 12: Version and Legend Flags
 Write-Host "--- Test 12: Version and Legend Output ---"
-$verOut = & $Ps1Statusline -Version 2>&1 | Out-String
+$verOut = Invoke-StatuslineProcess -Payload "" -Arguments @("-Version")
 Assert-Condition ($verOut -match "Antigravity CLI Statusline v0\.3\.4" -and $verOut -notmatch "v0\.3\.3") "Version flag reports 0.3.4 cleanly"
-$legOut = & $Ps1Statusline -Legend 2>&1 | Out-String
+$legOut = Invoke-StatuslineProcess -Payload "" -Arguments @("-Legend")
 Assert-Condition ($legOut -match "Smart Dynamic Line-Packing Engine" -and $legOut -match "User Account" -and $legOut -match "Host Diagnostics" -and $legOut -match "CLI Version") "Legend output describes dynamic line packing and full components"
 
 Write-Host "============================================================" -ForegroundColor Cyan
