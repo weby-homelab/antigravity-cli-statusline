@@ -3,7 +3,7 @@
 # ─────────────────────────────────────────────
 
 # Sitemap
-Sitemap: https://raw.githubusercontent.com/weby-homelab/antigravity-cli-statusline/master/sitemap.xml
+Sitemap: https://raw.githubusercontent.com/weby-homelab/antigravity-cli-statusline/main/sitemap.xml
 
 # ─── General Rules ───────────────────────────
 User-agent: *

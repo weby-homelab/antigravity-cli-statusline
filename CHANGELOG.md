@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.4] - 2026-11-18
+### Added
+- **Session Cost Telemetry Badge (`--no-cost` / `-NoCost`, Issue #94, PR #95 by @vizmoe)**:
+  - Implemented `format_usd` / `Format-Usd` USD spend formatting (`<$0.0001`, 4 decimal places below `$0.00995`, 2 decimal places at `$0.00995` and above without double-rounding) across both `statusline.sh` and `statusline.ps1`.
+  - Reads `cost.total_usd` (with `cost.total_cost_usd` fallback), prefixes `~` when `cost.estimated` is `true`, appends `| sub: ...` when `cost.subagent_usd` is positive, applies threshold coloring (`>= $1.00` yellow, `>= $5.00` red), and wires the `--no-cost` / `-NoCost` suppression flags.
+
+### Fixed & Aligned
+- **Documentation & Legend Drift Alignment**:
+  - Updated `statusline.sh --version` / `--legend` and `statusline.ps1 -Version` / `-Legend` to report `v0.3.4`, replace legacy fixed layout descriptions in `statusline.ps1` with the Smart Dynamic Line-Packing Engine, and align component icons, sandbox labels, Vim formatting, Account, Host Diagnostics, and CLI Version rows with actual renderer output while preserving the UTF-8 BOM on `statusline.ps1`.
+  - Audited and updated `README.md`, `robots.txt`, and `sitemap.xml` (`main` branch links, accurate width/truncation limits, context limit derivation parity, `subagents` pill behavior, Windows path example, and test runner details).
+
 ## [0.3.3] - 2026-10-07
 ### Fixed & Hardened
 - **Windows Installer UTF-8 BOM Removal & Pure ASCII (Issue #89, reported by @zavada123, PR #90)**:

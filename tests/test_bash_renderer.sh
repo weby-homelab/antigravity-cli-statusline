@@ -78,7 +78,8 @@ assert_contains "$delayed_plain" "14.2%" "Payload arriving after 400ms is still 
 # Test 2: CLI Flags
 echo "--- Testing CLI Flags ---"
 ver_out=$(bash "$STATUSLINE" --version 2>&1)
-assert_contains "$ver_out" "0.3.3" "Version flag reports 0.3.3"
+assert_contains "$ver_out" "0.3.4" "Version flag reports 0.3.4"
+assert_not_contains "$ver_out" "0.3.3" "Version flag does not contain stale 0.3.3"
 assert_not_contains "$ver_out" "0.3.2" "Version flag does not contain stale 0.3.2"
 assert_not_contains "$ver_out" "0.3.1" "Version flag does not contain stale 0.3.1"
 assert_not_contains "$ver_out" "0.3.0" "Version flag does not contain stale 0.3.0"
@@ -87,7 +88,10 @@ assert_not_contains "$ver_out" "0.2.5" "Version flag does not contain stale 0.2.
 assert_not_contains "$ver_out" "0.2.4" "Version flag does not contain stale 0.2.4"
 assert_not_contains "$ver_out" "0.2.2" "Version flag does not contain stale 0.2.2"
 legend_out=$(bash "$STATUSLINE" --legend 2>&1)
-assert_contains "$legend_out" "Legend" "Legend flag works"
+assert_contains "$legend_out" "0.3.4" "Legend flag reports 0.3.4"
+assert_contains "$legend_out" "State: UNKNOWN" "Legend includes unknown state"
+assert_contains "$legend_out" "Host Diagnostics" "Legend includes Host Diagnostics"
+assert_contains "$legend_out" "CLI Version" "Legend includes CLI Version"
 assert_contains "$legend_out" "Vim" "Legend mentions Vim mode"
 assert_contains "$legend_out" "Session Cost" "Legend mentions Session Cost"
 
